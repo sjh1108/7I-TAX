@@ -936,3 +936,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/macos,windows,visualstudiocode,python,java,intellij,intellij+iml,intellij+all,webstorm,webstorm+iml,webstorm+all,pycharm,pycharm+iml,pycharm+all,git,nextjs,react
+
+# personal
+.claude
+docs/
