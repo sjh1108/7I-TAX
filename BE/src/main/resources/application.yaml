@@ -1,3 +1,24 @@
 spring:
   application:
     name: tax7i
+  config:
+    import: optional:classpath:application-local.yaml
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  access-expiration: 1800000
+  refresh-expiration: 604800000
+
+ssafy:
+  oauth:
+    authorization-uri: https://project.ssafy.com/oauth/sso-check
+    token-uri: https://project.ssafy.com/ssafy/oauth2/token
+    user-info-uri: https://project.ssafy.com/ssafy/resources/userInfo
+    client-id: ${SSAFY_CLIENT_ID}
+    client-secret: ${SSAFY_CLIENT_SECRET}
+    redirect-uri: ${SSAFY_REDIRECT_URI}
