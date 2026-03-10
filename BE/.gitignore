@@ -39,3 +39,6 @@ out/
 ### Claude ###
 .claude/
 CLAUDE.md
+
+### Local config ###
+application-local.yaml
