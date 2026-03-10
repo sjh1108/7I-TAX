@@ -9,4 +9,11 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     answer: str = Field(..., description="AI 응답")
     model: str = Field(..., description="사용된 모델명")
+    session_id: str = Field(..., description="세션 ID")
     usage: dict | None = Field(default=None, description="토큰 사용량")
+
+
+class ChatHistoryResponse(BaseModel):
+    session_id: str
+    messages: list[dict[str, str]]
+    message_count: int

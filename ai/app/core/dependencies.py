@@ -11,7 +11,10 @@ def get_settings() -> Settings:
     return Settings()
 
 
-def get_chat_service(
-    settings: Settings = Depends(get_settings),
-) -> ChatService:
-    return ChatService(settings=settings)
+@lru_cache
+def _create_chat_service() -> ChatService:
+    return ChatService(settings=get_settings())
+
+
+def get_chat_service() -> ChatService:
+    return _create_chat_service()
