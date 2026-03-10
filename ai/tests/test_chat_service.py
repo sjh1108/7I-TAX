@@ -19,10 +19,29 @@ def settings() -> Settings:
 
 
 @pytest.fixture
+def rag_settings() -> Settings:
+    return Settings(
+        gms_api_key="test-key",
+        gms_base_url="http://fake-llm",
+        llm_model="test-model",
+        rag_enabled=True,
+    )
+
+
+@pytest.fixture
 def service(settings: Settings) -> ChatService:
     with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock:
         mock.return_value = "테스트 응답"
         svc = ChatService(settings=settings)
+        svc._mock_llm = mock  # 테스트에서 참조용
+        yield svc
+
+
+@pytest.fixture
+def rag_service(rag_settings: Settings) -> ChatService:
+    with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock:
+        mock.return_value = "RAG 테스트 응답"
+        svc = ChatService(settings=rag_settings)
         svc._mock_llm = mock  # 테스트에서 참조용
         yield svc
 
@@ -110,3 +129,67 @@ class TestCallLlm:
         ):
             with pytest.raises(LLMRateLimitError):
                 await service._call_llm([])
+
+
+class TestRagIntegration:
+    """RAG 연동 포인트 관련 테스트"""
+
+    async def test_rag_disabled_does_not_call_retrieve(self, service: ChatService):
+        """rag_enabled=False일 때 RetrievalService.retrieve가 호출되지 않는다."""
+        with patch.object(
+            service.retrieval_service, "retrieve", new_callable=AsyncMock
+        ) as mock_retrieve:
+            await service.get_response("안녕하세요")
+            mock_retrieve.assert_not_called()
+
+    async def test_rag_disabled_preserves_existing_behavior(self, service: ChatService):
+        """rag_enabled=False일 때 기존 동작에 영향이 없다."""
+        answer, session_id = await service.get_response("안녕하세요")
+        assert answer == "테스트 응답"
+        assert session_id is not None
+
+    async def test_rag_enabled_calls_retrieve(self, rag_service: ChatService):
+        """rag_enabled=True일 때 RetrievalService.retrieve가 호출된다."""
+        with patch.object(
+            rag_service.retrieval_service, "retrieve", new_callable=AsyncMock
+        ) as mock_retrieve:
+            mock_retrieve.return_value = []
+            await rag_service.get_response("종합소득세 알려줘")
+            mock_retrieve.assert_called_once_with("종합소득세 알려줘")
+
+    async def test_rag_enabled_with_context_adds_system_message(
+        self, rag_service: ChatService
+    ):
+        """rag_enabled=True + context 반환 시 SystemMessage에 '참고 자료'가 포함된다."""
+        with patch.object(
+            rag_service.retrieval_service, "retrieve", new_callable=AsyncMock
+        ) as mock_retrieve:
+            mock_retrieve.return_value = ["세금 문서 조각 1", "세금 문서 조각 2"]
+            await rag_service.get_response("종합소득세 알려줘")
+
+            # _call_llm에 전달된 messages를 검증
+            call_args = rag_service._mock_llm.call_args[0][0]
+            context_messages = [
+                msg for msg in call_args
+                if hasattr(msg, "content") and "참고 자료" in msg.content
+            ]
+            assert len(context_messages) == 1
+            assert "세금 문서 조각 1" in context_messages[0].content
+            assert "세금 문서 조각 2" in context_messages[0].content
+
+    async def test_rag_enabled_empty_context_no_extra_message(
+        self, rag_service: ChatService
+    ):
+        """rag_enabled=True이지만 context가 빈 리스트면 '참고 자료' 메시지가 추가되지 않는다."""
+        with patch.object(
+            rag_service.retrieval_service, "retrieve", new_callable=AsyncMock
+        ) as mock_retrieve:
+            mock_retrieve.return_value = []
+            await rag_service.get_response("안녕")
+
+            call_args = rag_service._mock_llm.call_args[0][0]
+            context_messages = [
+                msg for msg in call_args
+                if hasattr(msg, "content") and "참고 자료" in msg.content
+            ]
+            assert len(context_messages) == 0

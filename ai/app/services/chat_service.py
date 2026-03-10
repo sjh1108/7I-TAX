@@ -9,12 +9,14 @@ from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_ex
 from app.core.config import Settings
 from app.core.exceptions import LLMAuthError, LLMRateLimitError, LLMTimeoutError
 from app.core.prompts import SYSTEM_PROMPT
+from app.services.retrieval_service import RetrievalService
 
 MAX_HISTORY_LENGTH = 20
 
 
 class ChatService:
     def __init__(self, settings: Settings) -> None:
+        self.settings = settings
         self.llm = ChatOpenAI(
             base_url=settings.gms_base_url,
             api_key=settings.gms_api_key,
@@ -22,6 +24,7 @@ class ChatService:
             temperature=0.7,
             timeout=30,
         )
+        self.retrieval_service = RetrievalService()
         self._histories: dict[str, list[BaseMessage]] = defaultdict(list)
 
     async def get_response(
@@ -35,6 +38,16 @@ class ChatService:
         history = self._histories[session_id]
 
         messages: list[BaseMessage] = [SystemMessage(content=SYSTEM_PROMPT)]
+
+        # RAG 연동 포인트
+        if self.settings.rag_enabled:
+            context = await self.retrieval_service.retrieve(message)
+            if context:
+                context_text = "\n".join(context)
+                messages.append(SystemMessage(
+                    content=f"참고 자료:\n{context_text}"
+                ))
+
         messages.extend(history)
         messages.append(HumanMessage(content=message))
 
