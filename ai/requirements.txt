@@ -6,3 +6,7 @@ langchain
 langchain-openai
 httpx
 tenacity
+
+# test
+pytest
+pytest-asyncio
