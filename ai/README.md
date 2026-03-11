@@ -1,18 +1,90 @@
-# 웹 어플리케이션 및 AI 서버 프로젝트
+# tax7i AI 서버
 
-이 프로젝트 디렉토리는 `FastAPI`를 기반으로 한 웹 서버 환경이 구성된 메인 AI 프로젝트 공간입니다.
-가상 환경 구성 및 실행에 대해서는 `venv_guide.md`를 참고하시고, 하위에 위치한 `jira` 폴더는 별도의 프로젝트로 관리되므로 해당 폴더 내의 `README.md`를 참고해 주세요.
+세금 관련 AI 챗봇 서비스의 백엔드 서버입니다. FastAPI 기반으로 LLM 채팅 API를 제공합니다.
 
-## 1. 기반 패키지 설치
-현재 메인 프로젝트 실행을 위해서는 아래 명령어로 이 디렉토리 수준의 필수 패키지(`fastapi`, `uvicorn`)를 설치해야 합니다.
+## 1. 환경 설정
+
+### 가상 환경 구성
+
+가상 환경 생성 및 활성화 방법은 [`venv_guide.md`](./venv_guide.md)를 참고하세요.
+
+### 의존성 설치
+
+가상 환경 활성화 후 패키지를 설치합니다.
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## 2. 서버 실행
-아래 명령어를 통해 기본 구성된 FastAPI 서버 환경을 구동시킬 수 있습니다.
+### 환경 변수 설정
+
+`.env.example`을 복사하여 `.env` 파일을 생성하고, API 키를 입력합니다.
+
 ```bash
-uvicorn main:app --reload
+cp .env.example .env
 ```
-서버 구동 후 브라우저에서 `http://127.0.0.1:8000` 로 접속하여 동작을 확인합니다.
+
+`.env` 파일에서 `GMS_API_KEY`를 실제 값으로 수정하세요.
+
+```dotenv
+GMS_API_KEY=실제_API_키
+GMS_BASE_URL=https://gms.ssafy.io/gmsapi/api.openai.com/v1
+LLM_MODEL=gpt-4o-mini
+DEBUG=false
+ALLOWED_ORIGINS=["http://localhost:3000"]
+```
+
+## 2. 서버 실행
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+서버 구동 후 `http://localhost:8000/docs`에서 Swagger UI로 API를 확인할 수 있습니다.
+
+## 3. API 사용법
+
+### 채팅 요청
+
+```bash
+curl -X POST http://localhost:8000/api/v1/chat/ \
+  -H "Content-Type: application/json" \
+  -d '{"message": "종합소득세가 뭐야?"}'
+```
+
+### 세션 유지 채팅
+
+응답에서 받은 `session_id`를 포함하여 대화를 이어갑니다.
+
+```bash
+curl -X POST http://localhost:8000/api/v1/chat/ \
+  -H "Content-Type: application/json" \
+  -d '{"message": "더 자세히 알려줘", "session_id": "응답에서_받은_session_id"}'
+```
+
+### 대화 히스토리 조회
+
+```bash
+curl http://localhost:8000/api/v1/chat/history/{session_id}
+```
+
+## 4. 테스트 실행
+
+```bash
+python -m pytest tests/ -v
+```
+
+## 5. 프로젝트 구조
+
+```
+ai/
+├── app/
+│   ├── core/           # 설정, 예외, 프롬프트
+│   ├── models/         # Pydantic 모델
+│   ├── routers/        # API 라우터
+│   └── services/       # 비즈니스 로직 (ChatService, RetrievalService)
+├── tests/              # 테스트
+├── .env.example        # 환경 변수 예시
+├── requirements.txt    # 의존성
+└── venv_guide.md       # 가상 환경 가이드
+```
