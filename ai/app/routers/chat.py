@@ -12,9 +12,7 @@ async def chat(
     request: ChatRequest,
     service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
-    answer, session_id = await service.get_response(
-        request.message, request.session_id
-    )
+    answer, session_id = await service.get_response(request.message, request.session_id)
     return ChatResponse(
         answer=answer, model=service.llm.model_name, session_id=session_id
     )
@@ -26,8 +24,4 @@ async def get_history(
     service: ChatService = Depends(get_chat_service),
 ) -> ChatHistoryResponse:
     messages = service.get_history(session_id)
-    return ChatHistoryResponse(
-        session_id=session_id,
-        messages=messages,
-        message_count=len(messages),
-    )
+    return ChatHistoryResponse(session_id=session_id, messages=messages, message_count=len(messages),)

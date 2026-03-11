@@ -7,9 +7,9 @@ class Settings(BaseSettings):
     debug: bool = False
 
     # GMS 프록시 (SSAFY OpenAI API)
-    gms_api_key: str = ""
-    gms_base_url: str = "https://gms.ssafy.io/gmsapi/api.openai.com/v1"
-    llm_model: str = "gpt-4o-mini"
+    gms_api_key: str
+    gms_base_url: str
+    llm_model: str
 
     # RAG (향후 활성화)
     rag_enabled: bool = False
