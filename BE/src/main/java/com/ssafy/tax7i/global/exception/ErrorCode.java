@@ -31,9 +31,22 @@ public enum ErrorCode {
     // 409 Conflict
     CONFLICT(HttpStatus.CONFLICT, "리소스 충돌이 발생했습니다."),
 
+    // 402 Payment Required
+    PAYMENT_DECLINED(HttpStatus.valueOf(402), "결제가 거절되었습니다."),
+
+    // 404 Not Found
+    ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "계좌를 찾을 수 없습니다."),
+    PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다."),
+
+    // 422 Unprocessable Entity
+    INSUFFICIENT_BALANCE(HttpStatus.UNPROCESSABLE_ENTITY, "잔액이 부족합니다."),
+
     // 500 Internal Server Error
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
-    OAUTH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "OAuth 인증에 실패했습니다.");
+    OAUTH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "OAuth 인증에 실패했습니다."),
+
+    // 503 Service Unavailable
+    BANK_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "은행 연동 서비스가 일시적으로 불가합니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

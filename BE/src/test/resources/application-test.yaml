@@ -19,6 +19,11 @@ jwt:
   refresh-expiration: 604800000
 
 ssafy:
+  finance:
+    base-url: https://finopenapi.ssafy.io/ssafy/api/v1/edu
+    api-key: test-finance-api-key
+    institution-code: "00100"
+    fintech-app-no: "001"
   oauth:
     authorization-uri: https://project.ssafy.com/oauth/sso-check
     token-uri: https://project.ssafy.com/ssafy/oauth2/token
