@@ -4,8 +4,24 @@ pydantic-settings
 python-dotenv
 langchain
 langchain-openai
-httpx
+httpx>=0.27.0
 tenacity
+
+# 벡터DB
+chromadb>=0.4.0
+langchain-chroma>=0.1.0
+
+# PDF 파싱
+pypdf>=4.0.0
+
+# 텍스트 분할
+langchain-text-splitters>=0.2.0
+
+# 벡터 연산
+numpy>=1.26.0
+
+# BM25 검색 (Phase 2)
+rank-bm25>=0.2.2
 
 # test
 pytest
