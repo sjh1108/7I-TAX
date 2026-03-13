@@ -26,10 +26,17 @@ class ChatService:
         cache_service=None,   # Phase 4: 선택적
     ) -> None:
         self.settings = settings
-        self.llm = ChatOpenAI(
+        self.llm_mini = ChatOpenAI(
             base_url=settings.gms_base_url,
             api_key=settings.gms_api_key,
-            model=settings.llm_model,
+            model=settings.llm_model_mini,
+            temperature=0.7,
+            timeout=30,
+        )
+        self.llm_standard = ChatOpenAI(
+            base_url=settings.gms_base_url,
+            api_key=settings.gms_api_key,
+            model=settings.llm_model_standard,
             temperature=0.7,
             timeout=30,
         )
@@ -93,7 +100,8 @@ class ChatService:
         messages.extend(history)
         messages.append(HumanMessage(content=message))
 
-        answer = await self._call_llm(messages)
+        llm = self._select_llm(intent_result.model_tier)
+        answer = await self._call_llm(messages, llm=llm)
 
         # 7. 히스토리 관리
         history.append(HumanMessage(content=message))
@@ -118,14 +126,25 @@ class ChatService:
             for msg in history
         ]
 
+    def _select_llm(self, model_tier: str) -> ChatOpenAI:
+        """모델 티어에 따라 LLM 인스턴스를 선택한다."""
+        if model_tier == "standard":
+            return self.llm_standard
+        return self.llm_mini
+
     @retry(
         stop=stop_after_attempt(3),
         wait=wait_exponential(multiplier=1, min=1, max=10),
         retry=retry_if_exception_type(LLMTimeoutError),
     )
-    async def _call_llm(self, messages: list[BaseMessage]) -> str:
+    async def _call_llm(
+        self,
+        messages: list[BaseMessage],
+        llm: ChatOpenAI | None = None,
+    ) -> str:
+        target_llm = llm or self.llm_mini
         try:
-            response = await self.llm.ainvoke(messages)
+            response = await target_llm.ainvoke(messages)
             return response.content
         except APITimeoutError as e:
             raise LLMTimeoutError() from e

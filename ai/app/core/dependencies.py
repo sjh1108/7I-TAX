@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 
 from app.core.config import Settings
+from app.services.cache_service import SemanticCache
 from app.services.chat_service import ChatService
 from app.services.embedding_service import EmbeddingService
 from app.services.intent_classifier import IntentClassifier
@@ -56,10 +57,22 @@ async def init_services() -> None:
     await intent_classifier.initialize()
     logger.info("IntentClassifier 초기화 완료")
 
+    cache_service = (
+        SemanticCache(
+            embedding_service=embedding_service,
+            threshold=settings.cache_threshold,
+            max_entries=settings.cache_max_entries,
+            ttl_hours=settings.cache_ttl_hours,
+        )
+        if settings.cache_enabled
+        else None
+    )
+
     _chat_service = ChatService(
         settings=settings,
         retrieval_service=_retrieval_service,
         intent_classifier=intent_classifier,
+        cache_service=cache_service,
     )
 
 

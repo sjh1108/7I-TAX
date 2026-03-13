@@ -11,6 +11,16 @@ class Settings(BaseSettings):
     gms_base_url: str
     llm_model: str
 
+    # 모델 티어링
+    llm_model_mini: str = "gpt-4o-mini"
+    llm_model_standard: str = "gpt-4o"
+
+    # 캐시 설정
+    cache_enabled: bool = True
+    cache_threshold: float = 0.95
+    cache_max_entries: int = 10000
+    cache_ttl_hours: int = 24
+
     # RAG (향후 활성화)
     rag_enabled: bool = False
     chroma_persist_directory: str = "./data/chroma"
