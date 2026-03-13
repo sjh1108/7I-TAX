@@ -1,14 +1,25 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
+from app.core.dependencies import init_services
 from app.core.exceptions import AIServiceError
 from app.routers import chat, health
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_services()
+    yield
+
 
 app = FastAPI(
     title=settings.app_name,
     version=settings.app_version,
+    lifespan=lifespan,
 )
 
 app.add_middleware(
