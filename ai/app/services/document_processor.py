@@ -5,6 +5,8 @@ from pathlib import Path
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pypdf import PdfReader
 
+from app.utils.legal_parser import LegalParser
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,6 +107,7 @@ class DocumentProcessor:
             separators=KOREAN_LAW_SEPARATORS,
             is_separator_regex=True,
         )
+        self.legal_parser = LegalParser()
 
     def extract_text_from_pdf(self, pdf_path: Path) -> RawDocument:
         """단일 PDF에서 텍스트를 추출한다.
@@ -189,12 +192,10 @@ class DocumentProcessor:
         }
 
     def chunk_document(self, raw_doc: RawDocument) -> list[TextChunk]:
-        """단일 RawDocument를 청크로 분할한다.
+        """문서 유형에 따라 청킹 전략을 분기한다.
 
-        1. RecursiveCharacterTextSplitter로 content를 분할
-        2. 각 청크에 부모 문서의 메타데이터 복사
-        3. chunk_id 부여: "{law_name}_{순번}" (예: "소득세법_001")
-        4. TextChunk 리스트 반환
+        - law_type == "테이블": 재귀적 청킹 (RecursiveCharacterTextSplitter)
+        - law_type in ["법률", "시행령", "시행규칙"]: 계층적 청킹 (LegalParser)
 
         Args:
             raw_doc: PDF에서 추출한 원본 문서.
@@ -202,6 +203,12 @@ class DocumentProcessor:
         Returns:
             청크 분할된 TextChunk 리스트.
         """
+        if raw_doc.metadata.get("law_type") == "테이블":
+            return self._recursive_chunk(raw_doc)
+        return self._hierarchical_chunk(raw_doc)
+
+    def _recursive_chunk(self, raw_doc: RawDocument) -> list[TextChunk]:
+        """재귀적 청킹 (경비율표 등 테이블 문서용)."""
         texts = self.splitter.split_text(raw_doc.content)
         law_name = raw_doc.metadata.get("law_name", "unknown")
         chunks: list[TextChunk] = []
@@ -212,9 +219,34 @@ class DocumentProcessor:
             chunk_metadata["source_path"] = raw_doc.source_path
             chunks.append(TextChunk(content=text, metadata=chunk_metadata))
 
-        logger.info(
-            "청크 분할 완료: %s -> %d개 청크", law_name, len(chunks)
+        logger.info("재귀적 청크 분할 완료: %s -> %d개 청크", law_name, len(chunks))
+        return chunks
+
+    def _hierarchical_chunk(self, raw_doc: RawDocument) -> list[TextChunk]:
+        """계층적 청킹 (법률 문서용, LegalParser 사용)."""
+        law_name = raw_doc.metadata.get("law_name", "unknown")
+        law_type = raw_doc.metadata.get("law_type", "unknown")
+        tax_type = raw_doc.metadata.get("tax_type", "unknown")
+
+        legal_chunks = self.legal_parser.parse(
+            text=raw_doc.content,
+            law_name=law_name,
+            law_type=law_type,
+            tax_type=tax_type,
         )
+
+        if not legal_chunks:
+            logger.warning("계층적 청킹 결과 없음, 재귀적 청킹으로 폴백: %s", law_name)
+            return self._recursive_chunk(raw_doc)
+
+        chunks = [
+            TextChunk(
+                content=lc.content,
+                metadata={**raw_doc.metadata, **lc.metadata, "source_path": raw_doc.source_path},
+            )
+            for lc in legal_chunks
+        ]
+        logger.info("계층적 청크 분할 완료: %s -> %d개 청크", law_name, len(chunks))
         return chunks
 
     def process_all(self) -> list[TextChunk]:

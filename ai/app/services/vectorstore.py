@@ -35,6 +35,31 @@ class VectorStoreService:
             ids=ids,
         )
 
+    @staticmethod
+    def convert_filter(metadata_filter: dict | None) -> dict | None:
+        """범용 메타데이터 필터를 ChromaDB where 필터로 변환한다.
+
+        입력 형식:
+            {"law_name": {"$in": ["소득세법"]}, "topics": {"$contains": "세율"}}
+
+        ChromaDB 출력 형식:
+            단일 조건: {"law_name": {"$in": [...]}}
+            복수 조건: {"$and": [{...}, {...}]}
+        """
+        if metadata_filter is None:
+            return None
+
+        conditions = []
+        for key, value in metadata_filter.items():
+            if isinstance(value, dict):
+                conditions.append({key: value})
+            else:
+                conditions.append({key: {"$eq": value}})
+
+        if len(conditions) == 1:
+            return conditions[0]
+        return {"$and": conditions}
+
     def similarity_search(
         self,
         query: str,
@@ -43,13 +68,16 @@ class VectorStoreService:
     ) -> list[dict]:
         """쿼리와 유사한 문서를 검색한다.
 
+        filter를 ChromaDB 형식으로 변환 후 검색한다.
+
         Returns:
             [{"content": str, "metadata": dict, "score": float}, ...]
         """
+        chroma_filter = self.convert_filter(filter)
         results = self.vectorstore.similarity_search_with_relevance_scores(
             query=query,
             k=k,
-            filter=filter,
+            filter=chroma_filter,
         )
         return [
             {
@@ -58,6 +86,21 @@ class VectorStoreService:
                 "score": score,
             }
             for doc, score in results
+        ]
+
+    def get_all_documents(self) -> list[dict]:
+        """BM25 인덱스 구축용으로 전체 문서를 반환한다.
+
+        Returns:
+            [{"content": str, "metadata": dict}, ...]
+        """
+        collection = self.vectorstore._collection
+        result = collection.get(include=["documents", "metadatas"])
+        documents = result.get("documents") or []
+        metadatas = result.get("metadatas") or []
+        return [
+            {"content": doc, "metadata": meta}
+            for doc, meta in zip(documents, metadatas)
         ]
 
     def get_collection_stats(self) -> dict:
