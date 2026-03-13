@@ -78,11 +78,13 @@ class RetrievalService:
         top_k: int = 5,
         metadata_filter: dict | None = None,
         search_strategy: str = "hybrid",
+        be_data: dict | None = None,
     ) -> list[SearchResult]:
         """인텐트에 따른 검색 전략 분기.
 
         search_strategy 옵션:
         - "hybrid": BM25 + 벡터 + RRF (기본)
+        - "hybrid_with_be_data": hybrid + 백엔드 데이터 컨텍스트 포함
         - "vector": 벡터 검색만
         - "metadata_filter": 메타데이터 필터 중심
         - "multi_query": 비교 대상별 다중 쿼리
@@ -100,7 +102,42 @@ class RetrievalService:
         if search_strategy == "multi_query":
             return await self._multi_query_search(query, top_k)
 
-        return await self._hybrid_search(query, top_k, metadata_filter)
+        if search_strategy == "hybrid":
+            return await self._hybrid_search(query, top_k, metadata_filter)
+
+        if search_strategy == "hybrid_with_be_data":
+            results = await self._hybrid_search(query, top_k, metadata_filter)
+            return self._enrich_with_be_data(results, be_data or {})
+
+        raise ValueError(f"알 수 없는 검색 전략: {search_strategy}")
+
+    def _enrich_with_be_data(
+        self,
+        results: list[SearchResult],
+        be_data: dict,
+    ) -> list[SearchResult]:
+        """BE 데이터를 검색 결과 컨텍스트에 prepend한다.
+
+        be_data가 비어있으면 results를 그대로 반환한다.
+        """
+        if not be_data:
+            return results
+
+        be_parts = []
+        if be_data.get("transactions"):
+            be_parts.append(f"거래내역: {be_data['transactions']}")
+        if be_data.get("business_info"):
+            be_parts.append(f"사업자정보: {be_data['business_info']}")
+
+        if not be_parts:
+            return results
+
+        be_result = SearchResult(
+            content="\n".join(be_parts),
+            metadata={"source": "backend_data"},
+            score=1.0,
+        )
+        return [be_result] + results
 
     async def _hybrid_search(
         self,

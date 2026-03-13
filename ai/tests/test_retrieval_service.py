@@ -265,3 +265,90 @@ class TestRetrieveStrategies:
         result = await self.service.retrieve("종합소득세", search_strategy="hybrid")
         # BM25 + 벡터 결과가 융합되어 반환됨
         assert isinstance(result, list)
+
+
+# ---------------------------------------------------------------------------
+# RetrievalService.retrieve — hybrid_with_be_data 전략
+# ---------------------------------------------------------------------------
+
+class TestRetrieveHybridWithBeData:
+    def setup_method(self):
+        self.mock_vs = MagicMock(spec=VectorStoreService)
+        self.mock_vs.similarity_search.return_value = []
+        self.bm25 = BM25Index()
+        self.service = RetrievalService(
+            vectorstore_service=self.mock_vs,
+            bm25_index=self.bm25,
+        )
+
+    async def test_hybrid_with_be_data_includes_be_context(self):
+        """hybrid_with_be_data 전략은 BE 데이터를 결과 앞에 포함해야 한다."""
+        be_data = {
+            "transactions": [{"date": "2025-01", "amount": 100000, "merchant": "주유소"}],
+            "business_info": {"type": "개인사업자", "industry": "운수업"},
+        }
+
+        results = await self.service.retrieve(
+            query="경비 공제 받을 수 있는 항목은?",
+            search_strategy="hybrid_with_be_data",
+            be_data=be_data,
+        )
+
+        assert results is not None
+        assert len(results) >= 1
+        assert results[0].metadata.get("source") == "backend_data"
+
+    async def test_hybrid_with_be_data_empty_be_data_equals_hybrid(self):
+        """be_data가 비어있으면 일반 hybrid와 동일한 결과를 반환한다."""
+        self.mock_vs.similarity_search.return_value = [
+            {"content": "세금 신고 방법", "metadata": {"chunk_id": "doc1"}, "score": 0.9}
+        ]
+
+        results_hybrid = await self.service.retrieve(
+            query="세금 신고 방법", search_strategy="hybrid"
+        )
+        results_be = await self.service.retrieve(
+            query="세금 신고 방법", search_strategy="hybrid_with_be_data", be_data={}
+        )
+
+        assert results_hybrid == results_be
+
+    async def test_unknown_strategy_raises_value_error(self):
+        """정의되지 않은 strategy는 ValueError를 발생시켜야 한다."""
+        with pytest.raises(ValueError, match="알 수 없는 검색 전략"):
+            await self.service.retrieve(
+                query="세금 신고",
+                search_strategy="invalid_strategy_xyz",
+            )
+
+
+# ---------------------------------------------------------------------------
+# RetrievalService.retrieve — 기존 전략 회귀 확인
+# ---------------------------------------------------------------------------
+
+class TestRetrieveStrategyRegression:
+    """hybrid_with_be_data 추가 및 ValueError 도입 후 기존 전략 회귀 확인."""
+
+    def setup_method(self):
+        self.mock_vs = MagicMock(spec=VectorStoreService)
+        self.mock_vs.similarity_search.return_value = []
+        self.bm25 = BM25Index()
+        self.service = RetrievalService(
+            vectorstore_service=self.mock_vs,
+            bm25_index=self.bm25,
+        )
+
+    async def test_vector_strategy_calls_vector_search(self):
+        """strategy='vector' 변경 없이 벡터 검색을 수행한다."""
+        await self.service.retrieve(query="세금", search_strategy="vector")
+        self.mock_vs.similarity_search.assert_called_once()
+
+    async def test_hybrid_strategy_explicit_still_works(self):
+        """strategy='hybrid'가 명시적 분기로 변경된 후에도 정상 동작한다."""
+        result = await self.service.retrieve(query="세금", search_strategy="hybrid")
+        assert isinstance(result, list)
+
+    async def test_hybrid_default_still_works(self):
+        """search_strategy 기본값(hybrid)이 변경 없이 동작한다."""
+        result = await self.service.retrieve(query="세금")
+        assert isinstance(result, list)

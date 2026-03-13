@@ -95,6 +95,164 @@ class TestGetHistory:
         assert history == []
 
 
+@pytest.fixture
+def service_with_cache(settings: Settings) -> ChatService:
+    with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock_llm:
+        mock_llm.return_value = "파이프라인 답변"
+        cache_svc = AsyncMock()
+        cache_svc.get = AsyncMock(return_value=None)
+        cache_svc.put = AsyncMock()
+        svc = ChatService(
+            settings=settings,
+            retrieval_service=_make_retrieval_service(),
+            intent_classifier=_make_mock_classifier(),
+            cache_service=cache_svc,
+        )
+        svc._mock_llm = mock_llm
+        yield svc
+
+
+@pytest.fixture
+def service_with_backend(settings: Settings) -> ChatService:
+    with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock_llm:
+        mock_llm.return_value = "답변"
+        mock_backend = AsyncMock()
+        mock_backend.get_transactions = AsyncMock(return_value=[])
+        mock_backend.get_business_info = AsyncMock(return_value=None)
+        clf = AsyncMock()
+        clf.classify.return_value = IntentResult(
+            intent=IntentName.EXPENSE_CLASSIFICATION,
+            confidence=0.9,
+            search_strategy="none",
+            model_tier="standard",
+            rag_required=False,
+            metadata_filter={},
+            be_data_required=True,
+        )
+        svc = ChatService(
+            settings=settings,
+            retrieval_service=_make_retrieval_service(),
+            intent_classifier=clf,
+            backend_client=mock_backend,
+        )
+        svc._mock_llm = mock_llm
+        yield svc
+
+
+@pytest.fixture
+def service_without_backend(settings: Settings) -> ChatService:
+    with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock_llm:
+        mock_llm.return_value = "답변"
+        clf = AsyncMock()
+        clf.classify.return_value = IntentResult(
+            intent=IntentName.EXPENSE_CLASSIFICATION,
+            confidence=0.9,
+            search_strategy="none",
+            model_tier="mini",
+            rag_required=False,
+            metadata_filter={},
+            be_data_required=True,
+        )
+        svc = ChatService(
+            settings=settings,
+            retrieval_service=_make_retrieval_service(),
+            intent_classifier=clf,
+            backend_client=None,
+        )
+        svc._mock_llm = mock_llm
+        yield svc
+
+
+# ---------------------------------------------------------------------------
+# 캐시 통합 경로 테스트
+# ---------------------------------------------------------------------------
+
+class TestCacheIntegration:
+    async def test_cache_hit_returns_early_without_pipeline(
+        self, service_with_cache: ChatService
+    ):
+        """캐시 히트 시 _call_llm이 호출되지 않아야 한다."""
+        service_with_cache.cache_service.get.return_value = "캐시된 답변"
+
+        answer, _ = await service_with_cache.get_response(
+            "세금 환급은 어떻게 하나요?", session_id="s1"
+        )
+
+        assert answer == "캐시된 답변"
+        service_with_cache._mock_llm.assert_not_called()
+
+    async def test_cache_miss_proceeds_to_pipeline(
+        self, service_with_cache: ChatService
+    ):
+        """캐시 미스 시 _call_llm이 호출되어야 한다."""
+        service_with_cache.cache_service.get.return_value = None
+
+        answer, _ = await service_with_cache.get_response(
+            "부가세 신고 방법은?", session_id="s2"
+        )
+
+        service_with_cache._mock_llm.assert_called_once()
+        assert answer == "파이프라인 답변"
+
+    async def test_response_is_stored_in_cache_after_pipeline(
+        self, service_with_cache: ChatService
+    ):
+        """파이프라인 실행 후 cache_service.put()이 호출되어야 한다."""
+        service_with_cache.cache_service.get.return_value = None
+        question = "종합소득세 신고 기한은?"
+
+        await service_with_cache.get_response(question, session_id="s3")
+
+        service_with_cache.cache_service.put.assert_called_once()
+        call_args = service_with_cache.cache_service.put.call_args
+        assert call_args[0][0] == question
+
+
+# ---------------------------------------------------------------------------
+# be_data_required 분기 테스트
+# ---------------------------------------------------------------------------
+
+class TestBeDataBranch:
+    async def test_be_data_required_true_calls_backend_apis(
+        self, service_with_backend: ChatService
+    ):
+        """be_data_required=True 인텐트에서 get_transactions, get_business_info가 호출된다."""
+        await service_with_backend.get_response(
+            "내 경비 공제 내역 알려줘", session_id="s1", user_id="user-42"
+        )
+
+        service_with_backend.backend_client.get_transactions.assert_called_once_with(
+            "user-42"
+        )
+        service_with_backend.backend_client.get_business_info.assert_called_once_with(
+            "user-42"
+        )
+
+    async def test_no_user_id_skips_backend_call(
+        self, service_with_backend: ChatService
+    ):
+        """user_id가 없으면 be_data_required=True여도 백엔드를 호출하지 않는다."""
+        await service_with_backend.get_response(
+            "내 경비 공제 내역 알려줘", session_id="s1"
+        )
+
+        service_with_backend.backend_client.get_transactions.assert_not_called()
+        service_with_backend.backend_client.get_business_info.assert_not_called()
+
+    async def test_no_backend_client_proceeds_with_empty_data(
+        self, service_without_backend: ChatService
+    ):
+        """backend_client 미주입 시 be_data_required=True여도 예외 없이 진행된다."""
+        result = await service_without_backend.get_response(
+            "경비 알려줘", session_id="s1", user_id="user-1"
+        )
+
+        assert result is not None
+        answer, _ = result
+        assert answer == "답변"
+        service_without_backend._mock_llm.assert_called_once()
+
+
 class TestCallLlm:
     """_call_llm의 예외 매핑 테스트"""
 
