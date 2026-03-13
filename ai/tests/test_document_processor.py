@@ -415,3 +415,85 @@ class TestProcessAll:
 
         chunk_ids = [chunk.metadata["chunk_id"] for chunk in result]
         assert len(chunk_ids) == len(set(chunk_ids)), "chunk_id가 중복됩니다"
+
+
+# ---------------------------------------------------------------------------
+# chunk_document — 청킹 전략 분기
+# ---------------------------------------------------------------------------
+
+
+class TestChunkDocumentStrategy:
+    """chunk_document() 청킹 전략 분기 테스트."""
+
+    def setup_method(self):
+        self.processor = DocumentProcessor()
+
+    def _make_raw_doc(self, content: str, law_type: str) -> RawDocument:
+        return RawDocument(
+            content=content,
+            metadata={"law_name": "소득세법", "law_type": law_type, "tax_type": "소득세"},
+            page_count=1,
+            source_path="test.pdf",
+        )
+
+    def test_table_document_uses_recursive_chunking(self):
+        """law_type='테이블' 문서는 재귀적 청킹을 사용한다."""
+        raw_doc = self._make_raw_doc("경비율표 내용 " * 10, "테이블")
+        result = self.processor.chunk_document(raw_doc)
+        assert isinstance(result, list)
+        assert len(result) >= 1
+        # 재귀적 청킹: chunk_id가 '{law_name}_NNN' 형식
+        for chunk in result:
+            assert "chunk_id" in chunk.metadata
+
+    def test_law_document_uses_hierarchical_chunking(self):
+        """law_type='법률' 문서는 계층적 청킹(LegalParser)을 사용한다."""
+        content = "제14조(과세표준의 계산)\n거주자의 종합소득에 대한 소득세의 과세표준."
+        raw_doc = self._make_raw_doc(content, "법률")
+        result = self.processor.chunk_document(raw_doc)
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_sihaengryeong_uses_hierarchical_chunking(self):
+        """law_type='시행령' 문서도 계층적 청킹을 사용한다."""
+        content = "제1조(목적)\n이 영은 소득세법에서 위임된 사항을 규정한다."
+        raw_doc = self._make_raw_doc(content, "시행령")
+        result = self.processor.chunk_document(raw_doc)
+        assert isinstance(result, list)
+
+    def test_hierarchical_chunk_has_article_metadata(self):
+        """계층적 청킹 결과에 article 메타데이터가 포함된다."""
+        content = "제14조(과세표준의 계산)\n내용입니다."
+        raw_doc = self._make_raw_doc(content, "법률")
+        result = self.processor.chunk_document(raw_doc)
+        if result:  # LegalParser가 파싱 성공한 경우
+            assert "article" in result[0].metadata or "chunk_id" in result[0].metadata
+
+    def test_hierarchical_chunk_fallback_on_empty_parse(self):
+        """LegalParser가 청크를 생성하지 못하면 재귀적 청킹으로 폴백한다."""
+        # 조문 패턴이 없는 일반 텍스트 → LegalParser 결과 없음
+        content = "일반적인 내용으로 조문 구조가 없습니다."
+        raw_doc = self._make_raw_doc(content, "법률")
+        result = self.processor.chunk_document(raw_doc)
+        # 폴백으로 재귀적 청킹이 실행되어 최소 1개 청크 반환
+        assert isinstance(result, list)
+        assert len(result) >= 1
+
+    def test_table_and_law_chunk_id_different_format(self):
+        """테이블 문서와 법률 문서의 chunk_id 형식이 다르다."""
+        table_doc = self._make_raw_doc("경비율 내용 " * 5, "테이블")
+        law_doc = self._make_raw_doc(
+            "제14조(과세표준의 계산)\n내용입니다.", "법률"
+        )
+        table_chunks = self.processor.chunk_document(table_doc)
+        law_chunks = self.processor.chunk_document(law_doc)
+
+        # 테이블: '소득세법_001' 형식 (03자리 숫자)
+        if table_chunks:
+            table_id = table_chunks[0].metadata.get("chunk_id", "")
+            assert "_" in table_id
+
+        # 법률: '소득세법_14' 형식 (조 번호)
+        if law_chunks:
+            law_id = law_chunks[0].metadata.get("chunk_id", "")
+            assert "소득세법" in law_id

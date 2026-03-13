@@ -151,7 +151,7 @@ class TestSimilaritySearch:
     def test_similarity_search_passes_k_and_filter(
         self, mock_vectorstore_service: VectorStoreService
     ):
-        """k와 filter 파라미터가 similarity_search_with_relevance_scores에 전달된다."""
+        """k와 filter 파라미터가 convert_filter 변환 후 similarity_search_with_relevance_scores에 전달된다."""
         mock_vectorstore_service._mock_chroma.similarity_search_with_relevance_scores.return_value = []
 
         mock_vectorstore_service.similarity_search(
@@ -160,10 +160,11 @@ class TestSimilaritySearch:
             filter={"source": "tax.pdf"},
         )
 
+        # convert_filter를 거쳐 스칼라 값이 {"$eq": ...} 형식으로 변환된다.
         mock_vectorstore_service._mock_chroma.similarity_search_with_relevance_scores.assert_called_once_with(
             query="부동산 양도소득세",
             k=3,
-            filter={"source": "tax.pdf"},
+            filter={"source": {"$eq": "tax.pdf"}},
         )
 
     def test_similarity_search_default_k(
@@ -246,3 +247,95 @@ class TestDeleteCollection:
         result = mock_vectorstore_service.delete_collection()
 
         assert result is None
+
+
+class TestConvertFilter:
+    """VectorStoreService.convert_filter() 테스트."""
+
+    def test_none_input_returns_none(self):
+        """None 입력은 None을 반환한다."""
+        result = VectorStoreService.convert_filter(None)
+        assert result is None
+
+    def test_single_condition_returned_directly(self):
+        """단일 조건은 $and 없이 그대로 반환한다."""
+        filt = {"law_name": {"$in": ["소득세법"]}}
+        result = VectorStoreService.convert_filter(filt)
+        assert result == {"law_name": {"$in": ["소득세법"]}}
+
+    def test_multiple_conditions_wrapped_with_and(self):
+        """복수 조건은 $and로 결합된다."""
+        filt = {
+            "law_name": {"$in": ["소득세법"]},
+            "topics": {"$contains": "세율"},
+        }
+        result = VectorStoreService.convert_filter(filt)
+        assert "$and" in result
+        assert len(result["$and"]) == 2
+
+    def test_scalar_value_becomes_eq_operator(self):
+        """단일 값(비딕셔너리)은 $eq 연산자로 변환된다."""
+        filt = {"law_name": "소득세법"}
+        result = VectorStoreService.convert_filter(filt)
+        assert result == {"law_name": {"$eq": "소득세법"}}
+
+    def test_and_contains_correct_keys(self):
+        """$and 배열 내 각 조건에 올바른 키가 있다."""
+        filt = {"law_name": {"$in": ["소득세법"]}, "tax_type": "소득세"}
+        result = VectorStoreService.convert_filter(filt)
+        keys_in_and = [list(cond.keys())[0] for cond in result["$and"]]
+        assert "law_name" in keys_in_and
+        assert "tax_type" in keys_in_and
+
+    def test_empty_dict_returns_and_with_no_conditions(self):
+        """빈 딕셔너리 입력은 빈 $and를 반환한다.
+
+        conditions=[] → len==0 (1이 아님) → {"$and": []} 반환.
+        """
+        filt = {}
+        result = VectorStoreService.convert_filter(filt)
+        assert result == {"$and": []}
+
+
+class TestGetAllDocuments:
+    """VectorStoreService.get_all_documents() 테스트."""
+
+    def test_returns_list_of_dicts(self, mock_vectorstore_service: VectorStoreService):
+        """get_all_documents()는 list[dict] 형식을 반환한다."""
+        mock_vectorstore_service._mock_collection.get.return_value = {
+            "documents": ["문서1 내용", "문서2 내용"],
+            "metadatas": [{"law_name": "소득세법"}, {"law_name": "부가가치세법"}],
+        }
+        result = mock_vectorstore_service.get_all_documents()
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert result[0] == {"content": "문서1 내용", "metadata": {"law_name": "소득세법"}}
+
+    def test_returns_empty_list_when_no_documents(self, mock_vectorstore_service: VectorStoreService):
+        """문서가 없으면 빈 리스트를 반환한다."""
+        mock_vectorstore_service._mock_collection.get.return_value = {
+            "documents": [],
+            "metadatas": [],
+        }
+        result = mock_vectorstore_service.get_all_documents()
+        assert result == []
+
+    def test_returns_empty_list_when_none_documents(self, mock_vectorstore_service: VectorStoreService):
+        """documents가 None이면 빈 리스트를 반환한다."""
+        mock_vectorstore_service._mock_collection.get.return_value = {
+            "documents": None,
+            "metadatas": None,
+        }
+        result = mock_vectorstore_service.get_all_documents()
+        assert result == []
+
+    def test_collection_get_called_with_correct_include(self, mock_vectorstore_service: VectorStoreService):
+        """collection.get()이 documents, metadatas include로 호출된다."""
+        mock_vectorstore_service._mock_collection.get.return_value = {
+            "documents": [],
+            "metadatas": [],
+        }
+        mock_vectorstore_service.get_all_documents()
+        mock_vectorstore_service._mock_collection.get.assert_called_once_with(
+            include=["documents", "metadatas"]
+        )

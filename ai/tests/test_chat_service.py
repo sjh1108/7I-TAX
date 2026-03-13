@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from openai import APITimeoutError, AuthenticationError, RateLimitError
@@ -7,6 +7,8 @@ from tenacity import RetryError
 from app.core.config import Settings
 from app.core.exceptions import LLMAuthError, LLMRateLimitError, LLMTimeoutError
 from app.services.chat_service import MAX_HISTORY_LENGTH, ChatService
+from app.services.retrieval_service import BM25Index, RetrievalService, SearchResult
+from app.services.vectorstore import VectorStoreService
 
 
 @pytest.fixture
@@ -28,12 +30,18 @@ def rag_settings() -> Settings:
     )
 
 
+def _make_retrieval_service() -> RetrievalService:
+    mock_vs = MagicMock(spec=VectorStoreService)
+    mock_vs.similarity_search.return_value = []
+    return RetrievalService(vectorstore_service=mock_vs, bm25_index=BM25Index())
+
+
 @pytest.fixture
 def service(settings: Settings) -> ChatService:
     with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock:
         mock.return_value = "테스트 응답"
-        svc = ChatService(settings=settings)
-        svc._mock_llm = mock  # 테스트에서 참조용
+        svc = ChatService(settings=settings, retrieval_service=_make_retrieval_service())
+        svc._mock_llm = mock
         yield svc
 
 
@@ -41,8 +49,8 @@ def service(settings: Settings) -> ChatService:
 def rag_service(rag_settings: Settings) -> ChatService:
     with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock:
         mock.return_value = "RAG 테스트 응답"
-        svc = ChatService(settings=rag_settings)
-        svc._mock_llm = mock  # 테스트에서 참조용
+        svc = ChatService(settings=rag_settings, retrieval_service=_make_retrieval_service())
+        svc._mock_llm = mock
         yield svc
 
 
@@ -90,7 +98,7 @@ class TestCallLlm:
 
     async def test_timeout_retries_then_raises(self, settings: Settings):
         """타임아웃 시 3회 재시도 후 RetryError 발생 (내부에 LLMTimeoutError 포함)"""
-        service = ChatService(settings=settings)
+        service = ChatService(settings=settings, retrieval_service=_make_retrieval_service())
         mock_ainvoke = AsyncMock(side_effect=APITimeoutError(request=None))
         with patch(
             "langchain_openai.ChatOpenAI.ainvoke",
@@ -101,7 +109,7 @@ class TestCallLlm:
             assert mock_ainvoke.call_count == 3  # 3회 재시도 확인
 
     async def test_auth_error_raises_llm_auth_error(self, settings: Settings):
-        service = ChatService(settings=settings)
+        service = ChatService(settings=settings, retrieval_service=_make_retrieval_service())
         mock_response = AsyncMock()
         mock_response.status_code = 401
         mock_response.json.return_value = {"error": {"message": "invalid key"}}
@@ -116,7 +124,7 @@ class TestCallLlm:
                 await service._call_llm([])
 
     async def test_rate_limit_raises_llm_rate_limit_error(self, settings: Settings):
-        service = ChatService(settings=settings)
+        service = ChatService(settings=settings, retrieval_service=_make_retrieval_service())
         mock_response = AsyncMock()
         mock_response.status_code = 429
         mock_response.json.return_value = {"error": {"message": "rate limit"}}
@@ -155,19 +163,22 @@ class TestRagIntegration:
         ) as mock_retrieve:
             mock_retrieve.return_value = []
             await rag_service.get_response("종합소득세 알려줘")
-            mock_retrieve.assert_called_once_with("종합소득세 알려줘")
+            mock_retrieve.assert_called_once_with(query="종합소득세 알려줘", top_k=5)
 
     async def test_rag_enabled_with_context_adds_system_message(
         self, rag_service: ChatService
     ):
         """rag_enabled=True + context 반환 시 SystemMessage에 '참고 자료'가 포함된다."""
+        mock_results = [
+            SearchResult(content="세금 문서 조각 1", metadata={"law_name": "소득세법", "chunk_id": "c1"}, score=0.9),
+            SearchResult(content="세금 문서 조각 2", metadata={"law_name": "소득세법", "chunk_id": "c2"}, score=0.8),
+        ]
         with patch.object(
             rag_service.retrieval_service, "retrieve", new_callable=AsyncMock
         ) as mock_retrieve:
-            mock_retrieve.return_value = ["세금 문서 조각 1", "세금 문서 조각 2"]
+            mock_retrieve.return_value = mock_results
             await rag_service.get_response("종합소득세 알려줘")
 
-            # _call_llm에 전달된 messages를 검증
             call_args = rag_service._mock_llm.call_args[0][0]
             context_messages = [
                 msg for msg in call_args
