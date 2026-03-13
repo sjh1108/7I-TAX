@@ -3,6 +3,8 @@ from functools import lru_cache
 
 from app.core.config import Settings
 from app.services.chat_service import ChatService
+from app.services.embedding_service import EmbeddingService
+from app.services.intent_classifier import IntentClassifier
 from app.services.retrieval_service import BM25Index, RetrievalService
 from app.services.vectorstore import VectorStoreService
 
@@ -12,24 +14,29 @@ _vectorstore_service: VectorStoreService | None = None
 _retrieval_service: RetrievalService | None = None
 _chat_service: ChatService | None = None
 
+INTENTS_PATH = "app/data/intents/tax_intents.json"
+
 
 @lru_cache
 def get_settings() -> Settings:
     return Settings()
 
 
-def init_services() -> None:
+async def init_services() -> None:
     """모든 서비스를 초기화한다. 앱 lifespan에서 호출.
 
     초기화 순서 (의존성 순):
     1. VectorStoreService (ChromaDB 연결)
     2. BM25Index 구축 (ChromaDB 전체 문서 로드)
     3. RetrievalService (VectorStoreService + BM25Index 주입)
-    4. ChatService (Settings + RetrievalService 주입)
+    4. EmbeddingService + IntentClassifier (예시 발화 임베딩)
+    5. ChatService (Settings + RetrievalService + IntentClassifier 주입)
     """
     global _vectorstore_service, _retrieval_service, _chat_service
 
-    _vectorstore_service = VectorStoreService(get_settings())
+    settings = get_settings()
+
+    _vectorstore_service = VectorStoreService(settings)
 
     bm25_index = BM25Index()
     all_docs = _vectorstore_service.get_all_documents()
@@ -43,7 +50,17 @@ def init_services() -> None:
         vectorstore_service=_vectorstore_service,
         bm25_index=bm25_index,
     )
-    _chat_service = ChatService(settings=get_settings(), retrieval_service=_retrieval_service)
+
+    embedding_service = EmbeddingService(settings)
+    intent_classifier = IntentClassifier(INTENTS_PATH, embedding_service)
+    await intent_classifier.initialize()
+    logger.info("IntentClassifier 초기화 완료")
+
+    _chat_service = ChatService(
+        settings=settings,
+        retrieval_service=_retrieval_service,
+        intent_classifier=intent_classifier,
+    )
 
 
 def get_chat_service() -> ChatService:

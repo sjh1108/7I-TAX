@@ -12,7 +12,7 @@ from app.routers import chat, health
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    init_services()
+    await init_services()
     yield
 
 

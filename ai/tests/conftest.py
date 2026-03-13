@@ -7,6 +7,7 @@ from app.core.config import Settings
 from app.core.dependencies import get_chat_service
 from app.main import app
 from app.services.chat_service import ChatService
+from app.services.intent_classifier import IntentName, IntentResult
 from app.services.retrieval_service import BM25Index, RetrievalService
 from app.services.vectorstore import VectorStoreService
 
@@ -30,10 +31,32 @@ def mock_retrieval_service() -> RetrievalService:
 
 
 @pytest.fixture
-def mock_chat_service(mock_settings: Settings, mock_retrieval_service: RetrievalService) -> ChatService:
+def mock_intent_classifier() -> AsyncMock:
+    mock = AsyncMock()
+    mock.classify.return_value = IntentResult(
+        intent=IntentName.GENERAL,
+        confidence=0.9,
+        search_strategy="none",
+        model_tier="mini",
+        rag_required=False,
+        metadata_filter={},
+    )
+    return mock
+
+
+@pytest.fixture
+def mock_chat_service(
+    mock_settings: Settings,
+    mock_retrieval_service: RetrievalService,
+    mock_intent_classifier: AsyncMock,
+) -> ChatService:
     with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock_llm:
         mock_llm.return_value = "테스트 응답입니다."
-        service = ChatService(settings=mock_settings, retrieval_service=mock_retrieval_service)
+        service = ChatService(
+            settings=mock_settings,
+            retrieval_service=mock_retrieval_service,
+            intent_classifier=mock_intent_classifier,
+        )
         yield service
 
 
