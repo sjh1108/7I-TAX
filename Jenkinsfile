@@ -18,6 +18,14 @@ pipeline {
             }
         }
 
+        stage('AI - Docker Build') {
+            steps {
+                dir('ai') {
+                    sh 'DOCKER_BUILDKIT=1 docker build -t tax-ai .'
+                }
+            }
+        }
+
         stage('Deploy') {
             steps {
                 sh '''
@@ -35,6 +43,15 @@ pipeline {
                         --network ubuntu_default \
                         -p 3000:80 \
                         tax-frontend
+
+                    docker stop tax-ai || true
+                    docker rm tax-ai || true
+                    docker run -d --name tax-ai \
+                        --network ubuntu_default \
+                        -p 19000:8000 \
+                        --env-file /home/ubuntu/.env.ai \
+                        -v chroma-data:/app/data/chroma \
+                        tax-ai
                 '''
             }
         }
