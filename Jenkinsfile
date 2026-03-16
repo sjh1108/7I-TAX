@@ -5,7 +5,7 @@ pipeline {
         stage('BE - Docker Build') {
             steps {
                 dir('BE') {
-                    sh 'docker build -t tax-backend .'
+                    sh 'DOCKER_BUILDKIT=1 docker build -t tax-backend .'
                 }
             }
         }
@@ -13,7 +13,7 @@ pipeline {
         stage('FE - Docker Build') {
             steps {
                 dir('FE') {
-                    sh 'docker build -t tax-frontend .'
+                    sh 'DOCKER_BUILDKIT=1 docker build -t tax-frontend .'
                 }
             }
         }
