@@ -39,4 +39,19 @@ pipeline {
             }
         }
     }
+
+    post {
+        success {
+            mattermostSend(
+                color: '#2EB67D',
+                message: "✅ 배포 성공: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n${env.BUILD_URL}"
+            )
+        }
+        failure {
+            mattermostSend(
+                color: '#E01E5A',
+                message: "❌ 빌드 실패: ${env.JOB_NAME} #${env.BUILD_NUMBER}\n${env.BUILD_URL}"
+            )
+        }
+    }
 }
