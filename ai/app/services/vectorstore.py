@@ -53,6 +53,8 @@ class VectorStoreService:
         for key, value in metadata_filter.items():
             if isinstance(value, dict):
                 conditions.append({key: value})
+            elif isinstance(value, list):
+                conditions.append({key: {"$in": value}})
             else:
                 conditions.append({key: {"$eq": value}})
 
