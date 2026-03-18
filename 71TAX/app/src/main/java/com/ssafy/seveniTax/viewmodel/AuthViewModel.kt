@@ -20,8 +20,8 @@ data class AuthUiState(
     val errorMessage: String = "",
     // 회원가입 입력
     val phone: String = "",
-    val residentFront: String = "",
-    val residentBack: String = "",
+    val residentFront: String = "",   // 생년월일 6자리
+    val residentBack: String = "",    // 뒷자리 1자리 (성별)
     val carrier: Carrier? = null,
     val name: String = "",
     // 약관
@@ -90,11 +90,11 @@ class AuthViewModel @Inject constructor(
     fun updateSmsCode(code: String) { _uiState.update { it.copy(smsCode = code) } }
 
     fun requestSmsVerification() = viewModelScope.launch {
-        TODO("Implement: authRepository.requestPhoneVerify()")
+        TODO("Implement: authRepository.requestPhoneVerify(phone, carrier, name, birthDate, gender)")
     }
 
     fun verifySms(onSuccess: () -> Unit) = viewModelScope.launch {
-        TODO("Implement: authRepository.confirmPhoneVerify() → smsVerified = true → onSuccess()")
+        TODO("Implement: authRepository.confirmPhoneVerify() → 토큰 저장(SecureStorage) → smsVerified = true → onSuccess()")
     }
 
     // PIN Setup
@@ -121,10 +121,6 @@ class AuthViewModel @Inject constructor(
 
     fun confirmPin(onSuccess: () -> Unit, onMismatch: () -> Unit) {
         TODO("Implement: pin == pinConfirm → 해시 저장 → onSuccess() else onMismatch()")
-    }
-
-    fun register() = viewModelScope.launch {
-        TODO("Implement: authRepository.register() → login() → 토큰 저장")
     }
 
     fun clearError() {

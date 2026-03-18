@@ -11,12 +11,6 @@ class AuthRepositoryImpl @Inject constructor(
     private val secureStorage: SecureStorage
 ) : AuthRepository {
 
-    override suspend fun register(request: RegisterRequest): ApiResponse<RegisterResponse> =
-        TODO("Implement")
-
-    override suspend fun login(request: LoginRequest): ApiResponse<LoginResponse> =
-        TODO("Implement")
-
     override suspend fun refresh(refreshToken: String): ApiResponse<RefreshResponse> =
         TODO("Implement")
 
