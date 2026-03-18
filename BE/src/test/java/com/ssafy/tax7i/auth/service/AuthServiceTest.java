@@ -20,6 +20,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -104,30 +105,30 @@ class AuthServiceTest {
 
     @Test
     void loginWithPin_성공() {
-        User user = createUserWithId(1L);
+        User user = createUserWithId(1L, "01012345678", "5678");
         user.setupPin("hashed-pin");
 
-        given(userRepository.findByCi("test-ci")).willReturn(Optional.of(user));
+        given(userRepository.findByPhoneLast4("5678")).willReturn(List.of(user));
         given(pinService.verifyPin("123456", "hashed-pin")).willReturn(true);
         given(jwtTokenProvider.createAccessToken(1L)).willReturn("access-token");
         given(jwtTokenProvider.createRefreshToken(1L)).willReturn("refresh-token");
         given(jwtTokenProvider.getRefreshExpiration()).willReturn(604800000L);
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
-        LoginResponse response = authService.loginWithPin("test-ci", "123456");
+        LoginResponse response = authService.loginWithPin("01012345678", "123456");
 
         assertThat(response.accessToken()).isEqualTo("access-token");
     }
 
     @Test
     void loginWithPin_PIN불일치_예외() {
-        User user = createUserWithId(1L);
+        User user = createUserWithId(1L, "01012345678", "5678");
         user.setupPin("hashed-pin");
 
-        given(userRepository.findByCi("test-ci")).willReturn(Optional.of(user));
+        given(userRepository.findByPhoneLast4("5678")).willReturn(List.of(user));
         given(pinService.verifyPin("999999", "hashed-pin")).willReturn(false);
 
-        assertThatThrownBy(() -> authService.loginWithPin("test-ci", "999999"))
+        assertThatThrownBy(() -> authService.loginWithPin("01012345678", "999999"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.PIN_INVALID));
@@ -135,11 +136,11 @@ class AuthServiceTest {
 
     @Test
     void loginWithPin_PIN미설정_예외() {
-        User user = createUserWithId(1L);
+        User user = createUserWithId(1L, "01012345678", "5678");
 
-        given(userRepository.findByCi("test-ci")).willReturn(Optional.of(user));
+        given(userRepository.findByPhoneLast4("5678")).willReturn(List.of(user));
 
-        assertThatThrownBy(() -> authService.loginWithPin("test-ci", "123456"))
+        assertThatThrownBy(() -> authService.loginWithPin("01012345678", "123456"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.PIN_NOT_SET));
@@ -201,10 +202,16 @@ class AuthServiceTest {
     // ───────────── helper ─────────────
 
     private User createUserWithId(Long id) {
+        return createUserWithId(id, null, null);
+    }
+
+    private User createUserWithId(Long id, String phoneNumber, String phoneLast4) {
         User user = User.builder()
                 .ci("test-ci")
                 .di("test-di")
                 .name("홍길동")
+                .phoneNumber(phoneNumber)
+                .phoneLast4(phoneLast4)
                 .build();
         try {
             var field = User.class.getDeclaredField("id");

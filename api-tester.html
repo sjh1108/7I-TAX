@@ -139,6 +139,7 @@
   <div class="gnb-logo">7i<span>TAX</span></div>
   <div class="gnb-menu">
     <a class="active" data-page="dashboard">대시보드</a>
+    <a data-page="auth">본인인증</a>
     <a data-page="cards">카드</a>
     <a data-page="payments">결제</a>
     <a data-page="entries">장부</a>
@@ -149,12 +150,77 @@
   </div>
   <div class="gnb-right">
     <span class="user-badge" id="user-badge" style="display:none"></span>
-    <button class="btn-login" id="loginBtn" onclick="doTestLogin()">로그인</button>
+    <button class="btn-login" id="loginBtn" onclick="showAuthPage()">로그인</button>
   </div>
 </nav>
 
 <!-- Toast -->
 <div class="toast" id="toast"></div>
+
+<!-- ======================== AUTH (CI/DI) ======================== -->
+<div class="page" id="page-auth">
+  <h2 class="section-title">본인인증 / 로그인</h2>
+  <p class="section-sub">CI/DI 기반 본인인증 → PIN 설정 → 로그인</p>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;">
+    <!-- Step 1: 본인인증 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#128100;</span> Step 1. 본인인증</div>
+      <div class="form-row" style="grid-template-columns:1fr;">
+        <div class="field"><label>이름 *</label><input type="text" id="auth-name" value="홍길동"></div>
+        <div class="field"><label>생년월일 * (YYYY-MM-DD)</label><input type="text" id="auth-birth" value="1990-01-01"></div>
+        <div class="field"><label>성별 *</label>
+          <select id="auth-gender"><option value="M">남성 (M)</option><option value="F">여성 (F)</option></select>
+        </div>
+        <div class="field"><label>휴대폰번호 *</label><input type="text" id="auth-phone" value="01012345678"></div>
+      </div>
+      <button class="btn btn-primary" onclick="doVerifyIdentity()" style="width:100%;margin-top:8px;">본인인증 요청</button>
+      <div id="auth-verify-result" style="margin-top:12px;font-size:13px;"></div>
+    </div>
+
+    <!-- Step 2: PIN 설정 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#128274;</span> Step 2. PIN 설정</div>
+      <div class="form-row" style="grid-template-columns:1fr;">
+        <div class="field"><label>User ID</label><input type="number" id="auth-userid" placeholder="본인인증 후 자동 입력"></div>
+        <div class="field"><label>PIN (6자리) *</label><input type="password" id="auth-pin-setup" maxlength="6" placeholder="123456"></div>
+      </div>
+      <button class="btn btn-success" onclick="doSetupPin()" style="width:100%;margin-top:8px;">PIN 설정 + 로그인</button>
+      <div id="auth-pin-result" style="margin-top:12px;font-size:13px;"></div>
+    </div>
+
+    <!-- Step 3: PIN 로그인 -->
+    <div class="card">
+      <div class="card-title"><span class="icon">&#128273;</span> Step 3. PIN 로그인</div>
+      <div class="form-row" style="grid-template-columns:1fr 1fr;">
+        <div class="field"><label>휴대폰번호 *</label><input type="text" id="auth-login-phone" placeholder="01012345678"></div>
+        <div class="field"><label>PIN (6자리) *</label><input type="password" id="auth-pin-login" maxlength="6" placeholder="123456"></div>
+      </div>
+      <button class="btn btn-primary" onclick="doPinLogin()" style="width:100%;margin-top:8px;">PIN 로그인</button>
+      <div id="auth-login-result" style="margin-top:12px;font-size:13px;"></div>
+    </div>
+  </div>
+
+  <!-- 빠른 로그인 -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title"><span class="icon">&#9889;</span> 빠른 테스트 로그인</div>
+    <p style="font-size:13px;color:#6b7280;margin-bottom:12px;">본인인증 과정 없이 테스트용 계정으로 바로 로그인합니다. (기존 test-login API)</p>
+    <div style="display:flex;gap:8px;align-items:center;">
+      <input type="text" id="auth-test-email" value="qkrrlxor627@naver.com" style="flex:1;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:14px;">
+      <button class="btn btn-secondary" onclick="doTestLogin()">테스트 로그인</button>
+    </div>
+  </div>
+
+  <!-- 토큰 관리 -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title"><span class="icon">&#128273;</span> 토큰 관리</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-secondary btn-sm" onclick="doReissue()">토큰 갱신 (Reissue)</button>
+      <button class="btn btn-secondary btn-sm" onclick="doLogout()">로그아웃</button>
+    </div>
+    <div id="auth-token-info" style="margin-top:12px;font-size:12px;color:#6b7280;word-break:break-all;"></div>
+  </div>
+</div>
 
 <!-- ======================== DASHBOARD ======================== -->
 <div class="page active" id="page-dashboard">
@@ -464,21 +530,145 @@ function toast(msg) {
 }
 
 // ── Auth ──
+let REFRESH_TOKEN = '';
+
+function showAuthPage() {
+  document.querySelectorAll('.gnb-menu a').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelector('[data-page="auth"]').classList.add('active');
+  document.getElementById('page-auth').classList.add('active');
+}
+
+function setLoggedIn(name) {
+  document.getElementById('loginBtn').textContent = '로그인됨';
+  document.getElementById('loginBtn').classList.add('logged-in');
+  document.getElementById('loginBtn').onclick = showAuthPage;
+  document.getElementById('user-badge').style.display = '';
+  document.getElementById('user-badge').textContent = name;
+  document.getElementById('auth-token-info').innerHTML =
+    '<b>Access Token:</b> '+TOKEN.substring(0,40)+'...<br><b>Refresh Token:</b> '+(REFRESH_TOKEN||'없음').substring(0,40)+'...';
+  loadDashboard();
+}
+
+// Step 1: 본인인증
+async function doVerifyIdentity() {
+  const body = {
+    name: document.getElementById('auth-name').value,
+    birthDate: document.getElementById('auth-birth').value,
+    gender: document.getElementById('auth-gender').value,
+    phoneNumber: document.getElementById('auth-phone').value
+  };
+  const el = document.getElementById('auth-verify-result');
+  try {
+    const res = await fetch(BASE+'/api/auth/verify-identity', {method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    const json = await res.json();
+    if (res.ok) {
+      const d = json.data;
+      document.getElementById('auth-userid').value = d.userId;
+      el.innerHTML = '<div style="background:#dcfce7;padding:12px;border-radius:8px;color:#16a34a;">'
+        +'<b>본인인증 성공!</b><br>userId: '+d.userId
+        +'<br>신규유저: '+(d.isNewUser?'예':'아니오')
+        +'<br>PIN 설정 필요: '+(d.requiresPinSetup?'예':'아니오')
+        +'<br>약관 동의 필요: '+(d.requiresConsent?'예':'아니오')+'</div>';
+      document.getElementById('auth-login-phone').value = body.phoneNumber;
+      toast('본인인증 성공! userId='+d.userId);
+    } else {
+      el.innerHTML = '<div style="background:#fee2e2;padding:12px;border-radius:8px;color:#dc2626;">실패: '+(json.message||res.status)+'</div>';
+    }
+  } catch(e) { el.innerHTML = '<div style="color:#dc2626;">오류: '+e.message+'</div>'; }
+}
+
+// Step 2: PIN 설정
+async function doSetupPin() {
+  const userId = document.getElementById('auth-userid').value;
+  const pin = document.getElementById('auth-pin-setup').value;
+  if (!userId || !pin || pin.length !== 6) { toast('userId와 6자리 PIN을 입력하세요'); return; }
+  const el = document.getElementById('auth-pin-result');
+  try {
+    const res = await fetch(BASE+'/api/auth/setup-pin?userId='+userId, {
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin})
+    });
+    const json = await res.json();
+    if (res.ok) {
+      TOKEN = json.data.accessToken;
+      REFRESH_TOKEN = json.data.refreshToken;
+      el.innerHTML = '<div style="background:#dcfce7;padding:12px;border-radius:8px;color:#16a34a;"><b>PIN 설정 + 로그인 성공!</b></div>';
+      setLoggedIn(document.getElementById('auth-name').value);
+      toast('PIN 설정 완료! 로그인됨');
+    } else {
+      el.innerHTML = '<div style="background:#fee2e2;padding:12px;border-radius:8px;color:#dc2626;">실패: '+(json.message||res.status)+'</div>';
+    }
+  } catch(e) { el.innerHTML = '<div style="color:#dc2626;">오류: '+e.message+'</div>'; }
+}
+
+// Step 3: PIN 로그인
+async function doPinLogin() {
+  const phoneNumber = document.getElementById('auth-login-phone').value;
+  const pin = document.getElementById('auth-pin-login').value;
+  if (!phoneNumber || !pin || pin.length !== 6) { toast('휴대폰번호와 6자리 PIN을 입력하세요'); return; }
+  const el = document.getElementById('auth-login-result');
+  try {
+    const res = await fetch(BASE+'/api/auth/login', {
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phoneNumber, pin})
+    });
+    const json = await res.json();
+    if (res.ok) {
+      TOKEN = json.data.accessToken;
+      REFRESH_TOKEN = json.data.refreshToken;
+      el.innerHTML = '<div style="background:#dcfce7;padding:12px;border-radius:8px;color:#16a34a;"><b>PIN 로그인 성공!</b></div>';
+      setLoggedIn('PIN 유저');
+      toast('PIN 로그인 성공!');
+    } else {
+      el.innerHTML = '<div style="background:#fee2e2;padding:12px;border-radius:8px;color:#dc2626;">실패: '+(json.message||json.errorCode||res.status)+'</div>';
+    }
+  } catch(e) { el.innerHTML = '<div style="color:#dc2626;">오류: '+e.message+'</div>'; }
+}
+
+// 토큰 갱신
+async function doReissue() {
+  if (!REFRESH_TOKEN) { toast('Refresh Token이 없습니다'); return; }
+  try {
+    const res = await fetch(BASE+'/api/auth/reissue', {
+      method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({refreshToken:REFRESH_TOKEN})
+    });
+    const json = await res.json();
+    if (res.ok) {
+      TOKEN = json.data.accessToken;
+      REFRESH_TOKEN = json.data.refreshToken;
+      document.getElementById('auth-token-info').innerHTML =
+        '<b>Access Token:</b> '+TOKEN.substring(0,40)+'...<br><b>Refresh Token:</b> '+REFRESH_TOKEN.substring(0,40)+'...';
+      toast('토큰 갱신 성공!');
+    } else { toast('갱신 실패: '+(json.message||json.errorCode||res.status)); }
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+// 로그아웃
+async function doLogout() {
+  if (!TOKEN) { toast('로그인 상태가 아닙니다'); return; }
+  try {
+    await fetch(BASE+'/api/auth/logout', {method:'POST',headers:{'Authorization':'Bearer '+TOKEN}});
+    TOKEN = ''; REFRESH_TOKEN = '';
+    document.getElementById('loginBtn').textContent = '로그인';
+    document.getElementById('loginBtn').classList.remove('logged-in');
+    document.getElementById('loginBtn').onclick = showAuthPage;
+    document.getElementById('user-badge').style.display = 'none';
+    document.getElementById('auth-token-info').innerHTML = '';
+    toast('로그아웃 완료');
+  } catch(e) { toast('오류: '+e.message); }
+}
+
+// 빠른 테스트 로그인
 async function doTestLogin() {
-  const email = prompt('SSAFY 금융망에 등록된 이메일을 입력하세요:', 'qkrrlxor627@naver.com');
+  const email = document.getElementById('auth-test-email')?.value || 'qkrrlxor627@naver.com';
   if (!email) return;
   try {
     const res = await fetch(BASE+'/api/auth/test-login?email='+encodeURIComponent(email), {method:'POST',headers:{'Content-Type':'application/json'}});
     const json = await res.json();
     TOKEN = json?.data?.accessToken || '';
+    REFRESH_TOKEN = json?.data?.refreshToken || '';
     if (TOKEN) {
-      const name = email.split('@')[0];
-      document.getElementById('loginBtn').textContent = '로그인됨';
-      document.getElementById('loginBtn').classList.add('logged-in');
-      document.getElementById('user-badge').style.display = '';
-      document.getElementById('user-badge').textContent = name;
-      toast('로그인 성공! ('+email+')');
-      loadDashboard();
+      setLoggedIn(email.split('@')[0]);
+      toast('테스트 로그인 성공! ('+email+')');
     } else {
       toast('로그인 실패: ' + (json.message || '응답 오류'));
     }
@@ -1050,32 +1240,13 @@ async function loadCardOptions() {
     const sel = document.getElementById('pf-card');
     sel.innerHTML = items.map(c => {
       const label = c.cardName + (c.last4Digits ? ' ••••'+c.last4Digits : '') + ' [' + (c.cardType==='BUSINESS'?'사업자':'일반') + ']';
-      return `<option value="${c.id}" data-account="${c.accountId}" data-type="${c.cardType}">${label}</option>`;
+      return `<option value="${c.id}" data-type="${c.cardType}">${label}</option>`;
     }).join('');
     if (!items.length) sel.innerHTML = '<option value="">카드 없음 — 먼저 카드를 등록하세요</option>';
   } catch {}
 }
 
-async function createPayment() {
-  const body = {
-    accountId: Number(document.getElementById('pf-account').value),
-    amount: Number(document.getElementById('pf-amount').value),
-    currency: document.getElementById('pf-currency').value || 'KRW',
-    merchantName: document.getElementById('pf-merchant').value,
-    paymentMethod: document.getElementById('pf-method').value,
-    purpose: document.getElementById('pf-purpose').value
-  };
-  const mcc = document.getElementById('pf-mcc').value;
-  if (mcc) body.merchantCategoryCode = mcc;
-  try {
-    const res = await fetch(BASE+'/api/payments/authorize', {method:'POST',headers:authHeaders(),body:JSON.stringify(body)});
-    const json = await res.json();
-    if (res.ok) {
-      toast('결제 승인 완료! ID: '+(json?.data?.paymentId||''));
-      togglePayForm(); loadPayments();
-    } else { toast('오류: '+(json?.message||res.status)); }
-  } catch(e) { toast('오류: '+e.message); }
-}
+// (첫 번째 createPayment는 아래 카드선택 버전으로 대체됨)
 
 async function loadPayments() {
   if (!TOKEN) return;
@@ -1168,12 +1339,12 @@ async function createPayment() {
   const sel = document.getElementById('pf-card');
   const opt = sel.options[sel.selectedIndex];
   if (!opt || !opt.value) { toast('카드를 선택해주세요'); return; }
-  const accountId = Number(opt.dataset.account);
+  const cardId = Number(opt.value);
   const cardType = opt.dataset.type;
   const purpose = cardType === 'BUSINESS' ? 'BUSINESS' : 'PERSONAL';
 
   const body = {
-    accountId: accountId,
+    cardId: cardId,
     amount: Number(document.getElementById('pf-amount').value),
     currency: document.getElementById('pf-currency').value || 'KRW',
     merchantName: document.getElementById('pf-merchant').value,

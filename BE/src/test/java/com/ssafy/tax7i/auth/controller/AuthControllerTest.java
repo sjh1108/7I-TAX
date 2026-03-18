@@ -76,13 +76,13 @@ class AuthControllerTest {
 
     @Test
     void login_200_PIN로그인성공() throws Exception {
-        given(authService.loginWithPin("test-ci", "123456"))
+        given(authService.loginWithPin("01012345678", "123456"))
                 .willReturn(new LoginResponse("access-token", "refresh-token"));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "ci", "test-ci",
+                                "phoneNumber", "01012345678",
                                 "pin", "123456"
                         ))))
                 .andExpect(status().isOk())
@@ -92,13 +92,13 @@ class AuthControllerTest {
 
     @Test
     void login_잘못된PIN_400() throws Exception {
-        given(authService.loginWithPin("test-ci", "999999"))
+        given(authService.loginWithPin("01012345678", "999999"))
                 .willThrow(new BusinessException(ErrorCode.PIN_INVALID));
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "ci", "test-ci",
+                                "phoneNumber", "01012345678",
                                 "pin", "999999"
                         ))))
                 .andExpect(status().isBadRequest())

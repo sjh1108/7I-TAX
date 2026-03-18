@@ -41,7 +41,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<SuccessResponse<LoginResponse>> login(
             @Valid @RequestBody PinLoginRequest request) {
-        LoginResponse response = authService.loginWithPin(request.ci(), request.pin());
+        LoginResponse response = authService.loginWithPin(request.phoneNumber(), request.pin());
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 

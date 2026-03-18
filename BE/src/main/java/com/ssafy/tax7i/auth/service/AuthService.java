@@ -78,8 +78,11 @@ public class AuthService {
     }
 
     @Transactional
-    public LoginResponse loginWithPin(String ci, String pin) {
-        User user = userRepository.findByCi(ci)
+    public LoginResponse loginWithPin(String phoneNumber, String pin) {
+        User user = userRepository.findByPhoneLast4(phoneNumber.substring(phoneNumber.length() - 4))
+                .stream()
+                .filter(u -> phoneNumber.equals(u.getPhoneNumber()))
+                .findFirst()
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         checkUserStatus(user);
