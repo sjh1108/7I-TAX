@@ -13,7 +13,9 @@ import com.ssafy.tax7i.payment.dto.*;
 import com.ssafy.tax7i.payment.entity.Payment;
 import com.ssafy.tax7i.payment.entity.PaymentStatus;
 import com.ssafy.tax7i.payment.repository.PaymentRepository;
+import com.ssafy.tax7i.bookentry.event.PaymentCapturedEvent; // 기택 추가: 결제 확정 시 장부 자동 생성 이벤트
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher; // 기택 추가
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class PaymentService {
     private final UserRepository userRepository;
     private final SsafyFinanceClient ssafyFinanceClient;
     private final PaymentStatusUpdater paymentStatusUpdater;
+    private final ApplicationEventPublisher eventPublisher; // 기택 추가: 장부 연동
 
     @Transactional
     public PaymentAuthorizeResponse authorize(Long userId, PaymentAuthorizeRequest request) {
@@ -97,7 +100,19 @@ public class PaymentService {
 
         account.releaseReservation(payment.getAmount());
         payment.capture();
-        long remainingBalance = Long.parseLong(withdrawResponse.rec().accountBalance());
+        String balanceStr = withdrawResponse.rec().accountBalance();
+        long remainingBalance = balanceStr != null ? Long.parseLong(balanceStr) : 0L;
+
+        // 기택 추가: 결제 확정 후 장부 자동 생성 이벤트 발행 (AFTER_COMMIT으로 결제 영향 없음)
+        eventPublisher.publishEvent(new PaymentCapturedEvent(
+                payment.getId(),
+                user.getId(),
+                payment.getAmount(),
+                payment.getMerchantName(),
+                payment.getMerchantCategoryCode(),
+                payment.getPurpose().name(),
+                payment.getCapturedAt()
+        ));
 
         return PaymentCaptureResponse.of(payment, remainingBalance);
     }

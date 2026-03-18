@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher; // 기택 추가: 장부 이벤트 mock
 
 import java.util.Optional;
 
@@ -39,6 +40,7 @@ class PaymentServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
     @Mock private PaymentStatusUpdater paymentStatusUpdater;
+    @Mock private ApplicationEventPublisher eventPublisher; // 기택 추가: 장부 연동 이벤트
 
     @InjectMocks
     private PaymentService paymentService;
