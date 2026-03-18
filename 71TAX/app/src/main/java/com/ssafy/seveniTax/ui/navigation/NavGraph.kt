@@ -1,29 +1,74 @@
 package com.ssafy.seveniTax.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navigation
 import com.ssafy.seveniTax.ui.auth.*
 import com.ssafy.seveniTax.ui.card.*
 import com.ssafy.seveniTax.ui.dashboard.DashboardScreen
 import com.ssafy.seveniTax.ui.pay.*
+import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
 @Composable
 fun NavGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = Route.Splash.path) {
+    NavHost(navController = navController, startDestination = "auth_graph") {
 
-        // ── Auth ──────────────────────────────────────────────
-        composable(Route.Splash.path)         { SplashScreen(navController) }
-        composable(Route.PhoneInput.path)     { PhoneInputScreen(navController) }
-        composable(Route.ResidentNumber.path) { ResidentNumberScreen(navController) }
-        composable(Route.CarrierSelect.path)  { CarrierSelectScreen(navController) }
-        composable(Route.NameInput.path)      { NameInputScreen(navController) }
-        composable(Route.Terms.path)          { TermsScreen(navController) }
-        composable(Route.SmsVerify.path)      { SmsVerifyScreen(navController) }
-        composable(Route.PinSetup.path)       { PinSetupScreen(navController) }
-        composable(Route.PinConfirm.path)     { PinConfirmScreen(navController) }
-        composable(Route.AuthSuccess.path)    { AuthSuccessScreen(navController) }
+        // ── Auth (ViewModel 공유) ────────────────────────────
+        navigation(startDestination = Route.Splash.path, route = "auth_graph") {
+
+            composable(Route.Splash.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                SplashScreen(navController, vm)
+            }
+            composable(Route.PhoneInput.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                PhoneInputScreen(navController, vm)
+            }
+            composable(Route.ResidentNumber.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                ResidentNumberScreen(navController, vm)
+            }
+            composable(Route.CarrierSelect.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                CarrierSelectScreen(navController, vm)
+            }
+            composable(Route.NameInput.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                NameInputScreen(navController, vm)
+            }
+            composable(Route.Terms.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                TermsScreen(navController, vm)
+            }
+            composable(Route.SmsVerify.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                SmsVerifyScreen(navController, vm)
+            }
+            composable(Route.PinSetup.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                PinSetupScreen(navController, vm)
+            }
+            composable(Route.PinConfirm.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                PinConfirmScreen(navController, vm)
+            }
+            composable(Route.AuthSuccess.path) {
+                AuthSuccessScreen(navController)
+            }
+        }
 
         // ── Pay ───────────────────────────────────────────────
         composable(Route.PayIntro.path)    { PayIntroScreen(navController) }

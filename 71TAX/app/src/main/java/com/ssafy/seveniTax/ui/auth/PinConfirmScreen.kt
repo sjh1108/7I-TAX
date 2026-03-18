@@ -25,8 +25,17 @@ fun PinConfirmScreen(
     LaunchedEffect(uiState.pinConfirm.length) {
         if (uiState.pinConfirm.length == 6) {
             viewModel.confirmPin(
-                onSuccess = { navController.navigate(Route.AuthSuccess.path) },
-                onMismatch = { viewModel.resetPinConfirm() }
+                onSuccess = {
+                    navController.navigate(Route.AuthSuccess.path)
+                },
+                onMismatch = {
+                    // 3회 실패 → PinSetup으로 강제 이동
+                    if (uiState.pinFailCount >= 3) {
+                        viewModel.resetPin()
+                        navController.popBackStack(Route.PinSetup.path, inclusive = true)
+                        navController.navigate(Route.PinSetup.path)
+                    }
+                }
             )
         }
     }
