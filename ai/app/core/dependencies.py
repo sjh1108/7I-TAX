@@ -2,6 +2,7 @@ import logging
 from functools import lru_cache
 
 from app.core.config import Settings
+from app.core.exceptions import AIServiceError
 from app.services.cache_service import SemanticCache
 from app.services.chat_service import ChatService
 from app.services.embedding_service import EmbeddingService
@@ -37,7 +38,11 @@ async def init_services() -> None:
 
     settings = get_settings()
 
-    _vectorstore_service = VectorStoreService(settings)
+    try:
+        _vectorstore_service = VectorStoreService(settings)
+    except Exception as e:
+        logger.error("VectorStoreService 초기화 실패: %s", e, exc_info=True)
+        raise
 
     bm25_index = BM25Index()
     all_docs = _vectorstore_service.get_all_documents()
@@ -54,8 +59,12 @@ async def init_services() -> None:
 
     embedding_service = EmbeddingService(settings)
     intent_classifier = IntentClassifier(INTENTS_PATH, embedding_service)
-    await intent_classifier.initialize()
-    logger.info("IntentClassifier 초기화 완료")
+    try:
+        await intent_classifier.initialize()
+        logger.info("IntentClassifier 초기화 완료")
+    except Exception as e:
+        logger.error("IntentClassifier 초기화 실패: %s", e, exc_info=True)
+        raise
 
     cache_service = (
         SemanticCache(
@@ -79,5 +88,5 @@ async def init_services() -> None:
 def get_chat_service() -> ChatService:
     """ChatService 인스턴스를 반환한다. FastAPI Depends()에서 사용."""
     if _chat_service is None:
-        raise RuntimeError("서비스가 초기화되지 않았습니다. init_services()를 먼저 호출하세요.")
+        raise AIServiceError("서비스가 초기화되지 않았습니다. 잠시 후 다시 시도해주세요.")
     return _chat_service
