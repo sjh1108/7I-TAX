@@ -21,12 +21,10 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Convert(converter = AesEncryptor.class)
-    @Column(nullable = false, unique = true, length = 512)
+    @Column(nullable = false, unique = true, length = 128)
     private String ci;
 
-    @Convert(converter = AesEncryptor.class)
-    @Column(nullable = false, unique = true, length = 512)
+    @Column(nullable = false, unique = true, length = 128)
     private String di;
 
     @Convert(converter = AesEncryptor.class)

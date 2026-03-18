@@ -10,6 +10,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.nio.ByteBuffer;
 import java.security.SecureRandom;
+import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
 @Slf4j
@@ -37,7 +38,7 @@ public class AesEncryptor implements AttributeConverter<String, String> {
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
-            byte[] encrypted = cipher.doFinal(attribute.getBytes());
+            byte[] encrypted = cipher.doFinal(attribute.getBytes(StandardCharsets.UTF_8));
 
             ByteBuffer buffer = ByteBuffer.allocate(iv.length + encrypted.length);
             buffer.put(iv);
@@ -63,7 +64,7 @@ public class AesEncryptor implements AttributeConverter<String, String> {
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
-            return new String(cipher.doFinal(encrypted));
+            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
         } catch (Exception e) {
             log.error("AES 복호화 실패", e);
             throw new RuntimeException("AES 복호화 실패", e);
