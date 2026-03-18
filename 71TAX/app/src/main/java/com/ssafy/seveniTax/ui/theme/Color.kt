@@ -13,3 +13,14 @@ val Success = Color(0xFF1D9E75)
 val Disabled = Color(0xFFD0D0E0)
 val CardGold = Color(0xFFD4A843)
 val CardBlue = Color(0xFF2B4C8C)
+
+// Logo
+val LogoPurple = Color(0xFF5655B9)
+val LogoTeal = Color(0xFF52D5BA)
+val LogoOrange = Color(0xFFFB6B18)
+
+// Wireframe
+val BrandPurple = Color(0xFF281C9D)
+val BoxPlaceholder = Color(0xFFD9D9D9)
+val KeypadBg = Color(0xFFD2D5DB)
+val Divider = Color(0xFFBCBCBC)

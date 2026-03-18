@@ -6,13 +6,16 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.Background
-import com.ssafy.seveniTax.ui.theme.Primary
-import com.ssafy.seveniTax.ui.theme.Typography
+import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 import com.ssafy.seveniTax.viewmodel.AutoLoginResult
 
@@ -42,14 +45,25 @@ fun SplashScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Primary),
+            .background(Background),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = "7iTAX",
-            style = Typography.headlineLarge,
-            color = Background,
-            fontSize = 48.sp
-        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = buildAnnotatedString {
+                    withStyle(SpanStyle(color = LogoPurple)) { append("7i") }
+                    withStyle(SpanStyle(color = LogoTeal)) { append("t") }
+                    withStyle(SpanStyle(color = LogoOrange)) { append("ax") }
+                },
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(16.dp))
+            Text(
+                text = "사용자 정보 확인 중...",
+                style = Typography.bodyMedium,
+                color = BrandPurple
+            )
+        }
     }
 }

@@ -1,5 +1,6 @@
 package com.ssafy.seveniTax.ui.auth
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
@@ -8,11 +9,10 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.ssafy.seveniTax.ui.components.PinIndicator
+import com.ssafy.seveniTax.ui.components.CodeBoxes
 import com.ssafy.seveniTax.ui.components.PinKeypad
-import com.ssafy.seveniTax.ui.components.TaxHeader
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.Typography
+import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
 @Composable
@@ -31,26 +31,50 @@ fun PinConfirmScreen(
         }
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TaxHeader(title = "PIN 확인", onBack = { navController.popBackStack() })
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+    ) {
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(32.dp)
+                .weight(1f)
+                .padding(horizontal = 24.dp, vertical = 32.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
-            Text("PIN을 한 번 더 입력해주세요.", style = Typography.bodyMedium)
-            PinIndicator(filled = uiState.pinConfirm.length)
-            if (uiState.errorMessage.isNotEmpty()) {
-                Text(uiState.errorMessage, style = Typography.bodySmall)
-            }
-            Spacer(modifier = Modifier.weight(1f))
-            PinKeypad(
-                onNumberClick = { viewModel.appendPinConfirm(it.toString()) },
-                onDelete = { viewModel.deletePinConfirm() }
+            Text(
+                text = "한번 더\n입력 해주세요",
+                style = Typography.headlineMedium,
+                modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            CodeBoxes(
+                code = uiState.pinConfirm,
+                length = 6,
+                masked = true
+            )
+
+            if (uiState.errorMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = uiState.errorMessage,
+                    style = Typography.bodySmall,
+                    color = Error
+                )
+            }
+
+            Spacer(modifier = Modifier.weight(1f))
         }
+
+        PinKeypad(
+            onNumberClick = { viewModel.appendPinConfirm(it.toString()) },
+            onDelete = { viewModel.deletePinConfirm() },
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(KeypadBg)
+                .padding(vertical = 8.dp)
+        )
     }
 }
