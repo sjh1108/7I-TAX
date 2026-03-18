@@ -100,7 +100,8 @@ public class PaymentService {
 
         account.releaseReservation(payment.getAmount());
         payment.capture();
-        long remainingBalance = Long.parseLong(withdrawResponse.rec().accountBalance());
+        String balanceStr = withdrawResponse.rec().accountBalance();
+        long remainingBalance = balanceStr != null ? Long.parseLong(balanceStr) : 0L;
 
         // 기택 추가: 결제 확정 후 장부 자동 생성 이벤트 발행 (AFTER_COMMIT으로 결제 영향 없음)
         eventPublisher.publishEvent(new PaymentCapturedEvent(

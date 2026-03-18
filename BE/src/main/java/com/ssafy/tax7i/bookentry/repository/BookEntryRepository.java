@@ -38,4 +38,11 @@ public interface BookEntryRepository extends JpaRepository<BookEntry, Long> {
     Long sumDeductiblePurchaseVat(@Param("userId") Long userId,
                                   @Param("start") LocalDate start,
                                   @Param("end") LocalDate end);
+
+    @Query("SELECT COALESCE(SUM(b.expenseAmount), 0) FROM BookEntry b " +
+            "WHERE b.userId = :userId AND b.categoryName = :categoryName " +
+            "AND YEAR(b.entryDate) = :year")
+    Long sumAmountByUserIdAndCategoryNameAndYear(@Param("userId") Long userId,
+                                                  @Param("categoryName") String categoryName,
+                                                  @Param("year") int year);
 }
