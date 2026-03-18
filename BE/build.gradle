@@ -43,5 +43,16 @@ dependencies {
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'integration'
+	}
+}
+
+tasks.register('integrationTest', Test) {
+	description = 'Runs integration tests against real external APIs'
+	group = 'verification'
+	shouldRunAfter tasks.named('test')
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
 }
