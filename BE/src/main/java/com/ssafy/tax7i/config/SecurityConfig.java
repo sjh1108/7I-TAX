@@ -30,6 +30,7 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/consents").authenticated()
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/payments/authorize", "/api/payments/*/capture").permitAll()
                         .requestMatchers("/api/tax-calendar/**").permitAll()

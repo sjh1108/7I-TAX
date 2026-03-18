@@ -1,7 +1,7 @@
 package com.ssafy.tax7i.payment.entity;
 
 import com.ssafy.tax7i.auth.domain.User;
-import com.ssafy.tax7i.banking.entity.Account;
+import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -26,8 +26,8 @@ public class Payment extends BaseTimeEntity {
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "account_id", nullable = false)
-    private Account account;
+    @JoinColumn(name = "card_id", nullable = false)
+    private Card card;
 
     @Column(nullable = false)
     private Long amount;
@@ -54,8 +54,6 @@ public class Payment extends BaseTimeEntity {
 
     private String authorizationCode;
 
-    private Long transactionId;
-
     private Long cancelledAmount;
 
     private String cancelReason;
@@ -67,12 +65,12 @@ public class Payment extends BaseTimeEntity {
     private LocalDateTime cancelledAt;
 
     @Builder
-    public Payment(User user, Account account, Long amount, String currency,
+    public Payment(User user, Card card, Long amount, String currency,
                    String merchantName, String merchantCategoryCode,
                    PaymentMethod paymentMethod, PaymentPurpose purpose,
                    String authorizationCode) {
         this.user = user;
-        this.account = account;
+        this.card = card;
         this.amount = amount;
         this.currency = currency;
         this.merchantName = merchantName;
@@ -90,17 +88,16 @@ public class Payment extends BaseTimeEntity {
     }
 
     public void cancel(Long cancelAmount, String reason) {
-        this.status = PaymentStatus.CANCELLED;
-        this.cancelledAmount = cancelAmount;
+        this.cancelledAmount = (this.cancelledAmount != null ? this.cancelledAmount : 0L) + cancelAmount;
         this.cancelReason = reason;
         this.cancelledAt = LocalDateTime.now();
+        if (this.cancelledAmount >= this.amount) {
+            this.status = PaymentStatus.CANCELLED;
+        }
     }
 
     public void decline() {
+        if (this.status != PaymentStatus.AUTHORIZED) return;
         this.status = PaymentStatus.DECLINED;
-    }
-
-    public void linkTransaction(Long txId) {
-        this.transactionId = txId;
     }
 }

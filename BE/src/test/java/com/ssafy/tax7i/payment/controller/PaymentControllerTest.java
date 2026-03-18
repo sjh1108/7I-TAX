@@ -52,7 +52,7 @@ class PaymentControllerTest {
         mockMvc.perform(post("/api/payments/authorize")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "accountId", 1,
+                                "cardId", 1,
                                 "amount", 10000,
                                 "merchantName", "스타벅스",
                                 "paymentMethod", "OFFLINE",
@@ -81,7 +81,7 @@ class PaymentControllerTest {
         mockMvc.perform(post("/api/payments/authorize")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "accountId", 1,
+                                "cardId", 1,
                                 "amount", 10000,
                                 "merchantName", "스타벅스",
                                 "paymentMethod", "OFFLINE",
@@ -97,14 +97,14 @@ class PaymentControllerTest {
     void capture_200_결제확정() throws Exception {
         PaymentCaptureResponse mockResponse = new PaymentCaptureResponse(
                 1L, PaymentStatus.CAPTURED,
-                new PaymentCaptureResponse.AccountDebit(1L, 10000L, 490000L),
+                new PaymentCaptureResponse.CardDebit(1L, 10000L, 490000L),
                 LocalDateTime.now());
         given(paymentService.capture(any(), eq(1L))).willReturn(mockResponse);
 
         mockMvc.perform(post("/api/payments/1/capture"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CAPTURED"))
-                .andExpect(jsonPath("$.data.accountDebited.remainingBalance").value(490000));
+                .andExpect(jsonPath("$.data.cardDebited.remainingBalance").value(490000));
     }
 
     @Test
@@ -151,7 +151,7 @@ class PaymentControllerTest {
         PaymentDetailResponse response = new PaymentDetailResponse(
                 1L, 1L, 15000L, "KRW", "스타벅스", "5812",
                 PaymentMethod.OFFLINE, PaymentPurpose.BUSINESS, PaymentStatus.CAPTURED,
-                "AUTH1234", null, null, null,
+                "AUTH1234", null, null,
                 LocalDateTime.now(), LocalDateTime.now(), null, LocalDateTime.now());
         given(paymentService.getPayment(any(), eq(1L))).willReturn(response);
 

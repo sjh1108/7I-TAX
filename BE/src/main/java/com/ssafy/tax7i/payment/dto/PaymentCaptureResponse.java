@@ -8,11 +8,11 @@ import java.time.LocalDateTime;
 public record PaymentCaptureResponse(
         Long paymentId,
         PaymentStatus status,
-        AccountDebit accountDebited,
+        CardDebit cardDebited,
         LocalDateTime capturedAt
 ) {
-    public record AccountDebit(
-            Long accountId,
+    public record CardDebit(
+            Long cardId,
             Long debitedAmount,
             Long remainingBalance
     ) {
@@ -22,8 +22,8 @@ public record PaymentCaptureResponse(
         return new PaymentCaptureResponse(
                 payment.getId(),
                 payment.getStatus(),
-                new AccountDebit(
-                        payment.getAccount().getId(),
+                new CardDebit(
+                        payment.getCard().getId(),
                         payment.getAmount(),
                         remainingBalance
                 ),

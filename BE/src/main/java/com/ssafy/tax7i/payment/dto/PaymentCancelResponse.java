@@ -9,7 +9,7 @@ public record PaymentCancelResponse(
         Long paymentId,
         PaymentStatus status,
         Long cancelledAmount,
-        Long refundedTo,
+        Long refundedToCardId,
         LocalDateTime cancelledAt
 ) {
     public static PaymentCancelResponse from(Payment payment) {
@@ -17,7 +17,7 @@ public record PaymentCancelResponse(
                 payment.getId(),
                 payment.getStatus(),
                 payment.getCancelledAmount(),
-                payment.getAccount().getId(),
+                payment.getCard().getId(),
                 payment.getCancelledAt()
         );
     }

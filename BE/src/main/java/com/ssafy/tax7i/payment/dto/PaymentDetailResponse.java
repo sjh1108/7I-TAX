@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 
 public record PaymentDetailResponse(
         Long paymentId,
-        Long accountId,
+        Long cardId,
         Long amount,
         String currency,
         String merchantName,
@@ -15,7 +15,6 @@ public record PaymentDetailResponse(
         PaymentPurpose purpose,
         PaymentStatus status,
         String authorizationCode,
-        Long transactionId,
         Long cancelledAmount,
         String cancelReason,
         LocalDateTime authorizedAt,
@@ -26,7 +25,7 @@ public record PaymentDetailResponse(
     public static PaymentDetailResponse from(Payment payment) {
         return new PaymentDetailResponse(
                 payment.getId(),
-                payment.getAccount().getId(),
+                payment.getCard().getId(),
                 payment.getAmount(),
                 payment.getCurrency(),
                 payment.getMerchantName(),
@@ -35,7 +34,6 @@ public record PaymentDetailResponse(
                 payment.getPurpose(),
                 payment.getStatus(),
                 payment.getAuthorizationCode(),
-                payment.getTransactionId(),
                 payment.getCancelledAmount(),
                 payment.getCancelReason(),
                 payment.getAuthorizedAt(),

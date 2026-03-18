@@ -8,8 +8,7 @@ public record CardResponse(
         String cardName,
         CardType cardType,
         String last4Digits,
-        Boolean isDefault,
-        Long accountId
+        Boolean isDefault
 ) {
     public static CardResponse from(Card card) {
         return new CardResponse(
@@ -17,8 +16,7 @@ public record CardResponse(
                 card.getCardName(),
                 card.getCardType(),
                 card.getLast4Digits(),
-                card.getIsDefault(),
-                card.getAccountId()
+                card.getIsDefault()
         );
     }
 }

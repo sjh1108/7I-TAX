@@ -1,11 +1,15 @@
 package com.ssafy.tax7i.auth.domain;
 
+import com.ssafy.tax7i.global.crypto.AesEncryptor;
 import com.ssafy.tax7i.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -17,23 +21,89 @@ public class User extends BaseTimeEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
-    private String ssafyUserId;
+    @Convert(converter = AesEncryptor.class)
+    @Column(nullable = false, unique = true, length = 512)
+    private String ci;
 
-    private String email;
+    @Convert(converter = AesEncryptor.class)
+    @Column(nullable = false, unique = true, length = 512)
+    private String di;
 
+    @Convert(converter = AesEncryptor.class)
+    @Column(length = 512)
     private String name;
 
     private String ssafyUserKey;
 
+    private LocalDate birthDate;
+
+    private String gender;
+
+    @Convert(converter = AesEncryptor.class)
+    @Column(length = 512)
+    private String phoneNumber;
+
+    @Column(length = 4)
+    private String phoneLast4;
+
+    @Column(length = 200)
+    private String pinHash;
+
+    @Column(nullable = false)
+    private Boolean biometricEnabled = false;
+
+    private String deviceId;
+
+    @Column(nullable = false)
+    private Boolean kycVerified = false;
+
+    @Column(nullable = false)
+    private Boolean isBusiness = false;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status = UserStatus.ACTIVE;
+
+    private LocalDateTime lastLoginAt;
+
     @Builder
-    public User(String ssafyUserId, String email, String name) {
-        this.ssafyUserId = ssafyUserId;
-        this.email = email;
+    public User(String ci, String di, String name,
+                LocalDate birthDate, String gender,
+                String phoneNumber, String phoneLast4) {
+        this.ci = ci;
+        this.di = di;
         this.name = name;
+        this.birthDate = birthDate;
+        this.gender = gender;
+        this.phoneNumber = phoneNumber;
+        this.phoneLast4 = phoneLast4;
     }
 
     public void registerFinanceKey(String userKey) {
         this.ssafyUserKey = userKey;
+    }
+
+    public void setupPin(String pinHash) {
+        this.pinHash = pinHash;
+    }
+
+    public void updateLastLogin() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
+    public void markKycVerified() {
+        this.kycVerified = true;
+    }
+
+    public void markBusiness() {
+        this.isBusiness = true;
+    }
+
+    public void suspend() {
+        this.status = UserStatus.SUSPENDED;
+    }
+
+    public void withdraw() {
+        this.status = UserStatus.WITHDRAWN;
     }
 }

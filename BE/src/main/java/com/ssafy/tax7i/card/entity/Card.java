@@ -20,8 +20,6 @@ public class Card extends BaseTimeEntity {
     @Column(nullable = false)
     private Long userId;
 
-    private Long accountId;
-
     @Column(nullable = false, length = 50)
     private String cardName;
 
@@ -35,13 +33,15 @@ public class Card extends BaseTimeEntity {
     @Column(nullable = false)
     private Boolean isDefault;
 
+    private String ssafyAccountNo;
+
     @Builder
-    public Card(Long userId, Long accountId, String cardName, CardType cardType, String last4Digits) {
+    public Card(Long userId, String cardName, CardType cardType, String last4Digits, String ssafyAccountNo) {
         this.userId = userId;
-        this.accountId = accountId;
         this.cardName = cardName;
         this.cardType = cardType;
         this.last4Digits = last4Digits;
+        this.ssafyAccountNo = ssafyAccountNo;
         this.isDefault = false;
     }
 
@@ -49,7 +49,7 @@ public class Card extends BaseTimeEntity {
         this.isDefault = isDefault;
     }
 
-    public void setAccountId(Long accountId) {
-        this.accountId = accountId;
+    public void setSsafyAccountNo(String ssafyAccountNo) {
+        this.ssafyAccountNo = ssafyAccountNo;
     }
 }
