@@ -48,7 +48,7 @@ fun SplashScreen(
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Image(
-                painter = painterResource(id = R.drawable.logo),
+                painter = painterResource(id = R.drawable.logo_main),
                 contentDescription = "7iTAX 로고",
                 modifier = Modifier.width(200.dp)
             )
