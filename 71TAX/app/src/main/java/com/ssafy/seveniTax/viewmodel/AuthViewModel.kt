@@ -2,6 +2,7 @@ package com.ssafy.seveniTax.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import android.util.Log
 import com.ssafy.seveniTax.data.model.auth.ConsentItem
 import com.ssafy.seveniTax.data.model.auth.TermItem
 import com.ssafy.seveniTax.data.model.auth.VerifyIdentityRequest
@@ -105,7 +106,8 @@ class AuthViewModel @Inject constructor(
             }
             onSuccess()
         } catch (e: Exception) {
-            _uiState.update { it.copy(isLoading = false, errorMessage = "본인인증에 실패했습니다") }
+            Log.e("AuthViewModel", "verifyIdentity 실패", e)
+            _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "본인인증에 실패했습니다") }
         }
     }
 
@@ -141,7 +143,8 @@ class AuthViewModel @Inject constructor(
                     _uiState.update { it.copy(isLoading = false, authComplete = true) }
                     onSuccess()
                 } catch (e: Exception) {
-                    _uiState.update { it.copy(isLoading = false, errorMessage = "PIN 설정에 실패했습니다") }
+                    Log.e("AuthViewModel", "setupPin 실패", e)
+                    _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "PIN 설정에 실패했습니다") }
                 }
             }
         } else {
@@ -209,7 +212,8 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
             onSuccess()
         } catch (e: Exception) {
-            _uiState.update { it.copy(isLoading = false, errorMessage = "약관 동의에 실패했습니다") }
+            Log.e("AuthViewModel", "submitConsents 실패", e)
+            _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "약관 동의에 실패했습니다") }
         }
     }
 
@@ -232,8 +236,9 @@ class AuthViewModel @Inject constructor(
             _uiState.update { it.copy(isLoading = false) }
             onSuccess()
         } catch (e: Exception) {
+            Log.e("AuthViewModel", "loginWithPin 실패", e)
             _uiState.update {
-                it.copy(isLoading = false, loginPin = "", errorMessage = "PIN이 올바르지 않습니다")
+                it.copy(isLoading = false, loginPin = "", errorMessage = e.message ?: "PIN이 올바르지 않습니다")
             }
         }
     }
