@@ -10,6 +10,7 @@ import androidx.navigation.navigation
 import com.ssafy.seveniTax.ui.auth.*
 import com.ssafy.seveniTax.ui.card.*
 import com.ssafy.seveniTax.ui.dashboard.DashboardScreen
+import com.ssafy.seveniTax.ui.home.HomeScreen
 import com.ssafy.seveniTax.ui.pay.*
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
@@ -69,6 +70,9 @@ fun NavGraph(navController: NavHostController) {
                 AuthSuccessScreen(navController)
             }
         }
+
+        // ── Home ──────────────────────────────────────────────
+        composable(Route.Home.path) { HomeScreen(navController) }
 
         // ── Pay ───────────────────────────────────────────────
         composable(Route.PayIntro.path)    { PayIntroScreen(navController) }
