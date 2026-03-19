@@ -1,25 +1,20 @@
 package com.ssafy.seveniTax.ui.pay
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.ssafy.seveniTax.ui.components.CodeBoxes
+import com.ssafy.seveniTax.ui.components.PinKeypad
 import com.ssafy.seveniTax.ui.theme.*
 
 @Composable
@@ -27,6 +22,17 @@ fun PayVerifyScreen(
     onBack: () -> Unit,
     onNext: () -> Unit
 ) {
+    var pin by remember { mutableStateOf("") }
+    var errorMessage by remember { mutableStateOf("") }
+
+    LaunchedEffect(pin.length) {
+        if (pin.length == 6) {
+            // TODO: 서버 비밀번호 검증 연동
+            // 현재는 Mock으로 바로 통과
+            onNext()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -47,7 +53,7 @@ fun PayVerifyScreen(
                 )
             }
             Text(
-                text = "본인 인증",
+                text = "비밀번호 인증",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = TextPrimary
@@ -57,81 +63,51 @@ fun PayVerifyScreen(
         // ── 본문 ──
         Column(
             modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 24.dp)
+                .weight(1f)
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                text = "서비스 이용을 위해\n본인 인증을 진행해 주세요.",
+                text = "간편 비밀번호를\n입력해 주세요",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.Bold,
                 color = TextPrimary,
-                lineHeight = 32.sp
+                lineHeight = 32.sp,
+                modifier = Modifier.fillMaxWidth()
             )
 
-            Spacer(modifier = Modifier.height(40.dp))
+            Spacer(modifier = Modifier.weight(1f))
 
-            // PASS 인증
-            VerifyOptionRow(
-                label = "PASS 인증",
-                onClick = onNext // TODO: 실제 PASS 인증 연동
+            CodeBoxes(
+                code = pin,
+                length = 6,
+                masked = true
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
+            if (errorMessage.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(16.dp))
+                Text(
+                    text = errorMessage,
+                    fontSize = 13.sp,
+                    color = Error
+                )
+            }
 
-            // 간편 인증
-            VerifyOptionRow(
-                label = "간편 인증",
-                onClick = onNext // TODO: 실제 간편 인증 연동
-            )
+            Spacer(modifier = Modifier.weight(1f))
         }
-    }
-}
 
-@Composable
-private fun VerifyOptionRow(
-    label: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .border(1.dp, Divider, RoundedCornerShape(8.dp))
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        // 아바타 아이콘
-        Box(
+        // ── 키패드 ──
+        PinKeypad(
+            onNumberClick = { digit ->
+                if (pin.length < 6) pin += digit
+            },
+            onDelete = {
+                if (pin.isNotEmpty()) pin = pin.dropLast(1)
+            },
             modifier = Modifier
-                .size(40.dp)
-                .clip(CircleShape)
-                .background(Surface),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = androidx.compose.ui.res.painterResource(com.ssafy.seveniTax.R.drawable.ic_29),
-                contentDescription = null,
-                tint = TextSecondary,
-                modifier = Modifier.size(24.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Text(
-            text = label,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextPrimary,
-            modifier = Modifier.weight(1f)
-        )
-
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = "이동",
-            tint = TextSecondary,
-            modifier = Modifier.size(24.dp)
+                .fillMaxWidth()
+                .background(KeypadBg)
+                .padding(vertical = 8.dp)
         )
     }
 }

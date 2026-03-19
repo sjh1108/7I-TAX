@@ -61,21 +61,14 @@ fun PayCompleteScreen(navController: NavController) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
-            // 체크 아이콘
-            Box(
+            // 완료 일러스트
+            androidx.compose.foundation.Image(
+                painter = androidx.compose.ui.res.painterResource(com.ssafy.seveniTax.R.drawable.ill_01),
+                contentDescription = "가입 완료",
                 modifier = Modifier
-                    .size(80.dp)
-                    .clip(CircleShape)
-                    .background(LogoPurple),
-                contentAlignment = Alignment.Center
-            ) {
-                Icon(
-                    Icons.Filled.Check,
-                    contentDescription = "완료",
-                    tint = Color.White,
-                    modifier = Modifier.size(40.dp)
-                )
-            }
+                    .fillMaxWidth()
+                    .height(180.dp)
+            )
 
             Spacer(modifier = Modifier.height(32.dp))
 
