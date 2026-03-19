@@ -3,6 +3,8 @@ package com.ssafy.tax7i.taxcalendar.service;
 import com.ssafy.tax7i.taxcalendar.dto.TaxDeadlineResponse;
 import org.springframework.stereotype.Service;
 
+import org.springframework.cache.annotation.Cacheable;
+
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -23,6 +25,7 @@ public class TaxCalendarService {
             new TaxSchedule("부가가치세 예정신고 (2기)", "7~9월 매출·매입 부가세 예정신고 및 납부", 10, 25)
     );
 
+    @Cacheable(value = "taxDeadlines", key = "#today")
     public List<TaxDeadlineResponse> getUpcomingDeadlines(LocalDate today) {
         List<TaxDeadlineResponse> result = new ArrayList<>();
         int year = today.getYear();

@@ -6,12 +6,13 @@ import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.service.TaxEstimationService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -28,38 +29,42 @@ public class ExportService {
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end = LocalDate.of(year, 12, 31);
 
-        List<BookEntry> entries = bookEntryRepository.findByUserIdAndEntryDateBetween(
-                userId, start, end, Pageable.unpaged()
-        ).getContent();
-
         StringBuilder sb = new StringBuilder();
         // BOM is added by controller // UTF-8 BOM for Excel
         sb.append("일자,계정과목,거래내용,거래처,수입금액,수입부가세,비용금액,비용부가세,자산증감금액,자산부가세,사업용여부,비고\n");
 
-        for (BookEntry e : entries) {
-            sb.append(e.getEntryDate()).append(',');
-            sb.append(csvEscape(e.getCategoryName())).append(',');
-            sb.append(csvEscape(e.getDescription())).append(',');
-            sb.append(csvEscape(e.getMerchantName())).append(',');
+        int page = 0;
+        Page<BookEntry> entryPage;
+        do {
+            entryPage = bookEntryRepository.findByUserIdAndEntryDateBetween(
+                    userId, start, end, PageRequest.of(page, 500, Sort.by("entryDate")));
 
-            if (e.getEntryType() == EntryType.INCOME) {
-                sb.append(e.getIncomeAmount()).append(',');
-                sb.append(e.getVatAmount()).append(',');
-                sb.append("0,0,0,0,");
-            } else if (e.getEntryType() == EntryType.EXPENSE) {
-                sb.append("0,0,");
-                sb.append(e.getExpenseAmount()).append(',');
-                sb.append(e.getVatAmount()).append(',');
-                sb.append("0,0,");
-            } else { // ASSET
-                sb.append("0,0,0,0,");
-                sb.append(e.getFixedAssetAmount()).append(',');
-                sb.append(e.getVatAmount()).append(',');
+            for (BookEntry e : entryPage.getContent()) {
+                sb.append(e.getEntryDate()).append(',');
+                sb.append(csvEscape(e.getCategoryName())).append(',');
+                sb.append(csvEscape(e.getDescription())).append(',');
+                sb.append(csvEscape(e.getMerchantName())).append(',');
+
+                if (e.getEntryType() == EntryType.INCOME) {
+                    sb.append(e.getIncomeAmount()).append(',');
+                    sb.append(e.getVatAmount()).append(',');
+                    sb.append("0,0,0,0,");
+                } else if (e.getEntryType() == EntryType.EXPENSE) {
+                    sb.append("0,0,");
+                    sb.append(e.getExpenseAmount()).append(',');
+                    sb.append(e.getVatAmount()).append(',');
+                    sb.append("0,0,");
+                } else { // ASSET
+                    sb.append("0,0,0,0,");
+                    sb.append(e.getFixedAssetAmount()).append(',');
+                    sb.append(e.getVatAmount()).append(',');
+                }
+
+                sb.append(e.getIsBusinessExpense() ? "사업용" : "개인용").append(',');
+                sb.append(csvEscape(e.getNote())).append('\n');
             }
-
-            sb.append(e.getIsBusinessExpense() ? "사업용" : "개인용").append(',');
-            sb.append(csvEscape(e.getNote())).append('\n');
-        }
+            page++;
+        } while (entryPage.hasNext());
 
         return sb.toString();
     }
@@ -77,23 +82,27 @@ public class ExportService {
             end = LocalDate.of(year, 12, 31);
         }
 
-        List<BookEntry> entries = bookEntryRepository.findByUserIdAndEntryDateBetween(
-                userId, start, end, Pageable.unpaged()
-        ).getContent();
-
         long salesAmount = 0, salesVat = 0;
         long purchaseAmount = 0, purchaseVat = 0;
 
-        for (BookEntry e : entries) {
-            if (!e.getConfirmed() || !e.getIsBusinessExpense()) continue;
-            if (e.getEntryType() == EntryType.INCOME) {
-                salesAmount += e.getSupplyPrice();
-                salesVat += e.getVatAmount();
-            } else if (e.getEntryType() == EntryType.EXPENSE && e.getIsVatDeductible()) {
-                purchaseAmount += e.getSupplyPrice();
-                purchaseVat += e.getVatAmount();
+        int page = 0;
+        Page<BookEntry> entryPage;
+        do {
+            entryPage = bookEntryRepository.findByUserIdAndEntryDateBetween(
+                    userId, start, end, PageRequest.of(page, 500, Sort.by("entryDate")));
+
+            for (BookEntry e : entryPage.getContent()) {
+                if (!e.getConfirmed() || !e.getIsBusinessExpense()) continue;
+                if (e.getEntryType() == EntryType.INCOME) {
+                    salesAmount += e.getSupplyPrice();
+                    salesVat += e.getVatAmount();
+                } else if (e.getEntryType() == EntryType.EXPENSE && e.getIsVatDeductible()) {
+                    purchaseAmount += e.getSupplyPrice();
+                    purchaseVat += e.getVatAmount();
+                }
             }
-        }
+            page++;
+        } while (entryPage.hasNext());
 
         long vatPayable = salesVat - purchaseVat;
 

@@ -7,7 +7,6 @@ import com.ssafy.tax7i.classification.dto.ClassificationResult.EntertainmentLimi
 import com.ssafy.tax7i.classification.entity.MccTaxRule;
 import com.ssafy.tax7i.classification.entity.Merchant;
 import com.ssafy.tax7i.classification.entity.MerchantKeywordMapping;
-import com.ssafy.tax7i.classification.repository.MccTaxRuleRepository;
 import com.ssafy.tax7i.classification.repository.MerchantKeywordMappingRepository;
 import com.ssafy.tax7i.classification.repository.MerchantRepository;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +36,7 @@ public class TaxClassificationService {
     private static final long DEFAULT_ENTERTAINMENT_ANNUAL_LIMIT = 12_000_000L;
 
     private final MerchantRepository merchantRepository;
-    private final MccTaxRuleRepository mccTaxRuleRepository;
+    private final ClassificationCacheService classificationCacheService;
     private final MerchantKeywordMappingRepository keywordMappingRepository;
     private final EntertainmentLimitService entertainmentLimitService;
 
@@ -55,7 +54,7 @@ public class TaxClassificationService {
         }
 
         // 2. 해당 MCC의 룰 조회
-        List<MccTaxRule> rules = mccTaxRuleRepository.findByMccOrderByTierAscIdAsc(mcc);
+        List<MccTaxRule> rules = classificationCacheService.getMccRules(mcc);
         if (rules.isEmpty()) {
             log.warn("분류 룰 없음: mcc={}, merchant={}", mcc, request.merchantName());
             return ClassificationResult.needsConfirmation(
@@ -116,7 +115,7 @@ public class TaxClassificationService {
             return request.mcc().trim();
         }
         // 가맹점명으로 정확 매칭
-        return merchantRepository.findFirstByMerchantName(request.merchantName())
+        return classificationCacheService.getMerchantByName(request.merchantName())
                 .map(Merchant::getMcc)
                 // 부분 매칭
                 .or(() -> merchantRepository.findByMerchantNameContainedIn(request.merchantName())

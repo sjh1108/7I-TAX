@@ -2,6 +2,8 @@ package com.ssafy.tax7i.card.repository;
 
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardType;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -16,4 +18,6 @@ public interface CardRepository extends JpaRepository<Card, Long> {
     Optional<Card> findByIdAndUserId(Long id, Long userId);
 
     Optional<Card> findByUserIdAndIsDefaultTrue(Long userId);
+
+    Page<Card> findByUserId(Long userId, Pageable pageable);
 }

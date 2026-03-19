@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "user_consents",
-        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "consentType"}))
+        uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "consentType"}),
+        indexes = @Index(name = "idx_consent_user_id", columnList = "user_id"))
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class UserConsent extends BaseTimeEntity {

@@ -32,8 +32,7 @@ class ConsentServiceTest {
     void saveConsents_신규동의_저장() {
         User user = createUser(1L);
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(userConsentRepository.findByUserIdAndConsentType(1L, ConsentType.SERVICE))
-                .willReturn(Optional.empty());
+        given(userConsentRepository.findByUserId(1L)).willReturn(List.of());
 
         consentService.saveConsents(1L, List.of(
                 new ConsentRequest(ConsentType.SERVICE, true)
@@ -52,14 +51,14 @@ class ConsentServiceTest {
                 .build();
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(userConsentRepository.findByUserIdAndConsentType(1L, ConsentType.SERVICE))
-                .willReturn(Optional.of(existing));
+        given(userConsentRepository.findByUserId(1L)).willReturn(List.of(existing));
 
         consentService.saveConsents(1L, List.of(
                 new ConsentRequest(ConsentType.SERVICE, false)
         ));
 
-        // revoke가 호출되었는지 검증 (consented가 false로 변경)
+        // revoke가 호출되었는지 검증 (consented가 false로 변경 — save 호출 없이 dirty checking)
+        then(userConsentRepository).should().findByUserId(1L);
         then(userConsentRepository).shouldHaveNoMoreInteractions();
     }
 

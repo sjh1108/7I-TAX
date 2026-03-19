@@ -9,6 +9,13 @@ spring:
     properties:
       hibernate:
         format_sql: true
+        jdbc:
+          batch_size: 20
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        default_batch_fetch_size: 100
+    open-in-view: false
 
 jwt:
   access-expiration: 1800000

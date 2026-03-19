@@ -99,6 +99,7 @@ public class AuthService {
         return issueTokens(user);
     }
 
+    @Transactional(readOnly = true)
     public LoginResponse reissue(String refreshToken) {
         if (!jwtTokenProvider.validateToken(refreshToken)) {
             throw new BusinessException(ErrorCode.REFRESH_TOKEN_INVALID);

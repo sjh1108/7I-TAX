@@ -6,6 +6,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.cache.annotation.Cacheable;
+
 import java.time.LocalDate;
 
 /**
@@ -24,6 +26,7 @@ public class EntertainmentLimitService {
     /**
      * 해당 연도의 접대비 사용 누적 금액 조회
      */
+    @Cacheable(value = "entertainmentUsed", key = "#userId")
     public long getUsedEntertainmentAmount(Long userId) {
         int currentYear = LocalDate.now().getYear();
         try {

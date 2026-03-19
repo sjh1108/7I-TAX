@@ -32,9 +32,8 @@ public class AuthController {
 
     @PostMapping("/setup-pin")
     public ResponseEntity<SuccessResponse<LoginResponse>> setupPin(
-            @Valid @RequestBody PinSetupRequest request,
-            @RequestParam Long userId) {
-        LoginResponse response = authService.setupPin(userId, request.pin());
+            @Valid @RequestBody PinSetupRequest request) {
+        LoginResponse response = authService.setupPin(request.userId(), request.pin());
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
