@@ -12,6 +12,10 @@ spring:
       host: localhost
       port: 6379
 
+app:
+  encryption:
+    aes-key: tax7i-test-aes256-key-32bytes!!
+
 jwt:
   secret: test-secret-key-must-be-at-least-32-bytes-long!!
   access-expiration: 1800000

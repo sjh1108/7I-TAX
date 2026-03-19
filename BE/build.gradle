@@ -8,6 +8,9 @@ group = 'com.ssafy'
 version = '0.0.1-SNAPSHOT'
 description = 'SSAFY 14th, 7I-Tax'
 
+// Redirect build output to ASCII-safe path to avoid ClassNotFoundException on Korean paths
+layout.buildDirectory = file("C:/tmp/tax7i-build")
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
@@ -46,6 +49,7 @@ tasks.named('test') {
 	useJUnitPlatform {
 		excludeTags 'integration'
 	}
+	jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=UTF-8'
 }
 
 tasks.register('integrationTest', Test) {

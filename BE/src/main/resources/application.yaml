@@ -14,6 +14,10 @@ jwt:
   access-expiration: 1800000
   refresh-expiration: 604800000
 
+app:
+  encryption:
+    aes-key: ${AES_256_KEY}
+
 ssafy:
   finance:
     base-url: https://finopenapi.ssafy.io/ssafy/api/v1/edu
