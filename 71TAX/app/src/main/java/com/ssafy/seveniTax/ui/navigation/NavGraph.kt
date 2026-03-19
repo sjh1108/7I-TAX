@@ -9,8 +9,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.navigation
 import com.ssafy.seveniTax.ui.auth.*
 import com.ssafy.seveniTax.ui.card.*
-import com.ssafy.seveniTax.ui.dashboard.DashboardScreen
-import com.ssafy.seveniTax.ui.home.HomeScreen
+import com.ssafy.seveniTax.ui.main.MainScreen
 import com.ssafy.seveniTax.ui.pay.*
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
@@ -66,8 +65,8 @@ fun NavGraph(navController: NavHostController) {
             }
         }
 
-        // ── Home ──────────────────────────────────────────────
-        composable(Route.Home.path) { HomeScreen(navController) }
+        // ── Main (탭바 포함) ─────────────────────────────────
+        composable(Route.Main.path) { MainScreen(navController) }
 
         // ── Pay ───────────────────────────────────────────────
         composable(Route.PayIntro.path)    { PayIntroScreen(navController) }
@@ -88,8 +87,5 @@ fun NavGraph(navController: NavHostController) {
         composable(Route.CardSms.path)         { CardSmsScreen(navController) }
         composable(Route.CardComplete.path)    { CardCompleteScreen(navController) }
         composable(Route.CardChange.path)      { CardChangeScreen(navController) }
-
-        // ── Dashboard (WebView) ───────────────────────────────
-        composable(Route.Dashboard.path) { DashboardScreen(navController) }
     }
 }

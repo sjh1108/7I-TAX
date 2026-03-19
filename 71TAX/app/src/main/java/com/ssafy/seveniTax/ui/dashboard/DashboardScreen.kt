@@ -23,6 +23,7 @@ import com.ssafy.seveniTax.viewmodel.DashboardViewModel
 @Composable
 fun DashboardScreen(
     navController: NavController,
+    modifier: Modifier = Modifier,
     viewModel: DashboardViewModel = hiltViewModel()
 ) {
     val mainHandler = remember { Handler(Looper.getMainLooper()) }

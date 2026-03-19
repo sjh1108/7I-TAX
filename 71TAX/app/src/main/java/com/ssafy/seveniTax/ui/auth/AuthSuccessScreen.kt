@@ -22,7 +22,7 @@ import kotlinx.coroutines.delay
 fun AuthSuccessScreen(navController: NavController) {
     LaunchedEffect(Unit) {
         delay(2000)
-        navController.navigate(Route.Home.path) {
+        navController.navigate(Route.Main.path) {
             popUpTo(0) { inclusive = true }
         }
     }

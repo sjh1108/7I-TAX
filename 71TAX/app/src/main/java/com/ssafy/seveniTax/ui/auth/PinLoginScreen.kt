@@ -26,7 +26,7 @@ fun PinLoginScreen(
         if (uiState.loginPin.length == 6) {
             viewModel.loginWithPin(
                 onSuccess = {
-                    navController.navigate(Route.Home.path) {
+                    navController.navigate(Route.Main.path) {
                         popUpTo(0) { inclusive = true }
                     }
                 }

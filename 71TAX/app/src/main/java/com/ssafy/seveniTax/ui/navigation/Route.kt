@@ -2,6 +2,7 @@ package com.ssafy.seveniTax.ui.navigation
 
 sealed class Route(val path: String) {
     object Splash : Route("splash")
+    object Main : Route("main")
     object Home : Route("home")
     object Dashboard : Route("dashboard")
     object PhoneInput : Route("phone_input")
