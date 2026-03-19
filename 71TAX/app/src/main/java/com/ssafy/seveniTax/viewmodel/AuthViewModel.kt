@@ -167,25 +167,26 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(pinConfirm = it.pinConfirm.dropLast(1)) }
     }
 
-    fun confirmPin(onSuccess: () -> Unit, onMismatch: () -> Unit) {
+    fun confirmPin(onSuccess: () -> Unit, onMismatch: () -> Unit, onResetRequired: () -> Unit) {
         val state = _uiState.value
         if (state.pin == state.pinConfirm) {
-            // TODO: PIN을 SHA-256 해시 → SecureStorage.savePinHash()
             _uiState.update { it.copy(authComplete = true, pinFailCount = 0) }
             onSuccess()
         } else {
             val newCount = state.pinFailCount + 1
-            _uiState.update {
-                it.copy(
-                    pinConfirm = "",
-                    pinFailCount = newCount,
-                    errorMessage = if (newCount >= 3)
-                        "처음부터 다시 설정해주세요"
-                    else
-                        "비밀번호가 일치하지 않습니다"
-                )
+            if (newCount >= 3) {
+                _uiState.update {
+                    it.copy(pin = "", pinConfirm = "", pinFailCount = 0,
+                        errorMessage = "처음부터 다시 설정해주세요")
+                }
+                onResetRequired()
+            } else {
+                _uiState.update {
+                    it.copy(pinConfirm = "", pinFailCount = newCount,
+                        errorMessage = "비밀번호가 일치하지 않습니다")
+                }
+                onMismatch()
             }
-            onMismatch()
         }
     }
 

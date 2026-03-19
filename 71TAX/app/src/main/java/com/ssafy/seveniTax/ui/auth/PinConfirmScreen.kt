@@ -29,12 +29,11 @@ fun PinConfirmScreen(
                     navController.navigate(Route.AuthSuccess.path)
                 },
                 onMismatch = {
-                    // 3회 실패 → PinSetup으로 강제 이동
-                    if (uiState.pinFailCount >= 3) {
-                        viewModel.resetPin()
-                        navController.popBackStack(Route.PinSetup.path, inclusive = true)
-                        navController.navigate(Route.PinSetup.path)
-                    }
+                    // ViewModel이 에러 메시지 + pinConfirm 초기화 처리함
+                },
+                onResetRequired = {
+                    navController.popBackStack(Route.PinSetup.path, inclusive = true)
+                    navController.navigate(Route.PinSetup.path)
                 }
             )
         }
