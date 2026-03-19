@@ -13,6 +13,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -27,10 +30,12 @@ public class ConsentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
+        Map<ConsentType, UserConsent> existingMap = userConsentRepository.findByUserId(userId)
+                .stream()
+                .collect(Collectors.toMap(UserConsent::getConsentType, Function.identity()));
+
         for (ConsentRequest req : requests) {
-            UserConsent existing = userConsentRepository
-                    .findByUserIdAndConsentType(userId, req.consentType())
-                    .orElse(null);
+            UserConsent existing = existingMap.get(req.consentType());
 
             if (existing != null) {
                 if (req.agreed()) {

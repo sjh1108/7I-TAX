@@ -8,7 +8,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "cards")
+@Table(name = "cards", indexes = {
+        @Index(name = "idx_card_user_id", columnList = "user_id")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Card extends BaseTimeEntity {

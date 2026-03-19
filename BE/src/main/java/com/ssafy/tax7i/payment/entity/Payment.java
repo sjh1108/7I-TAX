@@ -12,7 +12,12 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "payments")
+@Table(name = "payments", indexes = {
+        @Index(name = "idx_payment_user_id", columnList = "user_id"),
+        @Index(name = "idx_payment_card_id", columnList = "card_id"),
+        @Index(name = "idx_payment_status", columnList = "status"),
+        @Index(name = "idx_payment_user_status", columnList = "user_id, status")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Payment extends BaseTimeEntity {

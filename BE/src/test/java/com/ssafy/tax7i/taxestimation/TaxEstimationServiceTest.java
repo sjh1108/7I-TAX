@@ -67,12 +67,9 @@ class TaxEstimationServiceTest {
     void estimationWithExpenses() {
         Long userId = 1L;
 
-        BookEntry income = createEntry(EntryType.INCOME, 50_000_000L, 0L, 0L, 4_545_455L, true, true);
-        BookEntry expense = createEntry(EntryType.EXPENSE, 0L, 20_000_000L, 0L, 1_818_182L, true, true);
-
-        given(bookEntryRepository.findByUserIdAndEntryDateBetween(
-                eq(userId), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                .willReturn(new PageImpl<>(List.of(income, expense)));
+        given(bookEntryRepository.aggregateByUserIdAndDateRange(
+                eq(userId), any(LocalDate.class), any(LocalDate.class)))
+                .willReturn(new Object[]{50_000_000L, 20_000_000L, 0L, 20_000_000L});
         given(bookEntryRepository.sumSalesVat(eq(userId), any(), any())).willReturn(4_545_455L);
         given(bookEntryRepository.sumDeductiblePurchaseVat(eq(userId), any(), any())).willReturn(1_818_182L);
 
@@ -93,17 +90,10 @@ class TaxEstimationServiceTest {
     void unconfirmedEntriesExcluded() {
         Long userId = 1L;
 
-        BookEntry unconfirmed = BookEntry.builder()
-                .userId(userId)
-                .entryDate(LocalDate.of(2026, 3, 1))
-                .entryType(EntryType.INCOME)
-                .incomeAmount(100_000_000L)
-                .build();
-        // confirmed = false (default)
-
-        given(bookEntryRepository.findByUserIdAndEntryDateBetween(
-                eq(userId), any(LocalDate.class), any(LocalDate.class), any(Pageable.class)))
-                .willReturn(new PageImpl<>(List.of(unconfirmed)));
+        // aggregate query already filters confirmed=true, so unconfirmed entries return zeros
+        given(bookEntryRepository.aggregateByUserIdAndDateRange(
+                eq(userId), any(LocalDate.class), any(LocalDate.class)))
+                .willReturn(new Object[]{0L, 0L, 0L, 0L});
         given(bookEntryRepository.sumSalesVat(eq(userId), any(), any())).willReturn(0L);
         given(bookEntryRepository.sumDeductiblePurchaseVat(eq(userId), any(), any())).willReturn(0L);
 

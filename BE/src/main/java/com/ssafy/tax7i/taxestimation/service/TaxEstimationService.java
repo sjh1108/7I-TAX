@@ -1,16 +1,12 @@
 package com.ssafy.tax7i.taxestimation.service;
 
-import com.ssafy.tax7i.bookentry.entity.BookEntry;
-import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -42,30 +38,12 @@ public class TaxEstimationService {
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end = LocalDate.of(year, 12, 31);
 
-        List<BookEntry> entries = bookEntryRepository.findByUserIdAndEntryDateBetween(
-                userId, start, end, Pageable.unpaged()
-        ).getContent();
-
-        // 집계
-        long totalIncome = 0;
-        long totalExpense = 0;
-        long totalAssetPurchase = 0;
-        long deductibleExpenses = 0;
-
-        for (BookEntry e : entries) {
-            if (!e.getConfirmed()) continue;
-
-            switch (e.getEntryType()) {
-                case INCOME -> totalIncome += e.getIncomeAmount();
-                case EXPENSE -> {
-                    totalExpense += e.getExpenseAmount();
-                    if (e.getIsBusinessExpense()) {
-                        deductibleExpenses += e.getExpenseAmount();
-                    }
-                }
-                case ASSET -> totalAssetPurchase += e.getFixedAssetAmount();
-            }
-        }
+        // DB 집계 쿼리로 전체 데이터 로드 없이 합산
+        Object[] agg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
+        long totalIncome = ((Number) agg[0]).longValue();
+        long totalExpense = ((Number) agg[1]).longValue();
+        long totalAssetPurchase = ((Number) agg[2]).longValue();
+        long deductibleExpenses = ((Number) agg[3]).longValue();
 
         // 부가세: 매출세액 - 매입세액
         long salesVat = bookEntryRepository.sumSalesVat(userId, start, end);

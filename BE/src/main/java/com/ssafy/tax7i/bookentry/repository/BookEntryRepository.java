@@ -45,4 +45,15 @@ public interface BookEntryRepository extends JpaRepository<BookEntry, Long> {
     Long sumAmountByUserIdAndCategoryNameAndYear(@Param("userId") Long userId,
                                                   @Param("categoryName") String categoryName,
                                                   @Param("year") int year);
+
+    @Query("SELECT " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'INCOME' THEN b.incomeAmount ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'EXPENSE' THEN b.expenseAmount ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'ASSET' THEN b.fixedAssetAmount ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'EXPENSE' AND b.isBusinessExpense = true THEN b.expenseAmount ELSE 0 END), 0) " +
+            "FROM BookEntry b WHERE b.userId = :userId AND b.confirmed = true " +
+            "AND b.entryDate BETWEEN :start AND :end")
+    Object[] aggregateByUserIdAndDateRange(@Param("userId") Long userId,
+                                           @Param("start") LocalDate start,
+                                           @Param("end") LocalDate end);
 }
