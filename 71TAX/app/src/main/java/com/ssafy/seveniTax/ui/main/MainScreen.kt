@@ -9,6 +9,7 @@ import com.ssafy.seveniTax.ui.dashboard.DashboardScreen
 import com.ssafy.seveniTax.ui.home.HomeScreen
 import com.ssafy.seveniTax.ui.settings.SettingsScreen
 import com.ssafy.seveniTax.ui.ai.AiScreen
+import com.ssafy.seveniTax.ui.navigation.Route
 
 @Composable
 fun MainScreen(navController: NavController) {
@@ -18,7 +19,8 @@ fun MainScreen(navController: NavController) {
         bottomBar = {
             BottomTabBar(
                 selectedTab = selectedTab,
-                onTabSelected = { selectedTab = it }
+                onTabSelected = { selectedTab = it },
+                onPayClick = { navController.navigate(Route.PayIntro.path) }
             )
         }
     ) { innerPadding ->
