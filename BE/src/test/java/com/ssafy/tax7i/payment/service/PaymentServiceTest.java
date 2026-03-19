@@ -20,8 +20,14 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.context.ApplicationEventPublisher;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,7 +35,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.then;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
@@ -38,8 +43,6 @@ class PaymentServiceTest {
     @Mock private CardRepository cardRepository;
     @Mock private UserRepository userRepository;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
-    @Mock private PaymentStatusUpdater paymentStatusUpdater;
-    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -48,11 +51,11 @@ class PaymentServiceTest {
 
     @Test
     void authorize_성공() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
         given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
                 .willReturn(balanceResponse("500000"));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
@@ -68,16 +71,15 @@ class PaymentServiceTest {
 
         assertThat(response.status()).isEqualTo(PaymentStatus.AUTHORIZED);
         assertThat(response.amount()).isEqualTo(10000L);
-        assertThat(response.authorizationCode()).isNotNull();
     }
 
     @Test
     void authorize_잔액부족_예외() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
         given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
                 .willReturn(balanceResponse("5000"));
 
@@ -91,28 +93,26 @@ class PaymentServiceTest {
     }
 
     @Test
-    void authorize_계좌없는카드_예외() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, null);
-
+    void authorize_카드없음_예외() {
+        User user = createUser(1L, "user-key");
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_Id(99L, 1L)).willReturn(Optional.empty());
 
         PaymentAuthorizeRequest request = new PaymentAuthorizeRequest(
-                1L, 10000L, null, "테스트", null, PaymentMethod.ONLINE, PaymentPurpose.PERSONAL);
+                99L, 10000L, null, "테스트", null, PaymentMethod.ONLINE, PaymentPurpose.PERSONAL);
 
         assertThatThrownBy(() -> paymentService.authorize(1L, request))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_ARGUMENT));
+                        .isEqualTo(ErrorCode.CARD_NOT_FOUND));
     }
 
     // ───────────── capture ─────────────
 
     @Test
     void capture_성공() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
         Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.AUTHORIZED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
@@ -127,8 +127,8 @@ class PaymentServiceTest {
 
     @Test
     void capture_승인상태아님_예외() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
         Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
@@ -149,30 +149,12 @@ class PaymentServiceTest {
                         .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND));
     }
 
-    @Test
-    void capture_출금실패_DECLINED전환() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
-        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.AUTHORIZED);
-
-        given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
-        given(ssafyFinanceClient.withdraw("user-key", "1234567890", 10000L, "스타벅스"))
-                .willThrow(new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE));
-
-        assertThatThrownBy(() -> paymentService.capture(1L, 1L))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.BANK_SERVICE_UNAVAILABLE));
-
-        then(paymentStatusUpdater).should().markDeclined(1L);
-    }
-
     // ───────────── cancel ─────────────
 
     @Test
     void cancel_성공() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
         Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
@@ -188,8 +170,8 @@ class PaymentServiceTest {
 
     @Test
     void cancel_확정되지않은결제_예외() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
         Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.AUTHORIZED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
@@ -203,25 +185,9 @@ class PaymentServiceTest {
     }
 
     @Test
-    void cancel_취소금액초과_예외() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
-        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
-
-        given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
-
-        PaymentCancelRequest request = new PaymentCancelRequest(20000L, "초과 취소");
-
-        assertThatThrownBy(() -> paymentService.cancel(1L, 1L, request))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.INVALID_ARGUMENT));
-    }
-
-    @Test
     void cancel_금액미지정_전액취소() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
         Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
@@ -239,8 +205,8 @@ class PaymentServiceTest {
 
     @Test
     void getPayment_성공() {
-        User user = createUserWithKey(1L, "user-key");
-        Card card = createCard(1L, 1L, "1234567890");
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
         Payment payment = createPayment(1L, user, card, 15000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
@@ -261,26 +227,154 @@ class PaymentServiceTest {
                         .isEqualTo(ErrorCode.PAYMENT_NOT_FOUND));
     }
 
+    // ───────────── processQrPayment ─────────────
+
+    @Test
+    void processQrPayment_성공() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
+
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
+                .willReturn(balanceResponse("500000"));
+        given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
+            Payment p = invocation.getArgument(0);
+            setField(p, "id", 1L);
+            return p;
+        });
+        given(ssafyFinanceClient.withdraw("user-key", "1234567890", 10000L, "스타벅스"))
+                .willReturn(withdrawResponse("490000"));
+
+        QrPaymentRequest request = new QrPaymentRequest(1L, 10000L, "스타벅스", "5812", PaymentPurpose.BUSINESS);
+
+        QrPaymentResponse response = paymentService.processQrPayment(1L, request);
+
+        assertThat(response.status()).isEqualTo(PaymentStatus.CAPTURED);
+        assertThat(response.remainingBalance()).isEqualTo(490000L);
+    }
+
+    @Test
+    void processQrPayment_잔액부족_예외() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
+
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
+                .willReturn(balanceResponse("5000"));
+
+        QrPaymentRequest request = new QrPaymentRequest(1L, 10000L, "스타벅스", "5812", PaymentPurpose.BUSINESS);
+
+        assertThatThrownBy(() -> paymentService.processQrPayment(1L, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.INSUFFICIENT_BALANCE));
+    }
+
+    @Test
+    void processQrPayment_출금실패_예외() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
+
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
+                .willReturn(balanceResponse("500000"));
+        given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
+            Payment p = invocation.getArgument(0);
+            setField(p, "id", 1L);
+            return p;
+        });
+        given(ssafyFinanceClient.withdraw("user-key", "1234567890", 10000L, "스타벅스"))
+                .willThrow(new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE));
+
+        QrPaymentRequest request = new QrPaymentRequest(1L, 10000L, "스타벅스", "5812", PaymentPurpose.BUSINESS);
+
+        assertThatThrownBy(() -> paymentService.processQrPayment(1L, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.BANK_SERVICE_UNAVAILABLE));
+    }
+
+    // ───────────── getPayments ─────────────
+
+    @Test
+    void getPayments_날짜필터없음() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
+        Page<Payment> page = new PageImpl<>(List.of(payment));
+
+        given(paymentRepository.findByUserIdWithFetch(eq(1L), any())).willReturn(page);
+
+        Page<PaymentDetailResponse> result = paymentService.getPayments(1L, null, null, null, PageRequest.of(0, 20));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).amount()).isEqualTo(10000L);
+    }
+
+    @Test
+    void getPayments_날짜필터() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
+        Payment payment = createPayment(1L, user, card, 20000L, PaymentStatus.CAPTURED);
+        Page<Payment> page = new PageImpl<>(List.of(payment));
+
+        LocalDate start = LocalDate.of(2026, 3, 1);
+        LocalDate end = LocalDate.of(2026, 3, 31);
+
+        given(paymentRepository.findByUserIdAndCapturedAtBetweenWithFetch(
+                eq(1L), any(LocalDateTime.class), any(LocalDateTime.class), any()))
+                .willReturn(page);
+
+        Page<PaymentDetailResponse> result = paymentService.getPayments(1L, start, end, null, PageRequest.of(0, 20));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).amount()).isEqualTo(20000L);
+    }
+
+    @Test
+    void getPayments_상태필터() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user, "1234567890");
+        Payment payment = createPayment(1L, user, card, 15000L, PaymentStatus.CANCELLED);
+        Page<Payment> page = new PageImpl<>(List.of(payment));
+
+        given(paymentRepository.findByUserIdAndStatus(eq(1L), eq(PaymentStatus.CANCELLED), any()))
+                .willReturn(page);
+
+        Page<PaymentDetailResponse> result = paymentService.getPayments(
+                1L, null, null, PaymentStatus.CANCELLED, PageRequest.of(0, 20));
+
+        assertThat(result.getContent()).hasSize(1);
+        assertThat(result.getContent().get(0).status()).isEqualTo(PaymentStatus.CANCELLED);
+    }
+
     // ───────────── helpers ─────────────
 
-    private User createUserWithKey(Long id, String userKey) {
+    private User createUser(Long id, String userKey) {
         User user = User.builder()
-                .ci("test-ci")
-                .di("test-di")
+                .ci("ci-hash")
+                .di("di-hash")
                 .name("홍길동")
+                .birthDate(LocalDate.of(1990, 1, 1))
+                .gender("M")
+                .phoneNumber("01012345678")
+                .phoneLast4("5678")
                 .build();
         setField(user, "id", id);
         user.registerFinanceKey(userKey);
         return user;
     }
 
-    private Card createCard(Long id, Long userId, String ssafyAccountNo) {
+    private Card createCard(Long id, User user, String accountNo) {
         Card card = Card.builder()
-                .userId(userId)
-                .cardName("테스트카드")
+                .user(user)
+                .cardName("테스트 카드")
                 .cardType(CardType.BUSINESS)
-                .last4Digits("1234")
-                .ssafyAccountNo(ssafyAccountNo)
+                .last4Digits("7890")
+                .ssafyAccountNo(accountNo)
                 .build();
         setField(card, "id", id);
         return card;

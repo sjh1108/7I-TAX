@@ -11,7 +11,8 @@ class AesEncryptorTest {
 
     @BeforeEach
     void setUp() {
-        EncryptionProperties properties = new EncryptionProperties("tax7i-local-aes256-key-32bytes!!");
+        String base64Key = java.util.Base64.getEncoder().encodeToString("tax7i-local-aes256-key-32bytes!!".getBytes());
+        EncryptionProperties properties = new EncryptionProperties(base64Key);
         aesEncryptor = new AesEncryptor(properties);
     }
 

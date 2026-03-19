@@ -4,6 +4,5 @@ public record IdentityVerifyResponse(
         Long userId,
         boolean isNewUser,
         boolean requiresPinSetup,
-        boolean requiresConsent
-) {
-}
+        String verifyToken
+) {}

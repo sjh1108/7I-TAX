@@ -16,7 +16,7 @@ public record CardResponse(
                 card.getCardName(),
                 card.getCardType(),
                 card.getLast4Digits(),
-                card.getIsDefault()
+                card.isDefault()
         );
     }
 }

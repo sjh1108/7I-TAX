@@ -9,7 +9,7 @@ public record PaymentCancelResponse(
         Long paymentId,
         PaymentStatus status,
         Long cancelledAmount,
-        Long refundedToCardId,
+        Long cardId,
         LocalDateTime cancelledAt
 ) {
     public static PaymentCancelResponse from(Payment payment) {

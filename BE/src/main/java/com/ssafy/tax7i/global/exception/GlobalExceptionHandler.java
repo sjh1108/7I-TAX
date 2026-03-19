@@ -29,21 +29,16 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ErrorResponse<Map<String, Object>>> handleValidationException(MethodArgumentNotValidException e) {
+    public ResponseEntity<ErrorResponse<Map<String, String>>> handleValidationException(MethodArgumentNotValidException e) {
         log.warn("Validation failed: {}", e.getMessage());
 
-        FieldError fieldError = e.getBindingResult().getFieldError();
-        String message = fieldError != null ? fieldError.getDefaultMessage() : "입력값이 올바르지 않습니다.";
-
-        Map<String, Object> errorData = new HashMap<>();
-        if (fieldError != null) {
-            errorData.put("field", fieldError.getField());
-            errorData.put("value", fieldError.getRejectedValue());
-        }
+        Map<String, String> fieldErrors = new HashMap<>();
+        e.getBindingResult().getFieldErrors()
+                .forEach(error -> fieldErrors.put(error.getField(), error.getDefaultMessage()));
 
         return ResponseEntity
                 .status(ErrorCode.INVALID_ARGUMENT.getHttpStatus())
-                .body(ErrorResponse.of(ErrorCode.INVALID_ARGUMENT.name(), message, errorData));
+                .body(ErrorResponse.of(ErrorCode.INVALID_ARGUMENT.name(), "입력값이 올바르지 않습니다.", fieldErrors));
     }
 
     @ExceptionHandler(Exception.class)
