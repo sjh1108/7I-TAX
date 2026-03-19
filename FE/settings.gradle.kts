@@ -22,6 +22,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "71TAX"
+rootProject.name = "FE"
 include(":app")
  
