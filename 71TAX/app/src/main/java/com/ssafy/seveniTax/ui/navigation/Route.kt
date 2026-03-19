@@ -18,6 +18,9 @@ sealed class Route(val path: String) {
     object PayTerms : Route("pay_terms")
     object PayVerify : Route("pay_verify")
     object PayComplete : Route("pay_complete")
+    object QrPayment : Route("qr_payment")
+    object PaymentProcessing : Route("payment_processing")
+    object PaymentComplete : Route("payment_complete")
 
     object CardList : Route("card_list")
     object CardTypeSelect : Route("card_type_select")

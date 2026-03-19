@@ -13,6 +13,7 @@ import com.ssafy.seveniTax.ui.auth.*
 import com.ssafy.seveniTax.ui.card.*
 import com.ssafy.seveniTax.ui.main.MainScreen
 import com.ssafy.seveniTax.ui.pay.*
+import com.ssafy.seveniTax.ui.payment.*
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
 @Composable
@@ -80,6 +81,11 @@ fun NavGraph(navController: NavHostController) {
             )
         }
         composable(Route.PayComplete.path) { PayCompleteScreen(navController) }
+
+        // ── QR Payment ──────────────────────────────────────────
+        composable(Route.QrPayment.path)         { QrPaymentScreen(navController) }
+        composable(Route.PaymentProcessing.path)  { PaymentProcessingScreen(navController) }
+        composable(Route.PaymentComplete.path)    { PaymentCompleteScreen(navController) }
 
         // ── Card ──────────────────────────────────────────────
         composable(Route.CardList.path)        { CardListScreen(navController) }

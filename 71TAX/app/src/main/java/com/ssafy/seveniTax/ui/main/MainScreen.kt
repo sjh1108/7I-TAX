@@ -27,10 +27,8 @@ fun MainScreen(
                 onTabSelected = { selectedTab = it },
                 onPayClick = {
                     if (viewModel.isPayEnrolled()) {
-                        // TODO: 가입 완료 → 결제(QR 스캔) 화면으로
-                        navController.navigate(Route.PayIntro.path)
+                        navController.navigate(Route.QrPayment.path)
                     } else {
-                        // 미가입 → 페이 가입 플로우
                         navController.navigate(Route.PayIntro.path)
                     }
                 }
