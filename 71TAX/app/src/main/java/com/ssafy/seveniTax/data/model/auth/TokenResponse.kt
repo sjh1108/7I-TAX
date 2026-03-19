@@ -1,6 +1,6 @@
 package com.ssafy.seveniTax.data.model.auth
 
-data class RefreshResponse(
+data class TokenResponse(
     val accessToken: String,
-    val expiresIn: Long
+    val refreshToken: String
 )

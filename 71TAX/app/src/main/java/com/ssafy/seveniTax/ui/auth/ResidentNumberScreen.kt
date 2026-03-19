@@ -1,7 +1,6 @@
 package com.ssafy.seveniTax.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,7 +28,7 @@ fun ResidentNumberScreen(
 
     LaunchedEffect(totalDigits) {
         if (uiState.residentFront.length == 6 && uiState.residentBack.length == 1) {
-            navController.navigate(Route.CarrierSelect.path)
+            navController.navigate(Route.NameInput.path)
         }
     }
 
@@ -90,16 +89,7 @@ fun ResidentNumberScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Phone field (read-only)
-            Text("휴대폰 번호", style = Typography.bodySmall, color = TextSecondary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = formatPhoneDisplay(uiState.phone),
-                style = Typography.titleLarge,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = Divider)
+            FormFieldReadOnly("휴대폰 번호", formatPhoneForm(uiState.phone))
 
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -131,10 +121,3 @@ fun ResidentNumberScreen(
     }
 }
 
-private fun formatPhoneDisplay(raw: String): String {
-    return when {
-        raw.length <= 3 -> raw
-        raw.length <= 7 -> "${raw.substring(0, 3)}-${raw.substring(3)}"
-        else -> "${raw.substring(0, 3)}-${raw.substring(3, 7)}-${raw.substring(7)}"
-    }
-}

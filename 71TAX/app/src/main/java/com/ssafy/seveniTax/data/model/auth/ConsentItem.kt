@@ -1,7 +1,6 @@
 package com.ssafy.seveniTax.data.model.auth
 
-data class TermItem(
+data class ConsentItem(
     val consentType: String,
-    val title: String,
-    val required: Boolean
+    val agreed: Boolean
 )

@@ -30,7 +30,7 @@ fun SplashScreen(
 
     LaunchedEffect(autoLoginResult) {
         when (autoLoginResult) {
-            AutoLoginResult.SUCCESS -> navController.navigate(Route.Home.path) {
+            AutoLoginResult.SUCCESS -> navController.navigate(Route.PinLogin.path) {
                 popUpTo(Route.Splash.path) { inclusive = true }
             }
             AutoLoginResult.FAILURE -> navController.navigate(Route.PhoneInput.path) {

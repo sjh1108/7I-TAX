@@ -4,10 +4,16 @@ import com.ssafy.seveniTax.data.model.auth.*
 import com.ssafy.seveniTax.data.model.common.ApiResponse
 
 interface AuthRepository {
-    suspend fun refresh(refreshToken: String): ApiResponse<RefreshResponse>
+    suspend fun verifyIdentity(request: VerifyIdentityRequest): ApiResponse<VerifyIdentityResponse>
+    suspend fun setupPin(userId: Long, pin: String): ApiResponse<TokenResponse>
+    suspend fun login(phoneNumber: String, pin: String): ApiResponse<TokenResponse>
+    suspend fun submitConsents(consents: List<ConsentItem>): ApiResponse<Unit>
+    suspend fun reissue(refreshToken: String): ApiResponse<TokenResponse>
     suspend fun logout()
-    suspend fun getTerms(): ApiResponse<List<TermItem>>
-    suspend fun agreeTerms(request: TermsAgreeRequest): ApiResponse<TermsAgreeResponse>
-    suspend fun requestPhoneVerify(request: PhoneVerifyRequest): ApiResponse<PhoneVerifyResponse>
-    suspend fun confirmPhoneVerify(request: PhoneConfirmRequest): ApiResponse<PhoneConfirmResponse>
+
+    fun saveTokens(accessToken: String, refreshToken: String)
+    fun saveUserInfo(userId: Long, phoneNumber: String)
+    fun getStoredPhoneNumber(): String?
+    fun hasStoredCredentials(): Boolean
+    fun clearSession()
 }

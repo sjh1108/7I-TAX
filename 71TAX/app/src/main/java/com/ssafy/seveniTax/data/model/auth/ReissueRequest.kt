@@ -1,5 +1,5 @@
 package com.ssafy.seveniTax.data.model.auth
 
-data class RefreshRequest(
+data class ReissueRequest(
     val refreshToken: String
 )

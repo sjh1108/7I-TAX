@@ -7,21 +7,24 @@ import retrofit2.http.*
 
 interface AuthApi {
 
-    @POST("auth/refresh")
-    suspend fun refresh(@Body body: RefreshRequest): Response<ApiResponse<RefreshResponse>>
+    @POST("auth/verify-identity")
+    suspend fun verifyIdentity(@Body body: VerifyIdentityRequest): Response<ApiResponse<VerifyIdentityResponse>>
+
+    @POST("auth/setup-pin")
+    suspend fun setupPin(
+        @Query("userId") userId: Long,
+        @Body body: SetupPinRequest
+    ): Response<ApiResponse<TokenResponse>>
+
+    @POST("auth/login")
+    suspend fun login(@Body body: LoginRequest): Response<ApiResponse<TokenResponse>>
+
+    @POST("auth/consents")
+    suspend fun submitConsents(@Body body: List<ConsentItem>): Response<ApiResponse<Unit>>
+
+    @POST("auth/reissue")
+    suspend fun reissue(@Body body: ReissueRequest): Response<ApiResponse<TokenResponse>>
 
     @POST("auth/logout")
-    suspend fun logout(): Response<Unit>
-
-    @GET("terms")
-    suspend fun getTerms(): Response<ApiResponse<List<TermItem>>>
-
-    @POST("terms/agree")
-    suspend fun agreeTerms(@Body body: TermsAgreeRequest): Response<ApiResponse<TermsAgreeResponse>>
-
-    @POST("verification/phone/request")
-    suspend fun requestPhoneVerify(@Body body: PhoneVerifyRequest): Response<ApiResponse<PhoneVerifyResponse>>
-
-    @POST("verification/phone/confirm")
-    suspend fun confirmPhoneVerify(@Body body: PhoneConfirmRequest): Response<ApiResponse<PhoneConfirmResponse>>
+    suspend fun logout(): Response<ApiResponse<Unit>>
 }

@@ -3,6 +3,7 @@ package com.ssafy.seveniTax.data.model.common
 data class ApiResponse<T>(
     val status: String,
     val message: String = "",
+    val errorCode: String? = null,
     val data: T? = null
 )
 

@@ -48,6 +48,12 @@ class SecureStorage @Inject constructor(
 
     fun getUserId(): String? = prefs.getString(Constants.KEY_USER_ID, null)
 
+    fun savePhoneNumber(phone: String) {
+        prefs.edit().putString(Constants.KEY_PHONE_NUMBER, phone).apply()
+    }
+
+    fun getPhoneNumber(): String? = prefs.getString(Constants.KEY_PHONE_NUMBER, null)
+
     fun isLoggedIn(): Boolean = getAccessToken() != null
 
     fun clearAll() {

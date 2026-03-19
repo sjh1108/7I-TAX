@@ -21,10 +21,8 @@ object Constants {
     const val KEY_REFRESH_TOKEN = "refresh_token"
     const val KEY_PIN_HASH = "pin_hash"
     const val KEY_USER_ID = "user_id"
+    const val KEY_PHONE_NUMBER = "phone_number"
 
     // PIN
     const val PIN_LENGTH = 6
-
-    // SMS
-    const val SMS_TIMEOUT_SECONDS = 180
 }

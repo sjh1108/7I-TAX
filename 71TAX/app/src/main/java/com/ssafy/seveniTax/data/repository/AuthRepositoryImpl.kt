@@ -11,21 +11,58 @@ class AuthRepositoryImpl @Inject constructor(
     private val secureStorage: SecureStorage
 ) : AuthRepository {
 
-    override suspend fun refresh(refreshToken: String): ApiResponse<RefreshResponse> =
-        TODO("Implement")
+    override suspend fun verifyIdentity(request: VerifyIdentityRequest): ApiResponse<VerifyIdentityResponse> {
+        val response = authApi.verifyIdentity(request)
+        return response.body() ?: throw Exception(response.errorBody()?.string() ?: "본인인증 실패")
+    }
 
-    override suspend fun logout() =
-        TODO("Implement")
+    override suspend fun setupPin(userId: Long, pin: String): ApiResponse<TokenResponse> {
+        val response = authApi.setupPin(userId, SetupPinRequest(pin))
+        val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "PIN 설정 실패")
+        body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
+        return body
+    }
 
-    override suspend fun getTerms(): ApiResponse<List<TermItem>> =
-        TODO("Implement")
+    override suspend fun login(phoneNumber: String, pin: String): ApiResponse<TokenResponse> {
+        val response = authApi.login(LoginRequest(phoneNumber, pin))
+        val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "로그인 실패")
+        body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
+        return body
+    }
 
-    override suspend fun agreeTerms(request: TermsAgreeRequest): ApiResponse<TermsAgreeResponse> =
-        TODO("Implement")
+    override suspend fun submitConsents(consents: List<ConsentItem>): ApiResponse<Unit> {
+        val response = authApi.submitConsents(consents)
+        return response.body() ?: throw Exception(response.errorBody()?.string() ?: "약관 동의 실패")
+    }
 
-    override suspend fun requestPhoneVerify(request: PhoneVerifyRequest): ApiResponse<PhoneVerifyResponse> =
-        TODO("Implement")
+    override suspend fun reissue(refreshToken: String): ApiResponse<TokenResponse> {
+        val response = authApi.reissue(ReissueRequest(refreshToken))
+        val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "토큰 갱신 실패")
+        body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
+        return body
+    }
 
-    override suspend fun confirmPhoneVerify(request: PhoneConfirmRequest): ApiResponse<PhoneConfirmResponse> =
-        TODO("Implement")
+    override suspend fun logout() {
+        try { authApi.logout() } catch (_: Exception) {}
+        clearSession()
+    }
+
+    override fun saveTokens(accessToken: String, refreshToken: String) {
+        secureStorage.saveAccessToken(accessToken)
+        secureStorage.saveRefreshToken(refreshToken)
+    }
+
+    override fun saveUserInfo(userId: Long, phoneNumber: String) {
+        secureStorage.saveUserId(userId.toString())
+        secureStorage.savePhoneNumber(phoneNumber)
+    }
+
+    override fun getStoredPhoneNumber(): String? = secureStorage.getPhoneNumber()
+
+    override fun hasStoredCredentials(): Boolean =
+        secureStorage.getPhoneNumber() != null
+
+    override fun clearSession() {
+        secureStorage.clearAll()
+    }
 }

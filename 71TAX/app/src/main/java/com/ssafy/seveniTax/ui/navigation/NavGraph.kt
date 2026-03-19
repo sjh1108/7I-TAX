@@ -26,6 +26,11 @@ fun NavGraph(navController: NavHostController) {
                 val vm: AuthViewModel = hiltViewModel(parentEntry)
                 SplashScreen(navController, vm)
             }
+            composable(Route.PinLogin.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                PinLoginScreen(navController, vm)
+            }
             composable(Route.PhoneInput.path) {
                 val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
                 val vm: AuthViewModel = hiltViewModel(parentEntry)
@@ -36,25 +41,10 @@ fun NavGraph(navController: NavHostController) {
                 val vm: AuthViewModel = hiltViewModel(parentEntry)
                 ResidentNumberScreen(navController, vm)
             }
-            composable(Route.CarrierSelect.path) {
-                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
-                val vm: AuthViewModel = hiltViewModel(parentEntry)
-                CarrierSelectScreen(navController, vm)
-            }
             composable(Route.NameInput.path) {
                 val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
                 val vm: AuthViewModel = hiltViewModel(parentEntry)
                 NameInputScreen(navController, vm)
-            }
-            composable(Route.Terms.path) {
-                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
-                val vm: AuthViewModel = hiltViewModel(parentEntry)
-                TermsScreen(navController, vm)
-            }
-            composable(Route.SmsVerify.path) {
-                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
-                val vm: AuthViewModel = hiltViewModel(parentEntry)
-                SmsVerifyScreen(navController, vm)
             }
             composable(Route.PinSetup.path) {
                 val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
@@ -65,6 +55,11 @@ fun NavGraph(navController: NavHostController) {
                 val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
                 val vm: AuthViewModel = hiltViewModel(parentEntry)
                 PinConfirmScreen(navController, vm)
+            }
+            composable(Route.Terms.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                TermsScreen(navController, vm)
             }
             composable(Route.AuthSuccess.path) {
                 AuthSuccessScreen(navController)

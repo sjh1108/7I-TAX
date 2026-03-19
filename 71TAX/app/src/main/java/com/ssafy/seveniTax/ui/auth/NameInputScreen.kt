@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -42,7 +43,11 @@ fun NameInputScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             IconButton(
-                onClick = { navController.popBackStack() },
+                onClick = {
+                    viewModel.updateResidentFront("")
+                    viewModel.updateResidentBack("")
+                    navController.popBackStack()
+                },
                 modifier = Modifier.offset(x = (-12).dp)
             ) {
                 Icon(
@@ -59,7 +64,6 @@ fun NameInputScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Name field (editable)
             Text("이름", style = Typography.bodySmall, color = TextSecondary)
             Spacer(modifier = Modifier.height(8.dp))
             BasicTextField(
@@ -76,17 +80,20 @@ fun NameInputScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Carrier (read-only)
-            FormFieldReadOnly("통신사", uiState.carrier?.displayName ?: "")
-            Spacer(modifier = Modifier.height(24.dp))
-
-            // SSN (read-only)
             FormFieldReadOnly("주민등록번호", buildSsnDisplay(uiState.residentFront, uiState.residentBack))
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Phone (read-only)
             FormFieldReadOnly("휴대폰 번호", formatPhoneForm(uiState.phone))
             Spacer(modifier = Modifier.height(16.dp))
+
+            if (uiState.errorMessage.isNotEmpty()) {
+                Text(
+                    text = uiState.errorMessage,
+                    style = Typography.bodySmall,
+                    color = Error
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             Text(
                 text = "입력하신 정보는 5일 동안 안전히 보관해드릴게요",
@@ -95,12 +102,15 @@ fun NameInputScreen(
             )
         }
 
-        // Next button at bottom
         Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             TaxButton(
-                text = "다음",
-                onClick = { navController.navigate(Route.Terms.path) },
-                enabled = uiState.name.isNotBlank()
+                text = if (uiState.isLoading) "인증 중..." else "다음",
+                onClick = {
+                    viewModel.verifyIdentity(
+                        onSuccess = { navController.navigate(Route.PinSetup.path) }
+                    )
+                },
+                enabled = uiState.name.isNotBlank() && !uiState.isLoading
             )
         }
     }

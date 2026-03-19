@@ -16,28 +16,19 @@ import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
 @Composable
-fun PinConfirmScreen(
+fun PinLoginScreen(
     navController: NavController,
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
 
-    LaunchedEffect(uiState.pinConfirm.length) {
-        if (uiState.pinConfirm.length == 6) {
-            viewModel.confirmPin(
+    LaunchedEffect(uiState.loginPin.length) {
+        if (uiState.loginPin.length == 6) {
+            viewModel.loginWithPin(
                 onSuccess = {
-                    if (uiState.requiresConsent) {
-                        navController.navigate(Route.Terms.path)
-                    } else {
-                        navController.navigate(Route.AuthSuccess.path)
+                    navController.navigate(Route.Home.path) {
+                        popUpTo(0) { inclusive = true }
                     }
-                },
-                onMismatch = {
-                    // ViewModel이 에러 메시지 + pinConfirm 초기화 처리함
-                },
-                onResetRequired = {
-                    navController.popBackStack(Route.PinSetup.path, inclusive = true)
-                    navController.navigate(Route.PinSetup.path)
                 }
             )
         }
@@ -55,7 +46,7 @@ fun PinConfirmScreen(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "한번 더\n입력 해주세요",
+                text = "간편 비밀번호를\n입력 해주세요",
                 style = Typography.headlineMedium,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -63,7 +54,7 @@ fun PinConfirmScreen(
             Spacer(modifier = Modifier.weight(1f))
 
             CodeBoxes(
-                code = uiState.pinConfirm,
+                code = uiState.loginPin,
                 length = 6,
                 masked = true
             )
@@ -81,8 +72,8 @@ fun PinConfirmScreen(
         }
 
         PinKeypad(
-            onNumberClick = { viewModel.appendPinConfirm(it.toString()) },
-            onDelete = { viewModel.deletePinConfirm() },
+            onNumberClick = { viewModel.appendLoginPin(it.toString()) },
+            onDelete = { viewModel.deleteLoginPin() },
             modifier = Modifier
                 .fillMaxWidth()
                 .background(KeypadBg)

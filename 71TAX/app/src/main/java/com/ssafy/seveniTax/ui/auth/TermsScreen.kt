@@ -49,15 +49,14 @@ fun TermsScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Terms list
                 uiState.terms.forEach { term ->
-                    val isAgreed = uiState.agreedTermIds.contains(term.id)
+                    val isAgreed = uiState.agreedTermIds.contains(term.consentType)
                     var expanded by remember { mutableStateOf(false) }
 
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clickable { viewModel.toggleTerm(term.id) }
+                            .clickable { viewModel.toggleTerm(term.consentType) }
                             .padding(vertical = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -80,17 +79,15 @@ fun TermsScreen(
                             color = TextPrimary,
                             modifier = Modifier.weight(1f)
                         )
-                        if (term.required) {
-                            IconButton(
-                                onClick = { expanded = !expanded },
-                                modifier = Modifier.size(24.dp)
-                            ) {
-                                Icon(
-                                    if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
-                                    contentDescription = "펼치기",
-                                    tint = TextSecondary
-                                )
-                            }
+                        IconButton(
+                            onClick = { expanded = !expanded },
+                            modifier = Modifier.size(24.dp)
+                        ) {
+                            Icon(
+                                if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                                contentDescription = "펼치기",
+                                tint = TextSecondary
+                            )
                         }
                     }
 
@@ -106,17 +103,16 @@ fun TermsScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // CTA button
                 TaxButton(
-                    text = "동의하고 본인 인증하기",
+                    text = if (uiState.isLoading) "처리 중..." else "동의하고 시작하기",
                     onClick = {
-                        viewModel.submitTerms()
-                        navController.navigate(Route.SmsVerify.path)
+                        viewModel.submitConsents(
+                            onSuccess = { navController.navigate(Route.AuthSuccess.path) }
+                        )
                     },
-                    enabled = uiState.allRequiredTermsAgreed
+                    enabled = uiState.allRequiredTermsAgreed && !uiState.isLoading
                 )
 
-                // Decline link
                 TextButton(
                     onClick = { navController.popBackStack() },
                     modifier = Modifier
@@ -131,7 +127,7 @@ fun TermsScreen(
         }
     }
 
-    // Background: form review
+    // Background
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -150,17 +146,13 @@ fun TermsScreen(
         }
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "${uiState.name}님이 맞는지\n확인할게요",
+            text = "${uiState.name}님,\n약관에 동의해주세요",
             style = Typography.headlineMedium
         )
 
         Spacer(modifier = Modifier.height(32.dp))
 
         FormFieldReadOnly("이름", uiState.name)
-        Spacer(modifier = Modifier.height(24.dp))
-        FormFieldReadOnly("통신사", uiState.carrier?.displayName ?: "")
-        Spacer(modifier = Modifier.height(24.dp))
-        FormFieldReadOnly("주민등록번호", buildSsnDisplay(uiState.residentFront, uiState.residentBack))
         Spacer(modifier = Modifier.height(24.dp))
         FormFieldReadOnly("휴대폰 번호", formatPhoneForm(uiState.phone))
     }
