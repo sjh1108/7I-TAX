@@ -201,16 +201,6 @@
     </div>
   </div>
 
-  <!-- 빠른 로그인 -->
-  <div class="card" style="margin-top:16px;">
-    <div class="card-title"><span class="icon">&#9889;</span> 빠른 테스트 로그인</div>
-    <p style="font-size:13px;color:#6b7280;margin-bottom:12px;">본인인증 과정 없이 테스트용 계정으로 바로 로그인합니다. (기존 test-login API)</p>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <input type="text" id="auth-test-email" value="qkrrlxor627@naver.com" style="flex:1;border:1px solid #d1d5db;border-radius:8px;padding:10px 12px;font-size:14px;">
-      <button class="btn btn-secondary" onclick="doTestLogin()">테스트 로그인</button>
-    </div>
-  </div>
-
   <!-- 토큰 관리 -->
   <div class="card" style="margin-top:16px;">
     <div class="card-title"><span class="icon">&#128273;</span> 토큰 관리</div>
@@ -655,24 +645,6 @@ async function doLogout() {
     document.getElementById('auth-token-info').innerHTML = '';
     toast('로그아웃 완료');
   } catch(e) { toast('오류: '+e.message); }
-}
-
-// 빠른 테스트 로그인
-async function doTestLogin() {
-  const email = document.getElementById('auth-test-email')?.value || 'qkrrlxor627@naver.com';
-  if (!email) return;
-  try {
-    const res = await fetch(BASE+'/api/auth/test-login?email='+encodeURIComponent(email), {method:'POST',headers:{'Content-Type':'application/json'}});
-    const json = await res.json();
-    TOKEN = json?.data?.accessToken || '';
-    REFRESH_TOKEN = json?.data?.refreshToken || '';
-    if (TOKEN) {
-      setLoggedIn(email.split('@')[0]);
-      toast('테스트 로그인 성공! ('+email+')');
-    } else {
-      toast('로그인 실패: ' + (json.message || '응답 오류'));
-    }
-  } catch(e) { toast('로그인 실패: '+e.message); }
 }
 
 function authHeaders() {
