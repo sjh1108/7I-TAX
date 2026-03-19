@@ -14,8 +14,8 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "book_entries", indexes = {
-        @Index(name = "idx_be_user_date", columnList = "userId, entryDate DESC"),
-        @Index(name = "idx_be_user_confirmed", columnList = "userId, confirmed")
+        @Index(name = "idx_be_user_date", columnList = "user_id, entry_date DESC"),
+        @Index(name = "idx_be_user_confirmed", columnList = "user_id, confirmed")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

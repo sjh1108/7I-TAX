@@ -25,7 +25,7 @@ public class AesEncryptor implements AttributeConverter<String, String> {
     private final SecretKeySpec secretKey;
 
     public AesEncryptor(EncryptionProperties properties) {
-        byte[] keyBytes = properties.aesKey().getBytes();
+        byte[] keyBytes = properties.aesKey().getBytes(StandardCharsets.UTF_8);
         this.secretKey = new SecretKeySpec(keyBytes, "AES");
     }
 

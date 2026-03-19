@@ -113,9 +113,11 @@ class AuthControllerTest {
                 .willReturn(new LoginResponse("access-token", "refresh-token"));
 
         mockMvc.perform(post("/api/auth/setup-pin")
-                        .param("userId", "1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("pin", "123456"))))
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "userId", 1,
+                                "pin", "123456"
+                        ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.accessToken").value("access-token"));
     }
