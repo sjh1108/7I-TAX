@@ -4,8 +4,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.ssafy.seveniTax.ui.auth.*
 import com.ssafy.seveniTax.ui.card.*
@@ -82,10 +84,24 @@ fun NavGraph(navController: NavHostController) {
         // ── Card ──────────────────────────────────────────────
         composable(Route.CardList.path)        { CardListScreen(navController) }
         composable(Route.CardTypeSelect.path)  { CardTypeSelectScreen(navController) }
-        composable(Route.CardInput.path)       { CardInputScreen(navController) }
+        composable(
+            route = Route.CardInput.path,
+            arguments = listOf(navArgument("cardType") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val cardType = backStackEntry.arguments?.getString("cardType") ?: "personal"
+            CardInputScreen(navController, cardType)
+        }
+        composable(Route.CardBusinessInfo.path) { CardBusinessInfoScreen(navController) }
         composable(Route.CardOwnerVerify.path) { CardOwnerVerifyScreen(navController) }
         composable(Route.CardSms.path)         { CardSmsScreen(navController) }
         composable(Route.CardComplete.path)    { CardCompleteScreen(navController) }
         composable(Route.CardChange.path)      { CardChangeScreen(navController) }
+        composable(
+            route = Route.CardDetail.path,
+            arguments = listOf(navArgument("cardId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val cardId = backStackEntry.arguments?.getString("cardId") ?: ""
+            CardDetailScreen(navController, cardId)
+        }
     }
 }

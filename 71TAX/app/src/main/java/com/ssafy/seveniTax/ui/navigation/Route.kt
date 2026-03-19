@@ -21,9 +21,15 @@ sealed class Route(val path: String) {
 
     object CardList : Route("card_list")
     object CardTypeSelect : Route("card_type_select")
-    object CardInput : Route("card_input")
+    object CardInput : Route("card_input/{cardType}") {
+        fun create(cardType: String) = "card_input/$cardType"
+    }
+    object CardBusinessInfo : Route("card_business_info")
     object CardOwnerVerify : Route("card_owner_verify")
     object CardSms : Route("card_sms")
     object CardComplete : Route("card_complete")
     object CardChange : Route("card_change")
+    object CardDetail : Route("card_detail/{cardId}") {
+        fun create(cardId: String) = "card_detail/$cardId"
+    }
 }
