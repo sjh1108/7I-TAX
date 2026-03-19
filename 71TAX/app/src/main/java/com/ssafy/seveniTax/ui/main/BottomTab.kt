@@ -10,5 +10,5 @@ enum class BottomTab(
     HOME("홈", R.drawable.ic_24),
     DASHBOARD("대시보드", R.drawable.ic_16),
     SETTINGS("설정", R.drawable.ic_22),
-    AI("AI", R.drawable.ic_45)
+    AI("AI", R.drawable.ic_44)
 }

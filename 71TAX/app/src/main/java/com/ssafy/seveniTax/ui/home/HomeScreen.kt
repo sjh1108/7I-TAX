@@ -60,7 +60,7 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f)
+                    .defaultMinSize(minHeight = 600.dp)
                     .background(
                         Color.White,
                         RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)

@@ -37,7 +37,7 @@ fun DashboardScreen(
     }
 
     AndroidView(
-        modifier = Modifier.fillMaxSize(),
+        modifier = modifier.fillMaxSize(),
         factory = { context ->
             WebView(context).apply {
                 settings.apply {
