@@ -30,7 +30,11 @@ fun CarrierSelectScreen(
         ModalBottomSheet(
             onDismissRequest = {
                 showSheet = false
-                if (uiState.carrier == null) navController.popBackStack()
+                if (uiState.carrier == null) {
+                    viewModel.updateResidentFront("")
+                    viewModel.updateResidentBack("")
+                    navController.popBackStack()
+                }
             },
             sheetState = sheetState,
             containerColor = Background
@@ -72,7 +76,11 @@ fun CarrierSelectScreen(
             .padding(horizontal = 24.dp, vertical = 16.dp)
     ) {
         IconButton(
-            onClick = { navController.popBackStack() },
+            onClick = {
+                viewModel.updateResidentFront("")
+                viewModel.updateResidentBack("")
+                navController.popBackStack()
+            },
             modifier = Modifier.offset(x = (-12).dp)
         ) {
             Icon(

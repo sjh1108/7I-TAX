@@ -44,7 +44,10 @@ fun ResidentNumberScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             IconButton(
-                onClick = { navController.popBackStack() },
+                onClick = {
+                    viewModel.updatePhone("")
+                    navController.popBackStack()
+                },
                 modifier = Modifier.offset(x = (-12).dp)
             ) {
                 Icon(
