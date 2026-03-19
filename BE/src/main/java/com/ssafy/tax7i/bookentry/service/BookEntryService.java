@@ -10,6 +10,7 @@ import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,7 @@ public class BookEntryService {
 
     private final BookEntryRepository bookEntryRepository;
 
+    @CacheEvict(value = "entertainmentUsed", key = "#userId")
     @Transactional
     public BookEntryResponse create(Long userId, BookEntryCreateRequest request) {
         // 중복 장부 방어: 같은 paymentId로 이미 생성된 경우

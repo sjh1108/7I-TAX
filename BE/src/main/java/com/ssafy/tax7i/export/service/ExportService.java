@@ -89,7 +89,7 @@ public class ExportService {
         Page<BookEntry> entryPage;
         do {
             entryPage = bookEntryRepository.findByUserIdAndEntryDateBetween(
-                    userId, start, end, PageRequest.of(page, 500));
+                    userId, start, end, PageRequest.of(page, 500, Sort.by("entryDate")));
 
             for (BookEntry e : entryPage.getContent()) {
                 if (!e.getConfirmed() || !e.getIsBusinessExpense()) continue;
