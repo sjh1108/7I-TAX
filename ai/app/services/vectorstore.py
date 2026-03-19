@@ -20,6 +20,8 @@ class VectorStoreService:
             model=settings.embedding_model,
             openai_api_key=settings.gms_api_key,
             openai_api_base=settings.gms_base_url,
+            chunk_size=10,
+            check_embedding_ctx_length=False,
         )
         self.vectorstore = Chroma(
             collection_name=self.COLLECTION_NAME,

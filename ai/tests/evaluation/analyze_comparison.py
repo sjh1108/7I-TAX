@@ -34,7 +34,7 @@ def main():
     targets = {"faithfulness": 0.95, "context_recall": 0.85, "answer_relevancy": 0.80}
 
     print("=" * 70)
-    print("Plain RAG vs Optimized RAG — 지표 비교")
+    print("Plain RAG vs Optimized RAG - 지표 비교")
     print("=" * 70)
 
     for m in metrics:
@@ -43,6 +43,12 @@ def main():
             continue
         p_val = plain[m].mean()
         o_val = optimized[m].mean()
+        if pd.isna(p_val) or pd.isna(o_val):
+            print(f"[{m}]")
+            print(f"  Plain:     N/A")
+            print(f"  Optimized: N/A")
+            print()
+            continue
         diff = o_val - p_val
         pct = (diff / p_val * 100) if p_val > 0 else 0
         target = targets.get(m)
@@ -54,14 +60,15 @@ def main():
         print(f"  변화: {diff:+.4f} ({pct:+.1f}%)")
         print()
 
-    # 하위 성능 질문 파악
-    if "faithfulness" in optimized.columns and "question" in optimized.columns:
+    # 하위 성능 질문 파악 (컬럼명: user_input)
+    q_col = "user_input" if "user_input" in optimized.columns else "question"
+    if "faithfulness" in optimized.columns and q_col in optimized.columns:
         print("=== Faithfulness 하위 5개 (optimized) ===")
-        print(optimized.nsmallest(5, "faithfulness")[["question", "faithfulness"]].to_string())
+        print(optimized.nsmallest(5, "faithfulness")[[q_col, "faithfulness"]].to_string())
 
-    if "context_recall" in optimized.columns and "question" in optimized.columns:
+    if "context_recall" in optimized.columns and q_col in optimized.columns:
         print("\n=== Context Recall 하위 5개 (optimized) ===")
-        print(optimized.nsmallest(5, "context_recall")[["question", "context_recall"]].to_string())
+        print(optimized.nsmallest(5, "context_recall")[[q_col, "context_recall"]].to_string())
 
     # 목표치 달성 요약
     print("\n" + "=" * 70)

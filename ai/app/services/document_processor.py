@@ -23,6 +23,9 @@ KOREAN_LAW_SEPARATORS: list[str] = [
 DEFAULT_CHUNK_SIZE: int = 1000
 DEFAULT_CHUNK_OVERLAP: int = 200
 
+# 임베딩 모델 토큰 한도(8192) 기준: 한국어 1자 ≈ 1.5토큰 → 안전 마진 포함 4000자
+MAX_EMBED_CHARS: int = 4000
+
 
 @dataclass
 class RawDocument:
@@ -96,7 +99,7 @@ class DocumentProcessor:
 
     def __init__(
         self,
-        resources_dir: str = "ai/resources",
+        resources_dir: str = "resources",
         chunk_size: int = DEFAULT_CHUNK_SIZE,
         chunk_overlap: int = DEFAULT_CHUNK_OVERLAP,
     ) -> None:
@@ -249,13 +252,38 @@ class DocumentProcessor:
         logger.info("계층적 청크 분할 완료: %s -> %d개 청크", law_name, len(chunks))
         return chunks
 
+    def _split_oversized(self, chunks: list[TextChunk]) -> list[TextChunk]:
+        """임베딩 토큰 한도를 초과하는 청크를 재분할한다.
+
+        한국어 1자 ≈ 1.5 토큰 기준, MAX_EMBED_CHARS(4000자) 초과 시
+        RecursiveCharacterTextSplitter로 추가 분할한다.
+        """
+        result: list[TextChunk] = []
+        oversized = 0
+
+        for chunk in chunks:
+            if len(chunk.content) <= MAX_EMBED_CHARS:
+                result.append(chunk)
+            else:
+                oversized += 1
+                sub_texts = self.splitter.split_text(chunk.content)
+                for i, text in enumerate(sub_texts):
+                    meta = dict(chunk.metadata)
+                    meta["chunk_id"] = f"{meta['chunk_id']}_s{i:02d}"
+                    result.append(TextChunk(content=text, metadata=meta))
+
+        if oversized:
+            logger.info("초과 청크 재분할: %d개 → %d개", oversized, len(result))
+        return result
+
     def process_all(self) -> list[TextChunk]:
         """전체 파이프라인: PDF 추출 -> 청킹 -> TextChunk 리스트 반환.
 
         1. extract_all()로 모든 PDF 추출
         2. 각 RawDocument에 대해 chunk_document() 호출
         3. 모든 청크를 하나의 리스트로 결합
-        4. 총 청크 수를 로그로 출력
+        4. _split_oversized()로 토큰 한도 초과 청크 재분할
+        5. 총 청크 수를 로그로 출력
 
         Returns:
             모든 문서의 TextChunk를 합친 리스트.
@@ -267,5 +295,6 @@ class DocumentProcessor:
             chunks = self.chunk_document(raw_doc)
             all_chunks.extend(chunks)
 
+        all_chunks = self._split_oversized(all_chunks)
         logger.info("전체 청크 수: %d", len(all_chunks))
         return all_chunks
