@@ -54,6 +54,12 @@ class SecureStorage @Inject constructor(
 
     fun getPhoneNumber(): String? = prefs.getString(Constants.KEY_PHONE_NUMBER, null)
 
+    fun setPayEnrolled(enrolled: Boolean) {
+        prefs.edit().putBoolean(Constants.KEY_PAY_ENROLLED, enrolled).apply()
+    }
+
+    fun isPayEnrolled(): Boolean = prefs.getBoolean(Constants.KEY_PAY_ENROLLED, false)
+
     fun isLoggedIn(): Boolean = getAccessToken() != null
 
     fun clearAll() {

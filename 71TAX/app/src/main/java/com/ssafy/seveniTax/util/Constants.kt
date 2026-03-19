@@ -22,6 +22,7 @@ object Constants {
     const val KEY_PIN_HASH = "pin_hash"
     const val KEY_USER_ID = "user_id"
     const val KEY_PHONE_NUMBER = "phone_number"
+    const val KEY_PAY_ENROLLED = "pay_enrolled"
 
     // PIN
     const val PIN_LENGTH = 6
