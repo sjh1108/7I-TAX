@@ -39,6 +39,8 @@ from app.services.vectorstore import VectorStoreService
 
 GOLDEN_SET_PATH = Path(__file__).parent / "golden_set.json"
 EVAL_DIR = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+OUTPUT_DIR = PROJECT_ROOT / "docdoc" / "02_ai" / "07_evaluation"
 
 
 def parse_args() -> argparse.Namespace:
@@ -64,30 +66,42 @@ def load_golden_set(path: Path) -> list[dict]:
 
 
 async def run_rag_pipeline(
-    retrieval_service: RetrievalService,
+    retrieval_service: RetrievalService | None,
     question: str,
     config: dict,
     llm,
 ) -> dict:
     """단일 질문에 대해 RAG 파이프라인 실행. 반환: {"answer": str, "contexts": list[str]}"""
-    results = await retrieval_service.retrieve(
-        query=question,
-        top_k=config.get("retrieval_top_k", 5),
-        search_strategy=config.get("search_strategy", "hybrid"),
-    )
-    contexts = [r.content for r in results]
-
     from langchain_core.messages import HumanMessage, SystemMessage
 
-    context_str = "\n\n".join(
-        f"[문서 {i+1}]\n{c}" for i, c in enumerate(contexts)
-    )
-    messages = [
-        SystemMessage(
-            content="당신은 세법 전문 AI 어시스턴트입니다. 아래 참고 문서만을 근거로 질문에 답하세요. 참고 문서에 없는 내용은 모른다고 답하세요."
-        ),
-        HumanMessage(content=f"참고 문서:\n{context_str}\n\n질문: {question}"),
-    ]
+    use_rag = config.get("use_rag", True)
+
+    if use_rag and retrieval_service is not None:
+        results = await retrieval_service.retrieve(
+            query=question,
+            top_k=config.get("retrieval_top_k", 5),
+            search_strategy=config.get("search_strategy", "hybrid"),
+        )
+        contexts = [r.content for r in results]
+        context_str = "\n\n".join(
+            f"[문서 {i+1}]\n{c}" for i, c in enumerate(contexts)
+        )
+        messages = [
+            SystemMessage(
+                content="당신은 세법 전문 AI 어시스턴트입니다. 아래 참고 문서만을 근거로 질문에 답하세요. 참고 문서에 없는 내용은 모른다고 답하세요."
+            ),
+            HumanMessage(content=f"참고 문서:\n{context_str}\n\n질문: {question}"),
+        ]
+    else:
+        # No-RAG: 검색 없이 LLM 자체 지식으로만 답변
+        contexts = [""]
+        messages = [
+            SystemMessage(
+                content="당신은 세법 전문 AI 어시스턴트입니다. 질문에 답하세요."
+            ),
+            HumanMessage(content=f"질문: {question}"),
+        ]
+
     response = await llm.ainvoke(messages)
     return {"answer": response.content, "contexts": contexts}
 
@@ -120,10 +134,12 @@ async def build_ragas_dataset(
     )
 
 
-def run_evaluation(dataset: Dataset):
+def run_evaluation(dataset: Dataset, llm=None, embeddings=None):
     return evaluate(
         dataset,
         metrics=[faithfulness, answer_relevancy, context_recall, context_precision],
+        llm=llm,
+        embeddings=embeddings,
     )
 
 
@@ -131,30 +147,36 @@ async def main():
     args = parse_args()
     config = load_config(args.config)
     config_name = config.get("name", Path(args.config).stem)
-    results_path = EVAL_DIR / f"{config_name}_results.csv"
+    OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
+    results_path = OUTPUT_DIR / f"{config_name}_results.csv"
 
     golden_set = load_golden_set(GOLDEN_SET_PATH)
+    use_rag = config.get("use_rag", True)
     print(f"[INFO] config: {config_name}")
+    print(f"[INFO] RAG 사용: {use_rag}")
     print(f"[INFO] 골든셋 로드: {len(golden_set)}쌍")
-    print(
-        f"[INFO] 파라미터: top_k={config.get('retrieval_top_k', 5)}, "
-        f"strategy={config.get('search_strategy', 'hybrid')}, "
-        f"rrf_k={config.get('rrf_k', 60)}, "
-        f"temperature={config.get('temperature', 0.7)}"
-    )
+    if use_rag:
+        print(
+            f"[INFO] 파라미터: top_k={config.get('retrieval_top_k', 5)}, "
+            f"strategy={config.get('search_strategy', 'hybrid')}, "
+            f"rrf_k={config.get('rrf_k', 60)}, "
+            f"temperature={config.get('temperature', 0.7)}"
+        )
 
-    # RAG 서비스 초기화
-    vectorstore = VectorStoreService(settings)
-    bm25_index = BM25Index()
-    retrieval_service = RetrievalService(
-        vectorstore_service=vectorstore,
-        bm25_index=bm25_index,
-    )
-    if "rrf_k" in config:
-        retrieval_service.RRF_K = config["rrf_k"]
+    # RAG 서비스 초기화 (use_rag=false이면 건너뜀)
+    retrieval_service = None
+    if use_rag:
+        vectorstore = VectorStoreService(settings)
+        bm25_index = BM25Index()
+        retrieval_service = RetrievalService(
+            vectorstore_service=vectorstore,
+            bm25_index=bm25_index,
+        )
+        if "rrf_k" in config:
+            retrieval_service.RRF_K = config["rrf_k"]
 
     # LLM 초기화 (GMS 프록시 사용)
-    from langchain_openai import ChatOpenAI
+    from langchain_openai import ChatOpenAI, OpenAIEmbeddings
 
     llm = ChatOpenAI(
         base_url=settings.gms_base_url,
@@ -163,11 +185,18 @@ async def main():
         temperature=config.get("temperature", 0.7),
     )
 
+    # RAGAS answer_relevancy 메트릭이 임베딩을 필요로 함 — GMS 프록시 경유
+    embeddings = OpenAIEmbeddings(
+        model=settings.embedding_model,
+        openai_api_key=settings.gms_api_key,
+        openai_api_base=settings.gms_base_url,
+    )
+
     print("[INFO] RAG 파이프라인 실행 중...")
     dataset = await build_ragas_dataset(golden_set, retrieval_service, config, llm)
 
     print("[INFO] RAGAS 평가 실행 중...")
-    result = run_evaluation(dataset)
+    result = run_evaluation(dataset, llm=llm, embeddings=embeddings)
 
     df = result.to_pandas()
     print(f"\n===== RAGAS 평가 결과 ({config_name}) =====")

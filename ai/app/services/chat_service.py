@@ -1,6 +1,6 @@
 import logging
 import uuid
-from collections import defaultdict
+from cachetools import TTLCache
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -47,17 +47,19 @@ class ChatService:
         self.intent_classifier = intent_classifier
         self.backend_client = backend_client
         self.cache_service = cache_service
-        self._histories: dict[str, list[BaseMessage]] = defaultdict(list)
+        self._histories: TTLCache = TTLCache(maxsize=1000, ttl=3600)
 
     async def get_response(
         self,
         message: str,
         session_id: str | None = None,
         user_id: str | None = None,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str]:
         if session_id is None:
             session_id = uuid.uuid4().hex
 
+        if session_id not in self._histories:
+            self._histories[session_id] = []
         history = self._histories[session_id]
 
         # 1. 인텐트 분류
@@ -68,7 +70,7 @@ class ChatService:
             try:
                 cached = await self.cache_service.get(message)
                 if cached:
-                    return cached, session_id
+                    return cached, session_id, "cached"
             except Exception as e:
                 logger.warning("캐시 조회 실패 (무시): %s", e)
 
@@ -129,7 +131,7 @@ class ChatService:
             except Exception as e:
                 logger.warning("캐시 저장 실패 (무시): %s", e)
 
-        return answer, session_id
+        return answer, session_id, llm.model_name
 
     def get_history(self, session_id: str) -> list[dict[str, str]]:
         history = self._histories.get(session_id, [])

@@ -592,7 +592,7 @@ instance/
 .scrapy
 
 # Sphinx documentation
-docs/_build/
+docdoc/_build/
 
 # PyBuilder
 .pybuilder/
@@ -939,8 +939,18 @@ $RECYCLE.BIN/
 
 # personal
 .claude
-docs/
+docdoc/
 CLAUDE.md
+
+# ML 모델 아티팩트
+ai/models/
 
 # ChromaDB 벡터 저장소 데이터
 ai/app/data/chroma/
+ai/data/
+
+# 합성 데이터 (재생성 가능)
+ai/scripts/data/synthetic_data*.json
+
+# RAG 평가 결과
+ai/tests/evaluation/*_results.csv

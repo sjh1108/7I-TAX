@@ -12,9 +12,11 @@ async def chat(
     request: ChatRequest,
     service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
-    answer, session_id = await service.get_response(request.message, request.session_id)
+    answer, session_id, model_used = await service.get_response(
+        request.message, request.session_id, request.user_id
+    )
     return ChatResponse(
-        answer=answer, model=service.llm_mini.model_name, session_id=session_id
+        answer=answer, model=model_used, session_id=session_id
     )
 
 

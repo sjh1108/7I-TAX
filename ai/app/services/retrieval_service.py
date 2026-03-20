@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from rank_bm25 import BM25Okapi
 
 from app.services.vectorstore import VectorStoreService
+from app.utils.korean_tokenizer import KoreanTokenizer
 
 
 @dataclass
@@ -27,6 +28,7 @@ class BM25Index:
     def __init__(self) -> None:
         self.bm25: BM25Okapi | None = None
         self.documents: list[dict] = []
+        self._tokenizer = KoreanTokenizer()
 
     def build(self, documents: list[dict]) -> None:
         """BM25 인덱스를 구축한다.
@@ -34,7 +36,7 @@ class BM25Index:
         documents: [{"content": str, "metadata": dict}, ...]
         """
         self.documents = documents
-        tokenized = [doc["content"].split() for doc in documents]
+        tokenized = [self._tokenizer.tokenize_for_bm25(doc["content"]) for doc in documents]
         self.bm25 = BM25Okapi(tokenized)
 
     def search(self, query: str, top_k: int = 20) -> list[tuple[dict, float]]:
@@ -45,7 +47,7 @@ class BM25Index:
         if self.bm25 is None:
             return []
 
-        tokenized_query = query.split()
+        tokenized_query = self._tokenizer.tokenize_for_bm25(query)
         scores = self.bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
         return [(self.documents[i], float(scores[i])) for i in top_indices if scores[i] > 0]

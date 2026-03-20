@@ -28,11 +28,30 @@ CIRCLED_NUMBER_MAP = {
     "⑪": 11, "⑫": 12, "⑬": 13, "⑭": 14, "⑮": 15,
 }
 
+TOPIC_KEYWORDS: dict[str, list[str]] = {
+    "세율": ["세율", "과세표준", "세율표", "세액", "과세", "누진"],
+    "경비": ["경비", "필요경비", "비용", "손금", "경비율"],
+    "공제": ["공제", "감면", "세액공제", "소득공제", "특별공제"],
+    "신고": ["신고", "납부", "절차", "기한", "신고서", "확정신고"],
+    "접대비": ["접대비", "접대"],
+    "감가상각": ["감가상각", "상각", "내용연수"],
+    "계산": ["계산", "산출", "산정", "결정"],
+}
+
 
 class LegalParser:
     """한국 세법 PDF에서 편-장-절-조-항-호 구조를 파싱하여 구조 보존 청크를 생성한다."""
 
     MAX_CHUNK_SIZE = 1500
+
+    def _extract_topics(self, article_title: str, content: str) -> str:
+        """조 제목과 내용에서 토픽 키워드를 추출하여 쉼표 구분 문자열로 반환한다."""
+        text = f"{article_title} {content[:500]}"
+        matched = []
+        for topic, keywords in TOPIC_KEYWORDS.items():
+            if any(kw in text for kw in keywords):
+                matched.append(topic)
+        return ",".join(matched) if matched else ""
 
     def parse(self, text: str, law_name: str, law_type: str, tax_type: str) -> list[LegalChunk]:
         """전체 법률 텍스트를 구조 보존 청크로 분할한다."""
@@ -40,6 +59,7 @@ class LegalParser:
         chunks: list[LegalChunk] = []
 
         for art in articles:
+            content = art["content"]
             base_metadata = {
                 "law_name": law_name,
                 "law_type": law_type,
@@ -50,9 +70,8 @@ class LegalParser:
                 "chapter": art.get("chapter"),
                 "section": art.get("section"),
                 "paragraph": None,
+                "topics": self._extract_topics(art["article_title"], content),
             }
-
-            content = art["content"]
             if len(content) > self.MAX_CHUNK_SIZE:
                 paragraphs = self._split_article_by_paragraph(content)
                 if paragraphs:

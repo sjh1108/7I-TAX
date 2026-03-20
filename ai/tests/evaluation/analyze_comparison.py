@@ -12,11 +12,13 @@ from pathlib import Path
 import pandas as pd
 
 EVAL_DIR = Path(__file__).parent
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent.parent
+OUTPUT_DIR = PROJECT_ROOT / "docdoc" / "02_ai" / "07_evaluation"
 
 
 def main():
-    plain_path = EVAL_DIR / "plain_results.csv"
-    opt_path = EVAL_DIR / "optimized_results.csv"
+    plain_path = OUTPUT_DIR / "plain_results.csv"
+    opt_path = OUTPUT_DIR / "optimized_results.csv"
 
     if not plain_path.exists():
         print(f"[ERROR] {plain_path} 없음. 먼저 평가를 실행하세요:")
