@@ -35,4 +35,6 @@ sealed class Route(val path: String) {
     object CardDetail : Route("card_detail/{cardId}") {
         fun create(cardId: String) = "card_detail/$cardId"
     }
+
+    object ServerTest : Route("server_test")
 }

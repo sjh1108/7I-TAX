@@ -4,14 +4,14 @@ import com.ssafy.seveniTax.BuildConfig
 
 object Constants {
     val API_BASE_URL = if (BuildConfig.DEBUG)
-        "http://10.0.2.2:8080/api/"
+        "https://j14c203.p.ssafy.io/api/"
     else
-        "https://api.taxsave.app/api/"
+        "https://j14c203.p.ssafy.io/api/"
 
     val WEBVIEW_BASE_URL = if (BuildConfig.DEBUG)
-        "http://10.0.2.2:3000"
+        "https://j14c203.p.ssafy.io"
     else
-        "https://7itax.com"
+        "https://j14c203.p.ssafy.io"
 
     // 개발 중 토큰 하드코딩 분기
     const val DEV_TOKEN = "dev_access_token_placeholder"

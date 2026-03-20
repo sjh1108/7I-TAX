@@ -14,11 +14,15 @@ import com.ssafy.seveniTax.ui.card.*
 import com.ssafy.seveniTax.ui.main.MainScreen
 import com.ssafy.seveniTax.ui.pay.*
 import com.ssafy.seveniTax.ui.payment.*
+import com.ssafy.seveniTax.ui.test.ServerTestScreen
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
 @Composable
 fun NavGraph(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = "auth_graph") {
+    NavHost(navController = navController, startDestination = Route.ServerTest.path) {
+
+        // ── Server Test ───────────────────────────────────────
+        composable(Route.ServerTest.path) { ServerTestScreen(navController) }
 
         // ── Auth (ViewModel 공유) ────────────────────────────
         navigation(startDestination = Route.Splash.path, route = "auth_graph") {
