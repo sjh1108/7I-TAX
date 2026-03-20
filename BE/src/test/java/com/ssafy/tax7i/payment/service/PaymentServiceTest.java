@@ -110,6 +110,17 @@ class PaymentServiceTest {
                         .isEqualTo(ErrorCode.CARD_NOT_FOUND));
     }
 
+    @Test
+    void authorize_userId_null이면_UNAUTHORIZED_예외() {
+        PaymentAuthorizeRequest request = new PaymentAuthorizeRequest(
+                1L, 10000L, null, "스타벅스", null, PaymentMethod.OFFLINE, PaymentPurpose.PERSONAL);
+
+        assertThatThrownBy(() -> paymentService.authorize(null, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.UNAUTHORIZED));
+    }
+
     // ───────────── capture ─────────────
 
     @Test

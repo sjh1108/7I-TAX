@@ -3,3 +3,4 @@
 .env.example
 BE/.dockerignore
 .claude/
+BE/docs/
