@@ -3,11 +3,13 @@ from functools import lru_cache
 
 from app.core.config import Settings
 from app.core.exceptions import AIServiceError
+from app.services.backend_client import BackendClient
 from app.services.cache_service import SemanticCache
 from app.services.chat_service import ChatService
 from app.services.embedding_service import EmbeddingService
 from app.services.intent_classifier import IntentClassifier
 from app.services.retrieval_service import BM25Index, RetrievalService
+from app.services.tax_classifier_service import TaxClassifierService
 from app.services.vectorstore import VectorStoreService
 
 logger = logging.getLogger(__name__)
@@ -15,6 +17,7 @@ logger = logging.getLogger(__name__)
 _vectorstore_service: VectorStoreService | None = None
 _retrieval_service: RetrievalService | None = None
 _chat_service: ChatService | None = None
+_tax_classifier_service: TaxClassifierService | None = None
 
 INTENTS_PATH = "app/data/intents/tax_intents.json"
 
@@ -77,12 +80,33 @@ async def init_services() -> None:
         else None
     )
 
+    backend_client = BackendClient(settings)
+
     _chat_service = ChatService(
         settings=settings,
         retrieval_service=_retrieval_service,
         intent_classifier=intent_classifier,
+        backend_client=backend_client,
         cache_service=cache_service,
     )
+
+
+    # 세목 분류 서비스 초기화 (모델 미존재 시 경고만 출력)
+    global _tax_classifier_service
+    try:
+        _tax_classifier_service = TaxClassifierService()
+        logger.info("TaxClassifierService 초기화 완료")
+    except FileNotFoundError as e:
+        logger.warning("TaxClassifierService 모델 없음 (파인튜닝 필요): %s", e)
+
+
+def get_tax_classifier_service() -> TaxClassifierService:
+    """TaxClassifierService 인스턴스를 반환한다. FastAPI Depends()에서 사용."""
+    if _tax_classifier_service is None:
+        raise AIServiceError(
+            "세목 분류 서비스가 초기화되지 않았습니다. 모델 파인튜닝이 필요합니다."
+        )
+    return _tax_classifier_service
 
 
 def get_chat_service() -> ChatService:

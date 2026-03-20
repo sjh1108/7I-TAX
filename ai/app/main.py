@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 from app.core.config import settings
 from app.core.dependencies import init_services
 from app.core.exceptions import AIServiceError
-from app.routers import chat, health
+from app.routers import chat, health, transaction
 
 logger = logging.getLogger(__name__)
 
@@ -36,6 +36,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(chat.router)
+app.include_router(transaction.router)
 
 
 @app.exception_handler(AIServiceError)
