@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
 import io.hypersistence.tsid.TSID;
@@ -51,7 +50,7 @@ public class AuthService {
                         .ci(result.ci())
                         .di(result.di())
                         .name(result.name())
-                        .birthDate(LocalDate.parse(result.birthDate(), DateTimeFormatter.BASIC_ISO_DATE))
+                        .birthDate(LocalDate.parse(result.birthDate()))
                         .gender(result.gender())
                         .phoneNumber(result.phoneNumber())
                         .phoneLast4(result.phoneLast4())
