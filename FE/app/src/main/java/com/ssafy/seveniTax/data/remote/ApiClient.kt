@@ -19,9 +19,7 @@ object ApiClient {
 
         return OkHttpClient.Builder()
             .addInterceptor { chain ->
-                // 저장된 토큰 우선, 없으면 DEBUG에서만 DEV_TOKEN 폴백
                 val token = secureStorage.getAccessToken()
-                    ?: if (BuildConfig.DEBUG) Constants.DEV_TOKEN else null
 
                 val request = chain.request().newBuilder()
                     .apply { token?.let { addHeader("Authorization", "Bearer $it") } }

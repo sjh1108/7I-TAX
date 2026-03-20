@@ -21,7 +21,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.util.Constants
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +49,6 @@ fun ServerTestScreen(navController: NavController) {
     var baseUrl by remember { mutableStateOf(Constants.API_BASE_URL) }
     var isTesting by remember { mutableStateOf(false) }
 
-    // 단계별 결과
     var connectResult by remember { mutableStateOf<TestResult?>(null) }
     var publicResults by remember { mutableStateOf<List<TestResult>>(emptyList()) }
     var authToken by remember { mutableStateOf<String?>(null) }
@@ -77,10 +75,11 @@ fun ServerTestScreen(navController: NavController) {
         return response.code to response.body?.string()?.take(1000)
     }
 
-    fun httpPost(url: String, jsonBody: String, token: String? = null): Pair<Int?, String?> {
+    fun httpPost(url: String, jsonBody: String, token: String? = null, verifyToken: String? = null): Pair<Int?, String?> {
         val body = jsonBody.toRequestBody(JSON_TYPE)
         val reqBuilder = Request.Builder().url(url).post(body)
         token?.let { reqBuilder.addHeader("Authorization", "Bearer $it") }
+        verifyToken?.let { reqBuilder.addHeader("X-Verify-Token", it) }
         val response = client.newCall(reqBuilder.build()).execute()
         return response.code to response.body?.string()?.take(1000)
     }
@@ -130,7 +129,6 @@ fun ServerTestScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── Base URL ───────────────────────────────────────
         Text("Base URL", style = Typography.labelLarge)
         Spacer(modifier = Modifier.height(4.dp))
         OutlinedTextField(
@@ -143,11 +141,8 @@ fun ServerTestScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(20.dp))
 
-        // ═══════════════════════════════════════════════════
-        // 1단계: 서버 연결 확인
-        // ═══════════════════════════════════════════════════
+        // ── 1단계: 서버 연결 확인 ──
         SectionHeader("1단계: 서버 연결 확인")
-
         Button(
             onClick = {
                 isTesting = true
@@ -172,11 +167,8 @@ fun ServerTestScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ═══════════════════════════════════════════════════
-        // 2단계: 공개 API (토큰 불필요)
-        // ═══════════════════════════════════════════════════
+        // ── 2단계: 공개 API ──
         SectionHeader("2단계: 공개 API 테스트 (토큰 불필요)")
-
         Button(
             onClick = {
                 isTesting = true
@@ -187,7 +179,7 @@ fun ServerTestScreen(navController: NavController) {
                             runSingle("POST /auth/verify-identity", "POST") {
                                 httpPost(
                                     buildUrl("auth/verify-identity"),
-                                    """{"name":"홍길동","birthDate":"1990-01-01","gender":"M","phoneNumber":"010-1234-5678"}"""
+                                    """{"name":"홍길동","birthDate":"1990-01-01","gender":"M","phoneNumber":"01012345678"}"""
                                 )
                             },
                             runSingle("GET /tax-calendar/deadlines", "GET") {
@@ -211,21 +203,14 @@ fun ServerTestScreen(navController: NavController) {
             if (isTesting && publicResults.isEmpty()) LoadingIndicator()
             Text("공개 API 테스트", color = Background)
         }
-
         publicResults.forEach { ResultCard(it) }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ═══════════════════════════════════════════════════
-        // 3단계: 인증 플로우 (토큰 획득)
-        // ═══════════════════════════════════════════════════
+        // ── 3단계: 인증 플로우 ──
         SectionHeader("3단계: 인증 플로우 (토큰 획득)")
-        Text(
-            "본인인증 → PIN 설정 → 토큰 획득",
-            style = Typography.bodySmall
-        )
+        Text("본인인증 → PIN 설정 → 토큰 획득", style = Typography.bodySmall)
         Spacer(modifier = Modifier.height(8.dp))
-
         Button(
             onClick = {
                 isTesting = true
@@ -235,44 +220,44 @@ fun ServerTestScreen(navController: NavController) {
                 scope.launch {
                     val results = mutableListOf<TestResult>()
                     withContext(Dispatchers.IO) {
-                        // Step 1: verify-identity → userId
                         val verifyResult = runSingle("POST /auth/verify-identity", "POST") {
                             httpPost(
                                 buildUrl("auth/verify-identity"),
-                                """{"name":"홍길동","birthDate":"1990-01-01","gender":"M","phoneNumber":"010-1234-5678"}"""
+                                """{"name":"홍길동","birthDate":"1990-01-01","gender":"M","phoneNumber":"01012345678"}"""
                             )
                         }
                         results.add(verifyResult)
 
-                        // userId 추출
                         val parsedUserId = try {
                             val json = JSONObject(verifyResult.body ?: "")
                             json.optJSONObject("data")?.optLong("userId")
                         } catch (_: Exception) { null }
+                        val parsedVerifyToken = try {
+                            val json = JSONObject(verifyResult.body ?: "")
+                            json.optJSONObject("data")?.optString("verifyToken")
+                        } catch (_: Exception) { null }
                         userId = parsedUserId
 
-                        if (parsedUserId != null) {
-                            // Step 2: setup-pin → token
+                        if (parsedUserId != null && !parsedVerifyToken.isNullOrBlank()) {
                             val pinResult = runSingle("POST /auth/setup-pin", "POST") {
                                 httpPost(
                                     buildUrl("auth/setup-pin"),
-                                    """{"userId":$parsedUserId,"pin":"123456"}"""
+                                    """{"pin":"123456"}""",
+                                    verifyToken = parsedVerifyToken
                                 )
                             }
                             results.add(pinResult)
 
-                            // token 추출
                             val token = try {
                                 val json = JSONObject(pinResult.body ?: "")
                                 json.optJSONObject("data")?.optString("accessToken")
                             } catch (_: Exception) { null }
 
                             if (token.isNullOrBlank()) {
-                                // setup-pin 실패 시 login 시도
                                 val loginResult = runSingle("POST /auth/login (fallback)", "POST") {
                                     httpPost(
                                         buildUrl("auth/login"),
-                                        """{"phoneNumber":"010-1234-5678","pin":"123456"}"""
+                                        """{"phoneNumber":"01012345678","pin":"123456"}"""
                                     )
                                 }
                                 results.add(loginResult)
@@ -297,10 +282,8 @@ fun ServerTestScreen(navController: NavController) {
             if (isTesting && authResults.isEmpty()) LoadingIndicator()
             Text("인증 플로우 실행", color = Background)
         }
-
         authResults.forEach { ResultCard(it) }
 
-        // 토큰 표시
         if (authToken != null) {
             Spacer(modifier = Modifier.height(8.dp))
             Column(
@@ -320,20 +303,13 @@ fun ServerTestScreen(navController: NavController) {
             }
         } else if (authResults.isNotEmpty()) {
             Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                "Token 획득 실패 — 응답 본문을 확인하세요",
-                style = Typography.bodySmall,
-                color = Error
-            )
+            Text("Token 획득 실패 — 응답 본문을 확인하세요", style = Typography.bodySmall, color = Error)
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ═══════════════════════════════════════════════════
-        // 4단계: 인증 필요 API
-        // ═══════════════════════════════════════════════════
+        // ── 4단계: 인증 필요 API ──
         SectionHeader("4단계: 인증 필요 API 테스트")
-
         Button(
             onClick = {
                 val token = authToken ?: return@Button
@@ -389,19 +365,15 @@ fun ServerTestScreen(navController: NavController) {
                 color = Background
             )
         }
-
         protectedResults.forEach { ResultCard(it) }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ═══════════════════════════════════════════════════
-        // 전체 요약
-        // ═══════════════════════════════════════════════════
+        // ── 전체 요약 ──
         val allResults = listOfNotNull(connectResult) + publicResults + authResults + protectedResults
         if (allResults.isNotEmpty()) {
             val successCount = allResults.count { it.isSuccess }
             val totalCount = allResults.size
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -431,7 +403,6 @@ fun ServerTestScreen(navController: NavController) {
         HorizontalDivider(color = Divider)
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 초기화 & 앱 이동
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -449,11 +420,10 @@ fun ServerTestScreen(navController: NavController) {
             ) {
                 Text("전체 초기화")
             }
-
             Button(
                 onClick = {
                     navController.navigate("auth_graph") {
-                        popUpTo(Route.ServerTest.path) { inclusive = true }
+                        popUpTo("server_test") { inclusive = true }
                     }
                 },
                 colors = ButtonDefaults.buttonColors(containerColor = Accent),

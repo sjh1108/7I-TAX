@@ -27,6 +27,7 @@ data class AuthUiState(
     val name: String = "",
     // 본인인증 결과
     val userId: Long = 0L,
+    val verifyToken: String = "",
     val requiresPinSetup: Boolean = false,
     val requiresConsent: Boolean = false,
     // 약관
@@ -101,6 +102,7 @@ class AuthViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     userId = data.userId,
+                    verifyToken = data.verifyToken,
                     requiresPinSetup = data.requiresPinSetup,
                     requiresConsent = data.requiresConsent
                 )
@@ -140,7 +142,7 @@ class AuthViewModel @Inject constructor(
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, pinFailCount = 0) }
                 try {
-                    authRepository.setupPin(state.userId, state.pin)
+                    authRepository.setupPin(state.verifyToken, state.pin)
                     _uiState.update { it.copy(isLoading = false, authComplete = true) }
                     onSuccess()
                 } catch (e: Exception) {

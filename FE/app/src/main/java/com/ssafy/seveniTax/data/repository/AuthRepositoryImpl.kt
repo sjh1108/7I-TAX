@@ -12,8 +12,7 @@ class AuthRepositoryImpl @Inject constructor(
     private val secureStorage: SecureStorage
 ) : AuthRepository {
 
-    // TODO: 백엔드 연동 시 false로 변경
-    private val useMock = BuildConfig.DEBUG
+    private val useMock = false
 
     override suspend fun verifyIdentity(request: VerifyIdentityRequest): ApiResponse<VerifyIdentityResponse> {
         if (useMock) {
@@ -23,7 +22,8 @@ class AuthRepositoryImpl @Inject constructor(
                     userId = 1L,
                     isNewUser = true,
                     requiresPinSetup = true,
-                    requiresConsent = true
+                    requiresConsent = true,
+                    verifyToken = "mock-verify-token"
                 )
             )
         }
@@ -31,13 +31,13 @@ class AuthRepositoryImpl @Inject constructor(
         return response.body() ?: throw Exception(response.errorBody()?.string() ?: "본인인증 실패")
     }
 
-    override suspend fun setupPin(userId: Long, pin: String): ApiResponse<TokenResponse> {
+    override suspend fun setupPin(verifyToken: String, pin: String): ApiResponse<TokenResponse> {
         if (useMock) {
             val mockToken = TokenResponse("mock_access_token", "mock_refresh_token")
             saveTokens(mockToken.accessToken, mockToken.refreshToken)
             return ApiResponse(status = "success", data = mockToken)
         }
-        val response = authApi.setupPin(userId, SetupPinRequest(pin))
+        val response = authApi.setupPin(verifyToken, SetupPinRequest(pin))
         val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "PIN 설정 실패")
         body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
         return body
@@ -95,7 +95,7 @@ class AuthRepositoryImpl @Inject constructor(
     override fun getStoredPhoneNumber(): String? = secureStorage.getPhoneNumber()
 
     override fun hasStoredCredentials(): Boolean =
-        secureStorage.getPhoneNumber() != null
+        secureStorage.getAccessToken() != null
 
     override fun clearSession() {
         secureStorage.clearAll()

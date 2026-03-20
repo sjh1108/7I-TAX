@@ -8,11 +8,13 @@ import retrofit2.http.*
 interface AuthApi {
 
     @POST("auth/verify-identity")
-    suspend fun verifyIdentity(@Body body: VerifyIdentityRequest): Response<ApiResponse<VerifyIdentityResponse>>
+    suspend fun verifyIdentity(
+        @Body body: VerifyIdentityRequest
+    ): Response<ApiResponse<VerifyIdentityResponse>>
 
     @POST("auth/setup-pin")
     suspend fun setupPin(
-        @Query("userId") userId: Long,
+        @Header("X-Verify-Token") verifyToken: String,
         @Body body: SetupPinRequest
     ): Response<ApiResponse<TokenResponse>>
 
