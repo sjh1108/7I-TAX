@@ -10,7 +10,10 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Entity
-@Table(name = "transfers")
+@Table(name = "transfers", indexes = {
+        @Index(name = "idx_transfer_sender_user", columnList = "sender_user_id"),
+        @Index(name = "idx_transfer_receiver_user", columnList = "receiver_user_id")
+})
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Transfer extends BaseTimeEntity {

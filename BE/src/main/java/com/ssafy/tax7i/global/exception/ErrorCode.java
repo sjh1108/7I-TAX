@@ -58,7 +58,6 @@ public enum ErrorCode {
 
     // 500 Internal Server Error
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
-    OAUTH_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "OAuth 인증에 실패했습니다."),
 
     // 503 Service Unavailable
     BANK_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "은행 연동 서비스가 일시적으로 불가합니다.");
