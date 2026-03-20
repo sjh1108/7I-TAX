@@ -33,8 +33,6 @@ public class User extends BaseTimeEntity {
     @Column(length = 512)
     private String name;
 
-    private String ssafyUserKey;
-
     private LocalDate birthDate;
 
     private String gender;
@@ -64,12 +62,15 @@ public class User extends BaseTimeEntity {
     @Column(nullable = false)
     private UserStatus status = UserStatus.ACTIVE;
 
+    @Column(length = 100)
+    private String ssafyUserKey;
+
     private LocalDateTime lastLoginAt;
 
     @Builder
     public User(String ci, String di, String name,
                 LocalDate birthDate, String gender,
-                String phoneNumber, String phoneLast4) {
+                String phoneNumber, String phoneLast4, String ssafyUserKey) {
         this.ci = ci;
         this.di = di;
         this.name = name;
@@ -77,10 +78,7 @@ public class User extends BaseTimeEntity {
         this.gender = gender;
         this.phoneNumber = phoneNumber;
         this.phoneLast4 = phoneLast4;
-    }
-
-    public void registerFinanceKey(String userKey) {
-        this.ssafyUserKey = userKey;
+        this.ssafyUserKey = ssafyUserKey;
     }
 
     public void setupPin(String pinHash) {

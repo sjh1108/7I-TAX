@@ -7,6 +7,7 @@ public record SsafyFinanceProperties(
         String baseUrl,
         String apiKey,
         String institutionCode,
-        String fintechAppNo
+        String fintechAppNo,
+        String userKey
 ) {
 }

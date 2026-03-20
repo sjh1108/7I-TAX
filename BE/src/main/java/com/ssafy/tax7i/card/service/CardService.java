@@ -1,7 +1,5 @@
 package com.ssafy.tax7i.card.service;
 
-import com.ssafy.tax7i.auth.domain.User;
-import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.SsafyBalanceResponse;
 import com.ssafy.tax7i.banking.client.dto.SsafyCreateAccountResponse;
@@ -12,6 +10,8 @@ import com.ssafy.tax7i.card.entity.CardTransaction;
 import com.ssafy.tax7i.card.entity.CardTransactionType;
 import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.card.repository.CardTransactionRepository;
+import com.ssafy.tax7i.auth.domain.User;
+import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;

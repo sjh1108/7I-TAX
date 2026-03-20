@@ -201,6 +201,24 @@
     </div>
   </div>
 
+  <!-- 약관 동의 -->
+  <div class="card" style="margin-top:16px;">
+    <div class="card-title"><span class="icon">&#128220;</span> 약관 동의 (신규 유저 필수)</div>
+    <div style="display:flex;flex-direction:column;gap:8px;" id="consent-area">
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+        <input type="checkbox" id="consent-service" checked> [필수] 서비스 이용약관 동의 (SERVICE)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+        <input type="checkbox" id="consent-privacy" checked> [필수] 개인정보 처리방침 동의 (PRIVACY)
+      </label>
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;cursor:pointer;">
+        <input type="checkbox" id="consent-financial" checked> [필수] 금융정보 제공 동의 (FINANCIAL)
+      </label>
+    </div>
+    <button class="btn btn-success" onclick="doSaveConsents()" style="margin-top:12px;">약관 동의 저장</button>
+    <div id="consent-result" style="margin-top:8px;font-size:13px;"></div>
+  </div>
+
   <!-- 토큰 관리 -->
   <div class="card" style="margin-top:16px;">
     <div class="card-title"><span class="icon">&#128273;</span> 토큰 관리</div>
@@ -316,7 +334,7 @@
   <div class="card" id="entry-form" style="display:none;">
     <div class="card-title">새 전표 작성</div>
     <div class="form-row">
-      <div class="field"><label>일자 *</label><input type="date" id="ef-date" value="2026-03-17"></div>
+      <div class="field"><label>일자 *</label><input type="date" id="ef-date"></div>
       <div class="field"><label>유형 *</label>
         <select id="ef-type"><option value="EXPENSE">지출</option><option value="INCOME">수입</option><option value="ASSET">자산</option></select>
       </div>
@@ -647,6 +665,29 @@ async function doLogout() {
   } catch(e) { toast('오류: '+e.message); }
 }
 
+// 약관 동의
+async function doSaveConsents() {
+  if (!TOKEN) { toast('먼저 로그인하세요'); return; }
+  const consents = [
+    { consentType: 'SERVICE', agreed: document.getElementById('consent-service').checked },
+    { consentType: 'PRIVACY', agreed: document.getElementById('consent-privacy').checked },
+    { consentType: 'FINANCIAL', agreed: document.getElementById('consent-financial').checked }
+  ];
+  const el = document.getElementById('consent-result');
+  try {
+    const res = await fetch(BASE+'/api/auth/consents', {
+      method:'POST', headers:authHeaders(), body:JSON.stringify(consents)
+    });
+    if (res.ok) {
+      el.innerHTML = '<div style="background:#dcfce7;padding:12px;border-radius:8px;color:#16a34a;"><b>약관 동의 저장 완료!</b></div>';
+      toast('약관 동의 저장 완료!');
+    } else {
+      const json = await res.json();
+      el.innerHTML = '<div style="background:#fee2e2;padding:12px;border-radius:8px;color:#dc2626;">실패: '+(json.message||res.status)+'</div>';
+    }
+  } catch(e) { el.innerHTML = '<div style="color:#dc2626;">오류: '+e.message+'</div>'; }
+}
+
 function authHeaders() {
   const h = {'Content-Type':'application/json'};
   if (TOKEN) h['Authorization'] = 'Bearer '+TOKEN;
@@ -800,19 +841,27 @@ async function loadEntries() {
       ).join('');
 
       let actions = '';
+      const bizToggle = e.isBusinessExpense
+        ? `<button class="btn btn-sm" style="background:#f3e8ff;color:#7c3aed;font-size:11px;" onclick="toggleExpenseType(${e.id},'personal')">개인용 전환</button>`
+        : `<button class="btn btn-sm" style="background:#eef2ff;color:#4f46e5;font-size:11px;" onclick="toggleExpenseType(${e.id},'business')">사업용 전환</button>`;
+
       if (!e.confirmed) {
         actions = `
           <div style="display:flex;flex-direction:column;gap:4px;min-width:160px;">
             <select id="cat-sel-${e.id}" style="border:1px solid #d1d5db;border-radius:4px;padding:4px 6px;font-size:11px;">
               <option value="">세목 선택</option>${catOptions}
             </select>
-            <div style="display:flex;gap:4px;">
+            <div style="display:flex;gap:4px;flex-wrap:wrap;">
               <button class="btn btn-sm btn-primary" onclick="updateCategoryAndConfirm(${e.id})">확정</button>
               <button class="btn btn-sm btn-secondary" onclick="updateCategory(${e.id})">세목만 저장</button>
+              ${bizToggle}
             </div>
           </div>`;
       } else {
-        actions = `<button class="btn btn-sm btn-secondary" onclick="editCategory(${e.id},'${e.categoryCode||''}')">세목 수정</button>`;
+        actions = `<div style="display:flex;gap:4px;flex-wrap:wrap;">
+          <button class="btn btn-sm btn-secondary" onclick="editCategory(${e.id},'${e.categoryCode||''}')">세목 수정</button>
+          ${bizToggle}
+        </div>`;
       }
 
       return `<tr>
@@ -883,6 +932,15 @@ function editCategory(id, currentCode) {
       <option value="">세목 선택</option>${catOptions}
     </select>
     <button class="btn btn-sm btn-primary" style="margin-top:4px;" onclick="updateCategory(${id})">저장</button>`;
+}
+
+async function toggleExpenseType(id, type) {
+  const endpoint = type === 'personal' ? '/personal' : '/business';
+  try {
+    const res = await fetch(BASE+'/api/book-entries/'+id+endpoint, {method:'PATCH',headers:authHeaders()});
+    if (res.ok) { toast(type === 'personal' ? '개인용으로 전환!' : '사업용으로 전환!'); loadEntries(); }
+    else { const j=await res.json(); toast('오류: '+(j.message||res.status)); }
+  } catch(e) { toast('오류: '+e.message); }
 }
 
 // ── Calendar ──
@@ -1289,16 +1347,26 @@ async function capturePayment(id) {
   } catch(e) { toast('오류: '+e.message); }
 }
 
-function promptCancel(id) {
+async function promptCancel(id) {
+  // 결제 상세를 먼저 조회하여 금액 확인
+  let fullAmount = 0;
+  try {
+    const detRes = await fetch(BASE+'/api/payments/'+id, {headers:authHeaders()});
+    if (detRes.ok) {
+      const det = (await detRes.json())?.data;
+      fullAmount = det?.amount || 0;
+    }
+  } catch {}
   const reason = prompt('취소 사유를 입력하세요:');
   if (!reason) return;
-  const amount = prompt('취소 금액 (전액이면 빈칸):');
-  cancelPayment(id, reason, amount ? Number(amount) : null);
+  const amountStr = prompt('취소 금액 (전액이면 빈칸, 현재 결제액: '+fmt(fullAmount)+'원):');
+  const cancelAmount = amountStr ? Number(amountStr) : fullAmount;
+  if (!cancelAmount || cancelAmount <= 0) { toast('취소 금액이 올바르지 않습니다'); return; }
+  cancelPayment(id, reason, cancelAmount);
 }
 
-async function cancelPayment(id, reason, amount) {
-  const body = { reason };
-  if (amount) body.cancelAmount = amount;
+async function cancelPayment(id, reason, cancelAmount) {
+  const body = { cancelAmount, reason };
   try {
     const res = await fetch(BASE+'/api/payments/'+id+'/cancel', {method:'POST',headers:authHeaders(),body:JSON.stringify(body)});
     if (res.ok) { toast('결제 취소 완료!'); renderPaymentRows(); }
@@ -1347,6 +1415,7 @@ async function createPayment() {
 }
 
 // ── Init ──
+document.getElementById('ef-date').value = new Date().toISOString().slice(0,10);
 loadDashDday();
 renderMccTable();
 </script>

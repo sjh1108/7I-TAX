@@ -44,6 +44,6 @@ public class TaxCalendarService {
 
     private TaxDeadlineResponse toResponse(TaxSchedule s, LocalDate deadline, LocalDate today) {
         long dDay = ChronoUnit.DAYS.between(today, deadline);
-        return new TaxDeadlineResponse(s.name(), s.description(), deadline, dDay);
+        return new TaxDeadlineResponse(s.name(), s.description(), deadline.toString(), dDay);
     }
 }

@@ -15,6 +15,7 @@ import com.ssafy.tax7i.payment.entity.PaymentMethod;
 import com.ssafy.tax7i.payment.entity.PaymentPurpose;
 import com.ssafy.tax7i.payment.entity.PaymentStatus;
 import com.ssafy.tax7i.payment.repository.PaymentRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -362,9 +363,9 @@ class PaymentServiceTest {
                 .gender("M")
                 .phoneNumber("01012345678")
                 .phoneLast4("5678")
+                .ssafyUserKey(userKey)
                 .build();
         setField(user, "id", id);
-        user.registerFinanceKey(userKey);
         return user;
     }
 

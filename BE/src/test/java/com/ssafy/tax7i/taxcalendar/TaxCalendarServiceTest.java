@@ -23,7 +23,7 @@ class TaxCalendarServiceTest {
         assertThat(deadlines).isNotEmpty();
         for (TaxDeadlineResponse d : deadlines) {
             assertThat(d.dDay()).isGreaterThanOrEqualTo(0);
-            assertThat(d.deadline()).isAfterOrEqualTo(today);
+            assertThat(LocalDate.parse(d.deadline())).isAfterOrEqualTo(today);
         }
     }
 
@@ -65,7 +65,7 @@ class TaxCalendarServiceTest {
 
         boolean hasVatPre = deadlines.stream()
                 .anyMatch(d -> d.taxName().contains("부가가치세 예정신고 (1기)") &&
-                        d.deadline().equals(LocalDate.of(2026, 4, 25)));
+                        d.deadline().equals("2026-04-25"));
         assertThat(hasVatPre).isTrue();
     }
 
@@ -93,6 +93,6 @@ class TaxCalendarServiceTest {
                 .findFirst().orElseThrow();
 
         // 5/31이 지났으므로 2027년
-        assertThat(incomeTax.deadline().getYear()).isEqualTo(2027);
+        assertThat(LocalDate.parse(incomeTax.deadline()).getYear()).isEqualTo(2027);
     }
 }
