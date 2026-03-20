@@ -11,6 +11,7 @@ import androidx.navigation.navArgument
 import androidx.navigation.navigation
 import com.ssafy.seveniTax.ui.auth.*
 import com.ssafy.seveniTax.ui.card.*
+import com.ssafy.seveniTax.ui.classification.*
 import com.ssafy.seveniTax.ui.main.MainScreen
 import com.ssafy.seveniTax.ui.pay.*
 import com.ssafy.seveniTax.ui.payment.*
@@ -112,6 +113,62 @@ fun NavGraph(navController: NavHostController) {
         ) { backStackEntry ->
             val cardId = backStackEntry.arguments?.getString("cardId") ?: ""
             CardDetailScreen(navController, cardId)
+        }
+
+        // ── AI 세목 자동분류 ─────────────────────────────────
+        composable(Route.ClassificationLoading.path) {
+            ClassificationLoadingScreen(navController)
+        }
+        composable(Route.ClassificationResult.path) {
+            ClassificationResultScreen(
+                navController = navController,
+                onConfirm = { navController.navigate(Route.MemoAdd.path) },
+                onChangeCategory = { navController.navigate(Route.CategorySelect.path) }
+            )
+        }
+        composable(Route.CategorySelect.path) {
+            CategorySelectScreen(
+                navController = navController,
+                onCategorySelected = { navController.popBackStack() }
+            )
+        }
+        composable(Route.MemoAdd.path) {
+            MemoAddScreen(
+                navController = navController,
+                onSave = { navController.navigate(Route.ClassificationComplete.path) },
+                onSkip = { navController.navigate(Route.ClassificationComplete.path) }
+            )
+        }
+        composable(Route.ClassificationComplete.path) {
+            ClassificationCompleteScreen(
+                navController = navController,
+                onConfirm = {
+                    navController.navigate(Route.Main.path) {
+                        popUpTo(Route.Main.path) { inclusive = true }
+                    }
+                }
+            )
+        }
+        composable(Route.UnclassifiedList.path) {
+            UnclassifiedListScreen(
+                navController = navController,
+                onBulkConfirm = {
+                    navController.navigate(Route.ClassificationComplete.path)
+                },
+                onReviewAll = {
+                    navController.navigate(Route.ClassificationResult.path)
+                },
+                onTransactionClick = {
+                    navController.navigate(Route.ClassificationResult.path)
+                }
+            )
+        }
+        composable(Route.AutoClassification.path) {
+            AutoClassificationScreen(
+                navController = navController,
+                onConfirm = { navController.popBackStack() },
+                onEditCategory = { navController.navigate(Route.CategorySelect.path) }
+            )
         }
     }
 }

@@ -37,4 +37,13 @@ sealed class Route(val path: String) {
     }
 
     object ServerTest : Route("server_test")
+
+    // AI 세목 자동분류
+    object ClassificationLoading : Route("classification_loading")
+    object ClassificationResult : Route("classification_result")
+    object CategorySelect : Route("category_select")
+    object MemoAdd : Route("memo_add")
+    object ClassificationComplete : Route("classification_complete")
+    object UnclassifiedList : Route("unclassified_list")
+    object AutoClassification : Route("auto_classification")
 }
