@@ -87,15 +87,16 @@ class AuthViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = "") }
         try {
             val state = _uiState.value
+            val rawPhone = state.phone.replace("-", "")
             val request = VerifyIdentityRequest(
                 name = state.name,
                 birthDate = buildBirthDate(state.residentFront, state.residentBack),
                 gender = buildGender(state.residentBack),
-                phoneNumber = state.phone
+                phoneNumber = rawPhone
             )
             val response = authRepository.verifyIdentity(request)
             val data = response.data!!
-            authRepository.saveUserInfo(data.userId, state.phone)
+            authRepository.saveUserInfo(data.userId, rawPhone)
             _uiState.update {
                 it.copy(
                     isLoading = false,
@@ -231,7 +232,7 @@ class AuthViewModel @Inject constructor(
     fun loginWithPin(onSuccess: () -> Unit) = viewModelScope.launch {
         _uiState.update { it.copy(isLoading = true, errorMessage = "") }
         try {
-            val phoneNumber = authRepository.getStoredPhoneNumber()!!
+            val phoneNumber = authRepository.getStoredPhoneNumber()!!.replace("-", "")
             authRepository.login(phoneNumber, _uiState.value.loginPin)
             _uiState.update { it.copy(isLoading = false) }
             onSuccess()
