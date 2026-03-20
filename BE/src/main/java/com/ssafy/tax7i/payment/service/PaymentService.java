@@ -43,6 +43,9 @@ public class PaymentService {
     private record PaymentContext(User user, Card card, String userKey, long balance, String authCode) {}
 
     private PaymentContext preparePayment(Long userId, Long cardId, long amount) {
+        if (userId == null) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         Card card = cardRepository.findByIdAndUser_Id(cardId, userId)
