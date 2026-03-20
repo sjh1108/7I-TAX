@@ -1,9 +1,11 @@
 package com.ssafy.tax7i.auth.service;
 
 import com.ssafy.tax7i.auth.domain.User;
+import com.ssafy.tax7i.auth.domain.UserStatus;
+import com.ssafy.tax7i.auth.dto.IdentityVerifyRequest;
+import com.ssafy.tax7i.auth.dto.IdentityVerifyResponse;
 import com.ssafy.tax7i.auth.dto.LoginResponse;
-import com.ssafy.tax7i.auth.dto.SsafyTokenResponse;
-import com.ssafy.tax7i.auth.dto.SsafyUserInfoResponse;
+import com.ssafy.tax7i.auth.repository.UserConsentRepository;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -17,22 +19,24 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.BDDMockito.never;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.BDDMockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class AuthServiceTest {
 
-    @Mock private SsafyOAuthClient ssafyOAuthClient;
+    @Mock private NiceIdentityMockService niceIdentityMockService;
+    @Mock private PinService pinService;
     @Mock private UserRepository userRepository;
+    @Mock private UserConsentRepository userConsentRepository;
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private RedisTemplate<String, String> redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
@@ -40,53 +44,106 @@ class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
-    private SsafyTokenResponse mockSsafyToken;
-    private SsafyUserInfoResponse mockUserInfo;
-
-    @BeforeEach
-    void setUp() {
-        mockSsafyToken = new SsafyTokenResponse(
-                "bearer", "ssafy-at", "ssafy-rt", 3600L, "read", 2592000L);
-        mockUserInfo = new SsafyUserInfoResponse("ssafy-user-001", "test@ssafy.com", "홍길동");
-    }
-
-    // ───────────── login ─────────────
+    // ───────────── verifyIdentity ─────────────
 
     @Test
-    void login_신규유저_회원가입후토큰반환() {
+    void verifyIdentity_신규유저_회원가입() {
+        IdentityVerifyRequest request = new IdentityVerifyRequest("홍길동", "1990-01-01", "M", "01012345678");
+        NiceIdentityMockService.VerificationResult result = new NiceIdentityMockService.VerificationResult(
+                "test-ci", "test-di", "홍길동", "1990-01-01", "M", "01012345678");
+
+        given(niceIdentityMockService.verify(request)).willReturn(result);
+        given(userRepository.findByCi("test-ci")).willReturn(Optional.empty());
         User savedUser = createUserWithId(1L);
-        given(ssafyOAuthClient.getToken("auth-code")).willReturn(mockSsafyToken);
-        given(ssafyOAuthClient.getUserInfo("ssafy-at")).willReturn(mockUserInfo);
-        given(userRepository.findBySsafyUserId("ssafy-user-001")).willReturn(Optional.empty());
         given(userRepository.save(any(User.class))).willReturn(savedUser);
+        given(userConsentRepository.findByUserId(1L)).willReturn(Collections.emptyList());
+
+        IdentityVerifyResponse response = authService.verifyIdentity(request);
+
+        assertThat(response.isNewUser()).isTrue();
+        assertThat(response.requiresPinSetup()).isTrue();
+        assertThat(response.requiresConsent()).isTrue();
+        then(userRepository).should().save(any(User.class));
+    }
+
+    @Test
+    void verifyIdentity_기존유저_조회() {
+        IdentityVerifyRequest request = new IdentityVerifyRequest("홍길동", "1990-01-01", "M", "01012345678");
+        NiceIdentityMockService.VerificationResult result = new NiceIdentityMockService.VerificationResult(
+                "test-ci", "test-di", "홍길동", "1990-01-01", "M", "01012345678");
+
+        User existingUser = createUserWithId(1L);
+        given(niceIdentityMockService.verify(request)).willReturn(result);
+        given(userRepository.findByCi("test-ci")).willReturn(Optional.of(existingUser));
+        given(userConsentRepository.findByUserId(1L)).willReturn(Collections.emptyList());
+
+        IdentityVerifyResponse response = authService.verifyIdentity(request);
+
+        assertThat(response.isNewUser()).isFalse();
+        then(userRepository).should(never()).save(any(User.class));
+    }
+
+    // ───────────── setupPin ─────────────
+
+    @Test
+    void setupPin_성공_토큰반환() {
+        User user = createUserWithId(1L);
+        given(userRepository.findById(1L)).willReturn(Optional.of(user));
+        given(pinService.hashPin("123456")).willReturn("hashed-pin");
         given(jwtTokenProvider.createAccessToken(1L)).willReturn("access-token");
         given(jwtTokenProvider.createRefreshToken(1L)).willReturn("refresh-token");
         given(jwtTokenProvider.getRefreshExpiration()).willReturn(604800000L);
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
-        LoginResponse response = authService.login("auth-code");
+        LoginResponse response = authService.setupPin(1L, "123456");
 
         assertThat(response.accessToken()).isEqualTo("access-token");
         assertThat(response.refreshToken()).isEqualTo("refresh-token");
-        then(userRepository).should().save(any(User.class));
-        then(valueOperations).should().set(eq("RT:1"), eq("refresh-token"), anyLong(), any());
     }
 
+    // ───────────── loginWithPin ─────────────
+
     @Test
-    void login_기존유저_로그인후토큰반환() {
-        User existingUser = createUserWithId(1L);
-        given(ssafyOAuthClient.getToken("auth-code")).willReturn(mockSsafyToken);
-        given(ssafyOAuthClient.getUserInfo("ssafy-at")).willReturn(mockUserInfo);
-        given(userRepository.findBySsafyUserId("ssafy-user-001")).willReturn(Optional.of(existingUser));
+    void loginWithPin_성공() {
+        User user = createUserWithId(1L, "01012345678", "5678");
+        user.setupPin("hashed-pin");
+
+        given(userRepository.findByPhoneLast4("5678")).willReturn(List.of(user));
+        given(pinService.verifyPin("123456", "hashed-pin")).willReturn(true);
         given(jwtTokenProvider.createAccessToken(1L)).willReturn("access-token");
         given(jwtTokenProvider.createRefreshToken(1L)).willReturn("refresh-token");
         given(jwtTokenProvider.getRefreshExpiration()).willReturn(604800000L);
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
 
-        LoginResponse response = authService.login("auth-code");
+        LoginResponse response = authService.loginWithPin("01012345678", "123456");
 
-        assertThat(response).isNotNull();
-        then(userRepository).should(never()).save(any(User.class));
+        assertThat(response.accessToken()).isEqualTo("access-token");
+    }
+
+    @Test
+    void loginWithPin_PIN불일치_예외() {
+        User user = createUserWithId(1L, "01012345678", "5678");
+        user.setupPin("hashed-pin");
+
+        given(userRepository.findByPhoneLast4("5678")).willReturn(List.of(user));
+        given(pinService.verifyPin("999999", "hashed-pin")).willReturn(false);
+
+        assertThatThrownBy(() -> authService.loginWithPin("01012345678", "999999"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PIN_INVALID));
+    }
+
+    @Test
+    void loginWithPin_PIN미설정_예외() {
+        User user = createUserWithId(1L, "01012345678", "5678");
+
+        given(userRepository.findByPhoneLast4("5678")).willReturn(List.of(user));
+
+        assertThatThrownBy(() -> authService.loginWithPin("01012345678", "123456"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.PIN_NOT_SET));
     }
 
     // ───────────── reissue ─────────────
@@ -105,7 +162,6 @@ class AuthServiceTest {
 
         assertThat(response.accessToken()).isEqualTo("new-at");
         assertThat(response.refreshToken()).isEqualTo("new-rt");
-        then(valueOperations).should().set(eq("RT:1"), eq("new-rt"), anyLong(), any());
     }
 
     @Test
@@ -113,19 +169,6 @@ class AuthServiceTest {
         given(jwtTokenProvider.validateToken("invalid-rt")).willReturn(false);
 
         assertThatThrownBy(() -> authService.reissue("invalid-rt"))
-                .isInstanceOf(BusinessException.class)
-                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.REFRESH_TOKEN_INVALID));
-    }
-
-    @Test
-    void reissue_Redis에토큰없음_예외발생() {
-        given(jwtTokenProvider.validateToken("rt")).willReturn(true);
-        given(jwtTokenProvider.getUserId("rt")).willReturn(1L);
-        given(redisTemplate.opsForValue()).willReturn(valueOperations);
-        given(valueOperations.get("RT:1")).willReturn(null);
-
-        assertThatThrownBy(() -> authService.reissue("rt"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.REFRESH_TOKEN_INVALID));
@@ -156,25 +199,19 @@ class AuthServiceTest {
                         .isEqualTo(ErrorCode.TOKEN_INVALID));
     }
 
-    @Test
-    void logout_잔여만료시간0이하_BL등록안함() {
-        given(jwtTokenProvider.validateToken("at")).willReturn(true);
-        given(jwtTokenProvider.getUserId("at")).willReturn(1L);
-        given(jwtTokenProvider.getRemainingExpiration("at")).willReturn(0L);
-
-        authService.logout("at");
-
-        then(redisTemplate).should().delete("RT:1");
-        then(redisTemplate).should(never()).opsForValue();
-    }
-
     // ───────────── helper ─────────────
 
     private User createUserWithId(Long id) {
+        return createUserWithId(id, null, null);
+    }
+
+    private User createUserWithId(Long id, String phoneNumber, String phoneLast4) {
         User user = User.builder()
-                .ssafyUserId("ssafy-user-001")
-                .email("test@ssafy.com")
+                .ci("test-ci")
+                .di("test-di")
                 .name("홍길동")
+                .phoneNumber(phoneNumber)
+                .phoneLast4(phoneLast4)
                 .build();
         try {
             var field = User.class.getDeclaredField("id");

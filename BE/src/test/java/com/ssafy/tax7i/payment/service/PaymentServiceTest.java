@@ -4,9 +4,9 @@ import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.*;
-import com.ssafy.tax7i.banking.entity.Account;
-import com.ssafy.tax7i.banking.entity.AccountType;
-import com.ssafy.tax7i.banking.service.AccountService;
+import com.ssafy.tax7i.card.entity.Card;
+import com.ssafy.tax7i.card.entity.CardType;
+import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -20,6 +20,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
@@ -29,16 +30,16 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class PaymentServiceTest {
 
     @Mock private PaymentRepository paymentRepository;
-    @Mock private AccountService accountService;
+    @Mock private CardRepository cardRepository;
     @Mock private UserRepository userRepository;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
     @Mock private PaymentStatusUpdater paymentStatusUpdater;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -48,10 +49,10 @@ class PaymentServiceTest {
     @Test
     void authorize_성공() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
+        Card card = createCard(1L, 1L, "1234567890");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(accountService.findAccountByUser(1L, 1L)).willReturn(account);
+        given(cardRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(card));
         given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
                 .willReturn(balanceResponse("500000"));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
@@ -73,10 +74,10 @@ class PaymentServiceTest {
     @Test
     void authorize_잔액부족_예외() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
+        Card card = createCard(1L, 1L, "1234567890");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(accountService.findAccountByUser(1L, 1L)).willReturn(account);
+        given(cardRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(card));
         given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
                 .willReturn(balanceResponse("5000"));
 
@@ -90,13 +91,12 @@ class PaymentServiceTest {
     }
 
     @Test
-    void authorize_비활성계좌_예외() {
+    void authorize_계좌없는카드_예외() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        account.close();
+        Card card = createCard(1L, 1L, null);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(accountService.findAccountByUser(1L, 1L)).willReturn(account);
+        given(cardRepository.findByIdAndUserId(1L, 1L)).willReturn(Optional.of(card));
 
         PaymentAuthorizeRequest request = new PaymentAuthorizeRequest(
                 1L, 10000L, null, "테스트", null, PaymentMethod.ONLINE, PaymentPurpose.PERSONAL);
@@ -112,8 +112,8 @@ class PaymentServiceTest {
     @Test
     void capture_성공() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 10000L, PaymentStatus.AUTHORIZED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.AUTHORIZED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
         given(ssafyFinanceClient.withdraw("user-key", "1234567890", 10000L, "스타벅스"))
@@ -122,14 +122,14 @@ class PaymentServiceTest {
         PaymentCaptureResponse response = paymentService.capture(1L, 1L);
 
         assertThat(response.status()).isEqualTo(PaymentStatus.CAPTURED);
-        assertThat(response.accountDebited().remainingBalance()).isEqualTo(490000L);
+        assertThat(response.cardDebited().remainingBalance()).isEqualTo(490000L);
     }
 
     @Test
     void capture_승인상태아님_예외() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 10000L, PaymentStatus.CAPTURED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
 
@@ -152,8 +152,8 @@ class PaymentServiceTest {
     @Test
     void capture_출금실패_DECLINED전환() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 10000L, PaymentStatus.AUTHORIZED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.AUTHORIZED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
         given(ssafyFinanceClient.withdraw("user-key", "1234567890", 10000L, "스타벅스"))
@@ -172,8 +172,8 @@ class PaymentServiceTest {
     @Test
     void cancel_성공() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 10000L, PaymentStatus.CAPTURED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
         given(ssafyFinanceClient.deposit("user-key", "1234567890", 10000L, "결제취소: 스타벅스"))
@@ -189,8 +189,8 @@ class PaymentServiceTest {
     @Test
     void cancel_확정되지않은결제_예외() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 10000L, PaymentStatus.AUTHORIZED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.AUTHORIZED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
 
@@ -205,8 +205,8 @@ class PaymentServiceTest {
     @Test
     void cancel_취소금액초과_예외() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 10000L, PaymentStatus.CAPTURED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
 
@@ -221,8 +221,8 @@ class PaymentServiceTest {
     @Test
     void cancel_금액미지정_전액취소() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 10000L, PaymentStatus.CAPTURED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
         given(ssafyFinanceClient.deposit("user-key", "1234567890", 10000L, "결제취소: 스타벅스"))
@@ -240,8 +240,8 @@ class PaymentServiceTest {
     @Test
     void getPayment_성공() {
         User user = createUserWithKey(1L, "user-key");
-        Account account = createAccount(1L, user, "1234567890");
-        Payment payment = createPayment(1L, user, account, 15000L, PaymentStatus.CAPTURED);
+        Card card = createCard(1L, 1L, "1234567890");
+        Payment payment = createPayment(1L, user, card, 15000L, PaymentStatus.CAPTURED);
 
         given(paymentRepository.findByIdAndUserIdWithFetch(1L, 1L)).willReturn(Optional.of(payment));
 
@@ -265,8 +265,8 @@ class PaymentServiceTest {
 
     private User createUserWithKey(Long id, String userKey) {
         User user = User.builder()
-                .ssafyUserId("ssafy-user-001")
-                .email("test@ssafy.com")
+                .ci("test-ci")
+                .di("test-di")
                 .name("홍길동")
                 .build();
         setField(user, "id", id);
@@ -274,22 +274,22 @@ class PaymentServiceTest {
         return user;
     }
 
-    private Account createAccount(Long id, User user, String accountNo) {
-        Account account = Account.builder()
-                .user(user)
-                .accountType(AccountType.BUSINESS)
-                .bankCode("001")
-                .accountNumber(accountNo)
-                .alias("테스트")
+    private Card createCard(Long id, Long userId, String ssafyAccountNo) {
+        Card card = Card.builder()
+                .userId(userId)
+                .cardName("테스트카드")
+                .cardType(CardType.BUSINESS)
+                .last4Digits("1234")
+                .ssafyAccountNo(ssafyAccountNo)
                 .build();
-        setField(account, "id", id);
-        return account;
+        setField(card, "id", id);
+        return card;
     }
 
-    private Payment createPayment(Long id, User user, Account account, Long amount, PaymentStatus status) {
+    private Payment createPayment(Long id, User user, Card card, Long amount, PaymentStatus status) {
         Payment payment = Payment.builder()
                 .user(user)
-                .account(account)
+                .card(card)
                 .amount(amount)
                 .currency("KRW")
                 .merchantName("스타벅스")

@@ -5,15 +5,17 @@ import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.SsafyBalanceResponse;
 import com.ssafy.tax7i.banking.client.dto.SsafyWithdrawResponse;
-import com.ssafy.tax7i.banking.entity.Account;
-import com.ssafy.tax7i.banking.service.AccountService;
+import com.ssafy.tax7i.card.entity.Card;
+import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
 import com.ssafy.tax7i.payment.entity.Payment;
 import com.ssafy.tax7i.payment.entity.PaymentStatus;
 import com.ssafy.tax7i.payment.repository.PaymentRepository;
+import com.ssafy.tax7i.bookentry.event.PaymentCapturedEvent;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,36 +27,35 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
-    private final AccountService accountService;
+    private final CardRepository cardRepository;
     private final UserRepository userRepository;
     private final SsafyFinanceClient ssafyFinanceClient;
     private final PaymentStatusUpdater paymentStatusUpdater;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public PaymentAuthorizeResponse authorize(Long userId, PaymentAuthorizeRequest request) {
         User user = findUser(userId);
-        Account account = accountService.findAccountByUser(request.accountId(), userId);
+        Card card = cardRepository.findByIdAndUserId(request.cardId(), userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "카드를 찾을 수 없습니다."));
 
-        if (!account.isActive()) {
-            throw new BusinessException(ErrorCode.INVALID_ARGUMENT, "비활성 계좌로는 결제할 수 없습니다.");
+        if (card.getSsafyAccountNo() == null) {
+            throw new BusinessException(ErrorCode.INVALID_ARGUMENT, "카드에 연결된 계좌가 없습니다.");
         }
 
         String userKey = getUserKey(user);
-        SsafyBalanceResponse balanceResponse = ssafyFinanceClient.getBalance(userKey, account.getAccountNumber());
+        SsafyBalanceResponse balanceResponse = ssafyFinanceClient.getBalance(userKey, card.getSsafyAccountNo());
         long balance = Long.parseLong(balanceResponse.rec().accountBalance());
-        long availableBalance = account.getAvailableBalance(balance);
 
-        if (availableBalance < request.amount()) {
+        if (balance < request.amount()) {
             throw new BusinessException(ErrorCode.INSUFFICIENT_BALANCE);
         }
-
-        account.reserve(request.amount());
 
         String authCode = UUID.randomUUID().toString().substring(0, 8).toUpperCase();
 
         Payment payment = Payment.builder()
                 .user(user)
-                .account(account)
+                .card(card)
                 .amount(request.amount())
                 .currency(request.currencyOrDefault())
                 .merchantName(request.merchantName())
@@ -77,7 +78,7 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.PAYMENT_DECLINED, "승인 상태의 결제만 확정할 수 있습니다.");
         }
 
-        Account account = payment.getAccount();
+        Card card = payment.getCard();
         User user = payment.getUser();
         String userKey = getUserKey(user);
 
@@ -85,19 +86,28 @@ public class PaymentService {
         try {
             withdrawResponse = ssafyFinanceClient.withdraw(
                     userKey,
-                    account.getAccountNumber(),
+                    card.getSsafyAccountNo(),
                     payment.getAmount(),
                     payment.getMerchantName()
             );
         } catch (BusinessException e) {
-            account.releaseReservation(payment.getAmount());
             paymentStatusUpdater.markDeclined(paymentId);
             throw e;
         }
 
-        account.releaseReservation(payment.getAmount());
         payment.capture();
-        long remainingBalance = Long.parseLong(withdrawResponse.rec().accountBalance());
+        String balanceStr = withdrawResponse.rec().accountBalance();
+        long remainingBalance = balanceStr != null ? Long.parseLong(balanceStr) : 0L;
+
+        eventPublisher.publishEvent(new PaymentCapturedEvent(
+                payment.getId(),
+                user.getId(),
+                payment.getAmount(),
+                payment.getMerchantName(),
+                payment.getMerchantCategoryCode(),
+                payment.getPurpose().name(),
+                payment.getCapturedAt()
+        ));
 
         return PaymentCaptureResponse.of(payment, remainingBalance);
     }
@@ -111,21 +121,26 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.PAYMENT_DECLINED, "확정된 결제만 취소할 수 있습니다.");
         }
 
-        long cancelAmount = request.cancelAmount() != null ? request.cancelAmount() : payment.getAmount();
-        if (cancelAmount > payment.getAmount()) {
+        long alreadyCancelled = payment.getCancelledAmount() != null ? payment.getCancelledAmount() : 0L;
+        long cancelAmount = request.cancelAmount() != null ? request.cancelAmount() : (payment.getAmount() - alreadyCancelled);
+        if (cancelAmount + alreadyCancelled > payment.getAmount()) {
             throw new BusinessException(ErrorCode.INVALID_ARGUMENT, "취소 금액이 결제 금액을 초과할 수 없습니다.");
         }
 
-        Account account = payment.getAccount();
+        Card card = payment.getCard();
         User user = payment.getUser();
         String userKey = getUserKey(user);
 
-        ssafyFinanceClient.deposit(
-                userKey,
-                account.getAccountNumber(),
-                cancelAmount,
-                "결제취소: " + payment.getMerchantName()
-        );
+        try {
+            ssafyFinanceClient.deposit(
+                    userKey,
+                    card.getSsafyAccountNo(),
+                    cancelAmount,
+                    "결제취소: " + payment.getMerchantName()
+            );
+        } catch (BusinessException e) {
+            throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE, "환불 입금 실패");
+        }
 
         payment.cancel(cancelAmount, request.reason());
         return PaymentCancelResponse.from(payment);

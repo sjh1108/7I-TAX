@@ -21,21 +21,31 @@ public enum ErrorCode {
     REFRESH_TOKEN_EXPIRED(HttpStatus.UNAUTHORIZED, "Refresh Token이 만료되었습니다."),
     REFRESH_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "유효하지 않은 Refresh Token입니다."),
 
+    // 400 Bad Request (Auth)
+    PIN_INVALID(HttpStatus.BAD_REQUEST, "PIN이 올바르지 않습니다."),
+    PIN_NOT_SET(HttpStatus.BAD_REQUEST, "PIN이 설정되지 않았습니다."),
+    CONSENT_REQUIRED(HttpStatus.BAD_REQUEST, "필수 약관 동의가 필요합니다."),
+    IDENTITY_VERIFICATION_FAILED(HttpStatus.BAD_REQUEST, "본인인증에 실패했습니다."),
+
     // 403 Forbidden
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
+    USER_SUSPENDED(HttpStatus.FORBIDDEN, "정지된 계정입니다."),
+    USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 계정입니다."),
 
     // 404 Not Found
     NOT_FOUND(HttpStatus.NOT_FOUND, "리소스를 찾을 수 없습니다."),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
+    BOOK_ENTRY_NOT_FOUND(HttpStatus.NOT_FOUND, "장부 항목을 찾을 수 없습니다."), // 장부 항목 찾을 수 없음
 
     // 409 Conflict
     CONFLICT(HttpStatus.CONFLICT, "리소스 충돌이 발생했습니다."),
+    DUPLICATE_BOOK_ENTRY(HttpStatus.CONFLICT, "이미 장부가 생성된 결제입니다."), // 동일 paymentId 중복 장부 방지
+    ALREADY_CONFIRMED(HttpStatus.CONFLICT, "이미 확인된 전표입니다."), // 확인 완료된 전표 재확인 방지
 
     // 402 Payment Required
     PAYMENT_DECLINED(HttpStatus.valueOf(402), "결제가 거절되었습니다."),
 
     // 404 Not Found
-    ACCOUNT_NOT_FOUND(HttpStatus.NOT_FOUND, "계좌를 찾을 수 없습니다."),
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다."),
 
     // 422 Unprocessable Entity

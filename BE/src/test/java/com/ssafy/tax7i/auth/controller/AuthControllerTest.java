@@ -1,8 +1,10 @@
 package com.ssafy.tax7i.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.tax7i.auth.dto.IdentityVerifyResponse;
 import com.ssafy.tax7i.auth.dto.LoginResponse;
 import com.ssafy.tax7i.auth.service.AuthService;
+import com.ssafy.tax7i.auth.service.ConsentService;
 import com.ssafy.tax7i.config.TestSecurityConfig;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -15,12 +17,13 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.util.List;
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.willDoNothing;
 import static org.mockito.BDDMockito.willThrow;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -34,49 +37,89 @@ class AuthControllerTest {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private AuthService authService;
-    // JwtAuthenticationFilter의 의존성 충족 (TestSecurityConfig에서 필터 체인에는 추가 안 함)
+    @MockitoBean private ConsentService consentService;
     @MockitoBean private com.ssafy.tax7i.global.jwt.JwtTokenProvider jwtTokenProvider;
     @MockitoBean private org.springframework.data.redis.core.RedisTemplate<String, String> redisTemplate;
 
-    // ───────────── GET /api/auth/login ─────────────
+    // ───────────── POST /api/auth/verify-identity ─────────────
 
     @Test
-    void login_200_AuthorizationUrl반환() throws Exception {
-        mockMvc.perform(get("/api/auth/login"))
+    void verifyIdentity_200_본인인증성공() throws Exception {
+        given(authService.verifyIdentity(any()))
+                .willReturn(new IdentityVerifyResponse(1L, true, true, true));
+
+        mockMvc.perform(post("/api/auth/verify-identity")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "name", "홍길동",
+                                "birthDate", "1990-01-01",
+                                "gender", "M",
+                                "phoneNumber", "01012345678"
+                        ))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("success"))
-                .andExpect(jsonPath("$.data.authorizationUrl").value(
-                        org.hamcrest.Matchers.containsString("project.ssafy.com/oauth/sso-check")))
-                .andExpect(jsonPath("$.data.authorizationUrl").value(
-                        org.hamcrest.Matchers.containsString("client_id=test-client-id")))
-                .andExpect(jsonPath("$.data.authorizationUrl").value(
-                        org.hamcrest.Matchers.containsString("response_type=code")));
+                .andExpect(jsonPath("$.data.userId").value(1))
+                .andExpect(jsonPath("$.data.isNewUser").value(true))
+                .andExpect(jsonPath("$.data.requiresPinSetup").value(true));
     }
 
-    // ───────────── POST /api/auth/callback ─────────────
+    @Test
+    void verifyIdentity_필수값누락_400() throws Exception {
+        mockMvc.perform(post("/api/auth/verify-identity")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("name", "홍길동"))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_ARGUMENT"));
+    }
+
+    // ───────────── POST /api/auth/login ─────────────
 
     @Test
-    void callback_유효한code_200_토큰반환() throws Exception {
-        given(authService.login("valid-code"))
+    void login_200_PIN로그인성공() throws Exception {
+        given(authService.loginWithPin("01012345678", "123456"))
                 .willReturn(new LoginResponse("access-token", "refresh-token"));
 
-        mockMvc.perform(post("/api/auth/callback")
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("code", "valid-code"))))
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "phoneNumber", "01012345678",
+                                "pin", "123456"
+                        ))))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("success"))
                 .andExpect(jsonPath("$.data.accessToken").value("access-token"))
                 .andExpect(jsonPath("$.data.refreshToken").value("refresh-token"));
     }
 
     @Test
-    void callback_빈code_400() throws Exception {
-        mockMvc.perform(post("/api/auth/callback")
+    void login_잘못된PIN_400() throws Exception {
+        given(authService.loginWithPin("01012345678", "999999"))
+                .willThrow(new BusinessException(ErrorCode.PIN_INVALID));
+
+        mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(Map.of("code", ""))))
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "phoneNumber", "01012345678",
+                                "pin", "999999"
+                        ))))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.status").value("fail"))
-                .andExpect(jsonPath("$.errorCode").value("INVALID_ARGUMENT"));
+                .andExpect(jsonPath("$.errorCode").value("PIN_INVALID"));
+    }
+
+    // ───────────── POST /api/auth/setup-pin ─────────────
+
+    @Test
+    void setupPin_200_PIN설정성공() throws Exception {
+        given(authService.setupPin(1L, "123456"))
+                .willReturn(new LoginResponse("access-token", "refresh-token"));
+
+        mockMvc.perform(post("/api/auth/setup-pin")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "userId", 1,
+                                "pin", "123456"
+                        ))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.accessToken").value("access-token"));
     }
 
     // ───────────── POST /api/auth/reissue ─────────────

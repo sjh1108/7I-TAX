@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 public record PaymentAuthorizeResponse(
         Long paymentId,
         String authorizationCode,
-        Long accountId,
+        Long cardId,
         Long amount,
         PaymentStatus status,
         PaymentPurpose purpose,
@@ -19,7 +19,7 @@ public record PaymentAuthorizeResponse(
         return new PaymentAuthorizeResponse(
                 payment.getId(),
                 payment.getAuthorizationCode(),
-                payment.getAccount().getId(),
+                payment.getCard().getId(),
                 payment.getAmount(),
                 payment.getStatus(),
                 payment.getPurpose(),
