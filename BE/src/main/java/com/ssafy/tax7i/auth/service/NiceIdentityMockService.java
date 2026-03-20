@@ -4,7 +4,6 @@ import com.ssafy.tax7i.auth.dto.IdentityVerifyRequest;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -17,7 +16,6 @@ import java.util.HexFormat;
  */
 @Slf4j
 @Service
-@Profile({"local", "dev", "test"})
 public class NiceIdentityMockService {
 
     public VerificationResult verify(IdentityVerifyRequest request) {
