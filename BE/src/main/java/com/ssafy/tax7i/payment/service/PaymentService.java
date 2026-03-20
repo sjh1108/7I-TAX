@@ -4,9 +4,13 @@ import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.SsafyBalanceResponse;
+import com.ssafy.tax7i.banking.client.dto.SsafyDepositResponse;
 import com.ssafy.tax7i.banking.client.dto.SsafyWithdrawResponse;
 import com.ssafy.tax7i.card.entity.Card;
+import com.ssafy.tax7i.card.entity.CardTransaction;
+import com.ssafy.tax7i.card.entity.CardTransactionType;
 import com.ssafy.tax7i.card.repository.CardRepository;
+import com.ssafy.tax7i.card.repository.CardTransactionRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -32,6 +36,7 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final CardRepository cardRepository;
+    private final CardTransactionRepository cardTransactionRepository;
     private final UserRepository userRepository;
     private final SsafyFinanceClient ssafyFinanceClient;
 
@@ -104,6 +109,14 @@ public class PaymentService {
         payment.capture();
         long remainingBalance = Long.parseLong(withdrawResponse.rec().accountBalance());
 
+        cardTransactionRepository.save(CardTransaction.builder()
+                .card(card)
+                .transactionType(CardTransactionType.PAYMENT)
+                .amount(payment.getAmount())
+                .balanceAfter(remainingBalance)
+                .description("결제: " + payment.getMerchantName())
+                .build());
+
         return PaymentCaptureResponse.of(payment, remainingBalance);
     }
 
@@ -126,7 +139,7 @@ public class PaymentService {
         User user = payment.getUser();
         String userKey = getUserKey(user);
 
-        ssafyFinanceClient.deposit(
+        SsafyDepositResponse depositResponse = ssafyFinanceClient.deposit(
                 userKey,
                 card.getSsafyAccountNo(),
                 cancelAmount,
@@ -134,6 +147,16 @@ public class PaymentService {
         );
 
         payment.cancel(cancelAmount, request.reason());
+
+        long balanceAfterRefund = Long.parseLong(depositResponse.rec().accountBalance());
+        cardTransactionRepository.save(CardTransaction.builder()
+                .card(card)
+                .transactionType(CardTransactionType.REFUND)
+                .amount(cancelAmount)
+                .balanceAfter(balanceAfterRefund)
+                .description("환불: " + payment.getMerchantName())
+                .build());
+
         return PaymentCancelResponse.from(payment);
     }
 
@@ -145,9 +168,15 @@ public class PaymentService {
 
     public Page<PaymentDetailResponse> getPayments(Long userId, LocalDate startDate, LocalDate endDate,
                                                     PaymentStatus status, Pageable pageable) {
-        if (startDate != null && endDate != null) {
+        boolean hasDateRange = startDate != null && endDate != null;
+
+        if (hasDateRange) {
             LocalDateTime start = startDate.atStartOfDay();
             LocalDateTime end = endDate.atTime(LocalTime.MAX);
+            if (status != null) {
+                return paymentRepository.findByUserIdAndCapturedAtBetweenAndStatusWithFetch(userId, start, end, status, pageable)
+                        .map(PaymentDetailResponse::from);
+            }
             return paymentRepository.findByUserIdAndCapturedAtBetweenWithFetch(userId, start, end, pageable)
                     .map(PaymentDetailResponse::from);
         }

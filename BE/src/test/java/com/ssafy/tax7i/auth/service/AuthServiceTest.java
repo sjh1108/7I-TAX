@@ -248,7 +248,7 @@ class AuthServiceTest {
                         .isEqualTo(ErrorCode.PIN_INVALID));
 
         then(valueOperations).should().increment("pin-fail:01012345678");
-        then(redisTemplate).should(never()).expire(eq("pin-fail:01012345678"), eq(5L), any());
+        then(redisTemplate).should().expire(eq("pin-fail:01012345678"), eq(5L), any());
     }
 
     // ───────────── reissue ─────────────

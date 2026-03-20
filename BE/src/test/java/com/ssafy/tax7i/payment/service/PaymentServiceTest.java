@@ -7,6 +7,7 @@ import com.ssafy.tax7i.banking.client.dto.*;
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
+import com.ssafy.tax7i.card.repository.CardTransactionRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -41,6 +42,7 @@ class PaymentServiceTest {
 
     @Mock private PaymentRepository paymentRepository;
     @Mock private CardRepository cardRepository;
+    @Mock private CardTransactionRepository cardTransactionRepository;
     @Mock private UserRepository userRepository;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
 
