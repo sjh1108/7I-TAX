@@ -8,8 +8,10 @@ group = 'com.ssafy'
 version = '0.0.1-SNAPSHOT'
 description = 'SSAFY 14th, 7I-Tax'
 
-// Redirect build output to ASCII-safe path to avoid ClassNotFoundException on Korean paths
-layout.buildDirectory = file("C:/tmp/tax7i-build")
+// Redirect build output to ASCII-safe path to avoid ClassNotFoundException on Korean paths (local Windows only)
+if (System.getProperty('os.name')?.toLowerCase()?.contains('windows')) {
+	layout.buildDirectory = file("C:/tmp/tax7i-build")
+}
 
 java {
 	toolchain {
