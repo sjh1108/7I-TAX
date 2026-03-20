@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: tax7i
+  config:
+    import: optional:classpath:application-local.yaml
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        jdbc:
+          batch_size: 20
+          fetch_size: 50
+        order_inserts: true
+        order_updates: true
+        default_batch_fetch_size: 100
+    open-in-view: false
+
+encryption:
+  aes-key: ${AES_ENCRYPTION_KEY}
+
+jwt:
+  access-expiration: 1800000
+  refresh-expiration: 604800000
+
+app:
+  test-login:
+    enabled: false
+
+ssafy:
+  finance:
+    base-url: https://finopenapi.ssafy.io/ssafy/api/v1/edu
+    api-key: ${SSAFY_FINANCE_API_KEY}
+    institution-code: "00100"
+    fintech-app-no: "001"
+    user-key: ${SSAFY_FINANCE_USER_KEY}
+
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
