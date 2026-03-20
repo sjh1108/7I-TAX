@@ -218,6 +218,14 @@ public class PaymentService {
         payment.capture();
         long remainingBalance = Long.parseLong(withdrawResponse.rec().accountBalance());
 
+        cardTransactionRepository.save(CardTransaction.builder()
+                .card(ctx.card())
+                .transactionType(CardTransactionType.PAYMENT)
+                .amount(request.amount())
+                .balanceAfter(remainingBalance)
+                .description("결제: " + request.merchantName())
+                .build());
+
         return QrPaymentResponse.of(payment, remainingBalance);
     }
 
