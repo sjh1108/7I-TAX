@@ -1,73 +1,84 @@
 package com.ssafy.tax7i.global.crypto;
 
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
-import java.nio.ByteBuffer;
 import java.security.SecureRandom;
-import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
-@Slf4j
 @Component
 @Converter
 public class AesEncryptor implements AttributeConverter<String, String> {
 
     private static final String ALGORITHM = "AES/GCM/NoPadding";
-    private static final int GCM_IV_LENGTH = 12;
     private static final int GCM_TAG_LENGTH = 128;
+    private static final int IV_LENGTH = 12;
 
-    private final SecretKeySpec secretKey;
+    private static volatile SecretKeySpec secretKey;
 
     public AesEncryptor(EncryptionProperties properties) {
-        byte[] keyBytes = properties.aesKey().getBytes(StandardCharsets.UTF_8);
-        this.secretKey = new SecretKeySpec(keyBytes, "AES");
+        byte[] keyBytes = Base64.getDecoder().decode(properties.getAesKey());
+        AesEncryptor.secretKey = new SecretKeySpec(keyBytes, "AES");
+    }
+
+    public AesEncryptor() {
+        // JPA가 no-arg constructor로 인스턴스를 생성할 때
+        // Spring이 먼저 초기화한 static secretKey를 공유
+    }
+
+    private void ensureKeyAvailable() {
+        if (secretKey == null) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "암호화 키가 초기화되지 않았습니다.");
+        }
     }
 
     @Override
     public String convertToDatabaseColumn(String attribute) {
         if (attribute == null) return null;
+        ensureKeyAvailable();
         try {
-            byte[] iv = new byte[GCM_IV_LENGTH];
+            byte[] iv = new byte[IV_LENGTH];
             new SecureRandom().nextBytes(iv);
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.ENCRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
-            byte[] encrypted = cipher.doFinal(attribute.getBytes(StandardCharsets.UTF_8));
+            byte[] encrypted = cipher.doFinal(attribute.getBytes());
 
-            ByteBuffer buffer = ByteBuffer.allocate(iv.length + encrypted.length);
-            buffer.put(iv);
-            buffer.put(encrypted);
-            return Base64.getEncoder().encodeToString(buffer.array());
+            byte[] combined = new byte[IV_LENGTH + encrypted.length];
+            System.arraycopy(iv, 0, combined, 0, IV_LENGTH);
+            System.arraycopy(encrypted, 0, combined, IV_LENGTH, encrypted.length);
+
+            return Base64.getEncoder().encodeToString(combined);
         } catch (Exception e) {
-            log.error("AES 암호화 실패", e);
-            throw new RuntimeException("AES 암호화 실패", e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "암호화에 실패했습니다.");
         }
     }
 
     @Override
     public String convertToEntityAttribute(String dbData) {
         if (dbData == null) return null;
+        ensureKeyAvailable();
         try {
-            byte[] decoded = Base64.getDecoder().decode(dbData);
-            ByteBuffer buffer = ByteBuffer.wrap(decoded);
+            byte[] combined = Base64.getDecoder().decode(dbData);
+            byte[] iv = new byte[IV_LENGTH];
+            System.arraycopy(combined, 0, iv, 0, IV_LENGTH);
 
-            byte[] iv = new byte[GCM_IV_LENGTH];
-            buffer.get(iv);
-            byte[] encrypted = new byte[buffer.remaining()];
-            buffer.get(encrypted);
+            byte[] encrypted = new byte[combined.length - IV_LENGTH];
+            System.arraycopy(combined, IV_LENGTH, encrypted, 0, encrypted.length);
 
             Cipher cipher = Cipher.getInstance(ALGORITHM);
             cipher.init(Cipher.DECRYPT_MODE, secretKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
-            return new String(cipher.doFinal(encrypted), StandardCharsets.UTF_8);
+            byte[] decrypted = cipher.doFinal(encrypted);
+
+            return new String(decrypted);
         } catch (Exception e) {
-            log.error("AES 복호화 실패", e);
-            throw new RuntimeException("AES 복호화 실패", e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "복호화에 실패했습니다.");
         }
     }
 }

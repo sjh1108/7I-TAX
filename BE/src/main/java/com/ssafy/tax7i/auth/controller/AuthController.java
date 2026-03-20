@@ -2,18 +2,15 @@ package com.ssafy.tax7i.auth.controller;
 
 import com.ssafy.tax7i.auth.dto.*;
 import com.ssafy.tax7i.auth.service.AuthService;
-import com.ssafy.tax7i.auth.service.ConsentService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -21,7 +18,9 @@ import java.util.List;
 public class AuthController {
 
     private final AuthService authService;
-    private final ConsentService consentService;
+
+    @Value("${app.test-login.enabled:false}")
+    private boolean testLoginEnabled;
 
     @PostMapping("/verify-identity")
     public ResponseEntity<SuccessResponse<IdentityVerifyResponse>> verifyIdentity(
@@ -32,8 +31,9 @@ public class AuthController {
 
     @PostMapping("/setup-pin")
     public ResponseEntity<SuccessResponse<LoginResponse>> setupPin(
+            @RequestHeader("X-Verify-Token") String verifyToken,
             @Valid @RequestBody PinSetupRequest request) {
-        LoginResponse response = authService.setupPin(request.userId(), request.pin());
+        LoginResponse response = authService.setupPin(verifyToken, request.pin());
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
@@ -44,19 +44,11 @@ public class AuthController {
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
-    @PostMapping("/consents")
-    public ResponseEntity<SuccessResponse<Void>> saveConsents(
-            @AuthenticationPrincipal Long userId,
-            @Valid @RequestBody List<ConsentRequest> requests) {
-        consentService.saveConsents(userId, requests);
-        return ResponseEntity.ok(SuccessResponse.ok());
-    }
-
     @PostMapping("/reissue")
     public ResponseEntity<SuccessResponse<LoginResponse>> reissue(
             @Valid @RequestBody TokenReissueRequest request) {
-        LoginResponse loginResponse = authService.reissue(request.refreshToken());
-        return ResponseEntity.ok(SuccessResponse.of(loginResponse));
+        LoginResponse response = authService.reissue(request.refreshToken());
+        return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
     @PostMapping("/logout")
@@ -68,5 +60,15 @@ public class AuthController {
         String accessToken = authorization.substring(7);
         authService.logout(accessToken);
         return ResponseEntity.ok(SuccessResponse.ok());
+    }
+
+    @PostMapping("/test-login")
+    public ResponseEntity<SuccessResponse<LoginResponse>> testLogin(
+            @RequestParam(value = "email", required = false) String email) {
+        if (!testLoginEnabled) {
+            throw new BusinessException(ErrorCode.FORBIDDEN, "테스트 로그인이 비활성화되어 있습니다.");
+        }
+        LoginResponse response = authService.testLogin(email);
+        return ResponseEntity.ok(SuccessResponse.of(response));
     }
 }

@@ -4,13 +4,13 @@ import com.ssafy.tax7i.card.entity.CardType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
-public record CardCreateRequest(
+public record CreateCardRequest(
         @NotBlank(message = "카드 이름은 필수입니다.")
         String cardName,
 
         @NotNull(message = "카드 유형은 필수입니다.")
         CardType cardType,
 
-        String last4Digits
-) {
-}
+        @NotBlank(message = "계좌 상품 고유번호는 필수입니다.")
+        String accountTypeUniqueNo
+) {}

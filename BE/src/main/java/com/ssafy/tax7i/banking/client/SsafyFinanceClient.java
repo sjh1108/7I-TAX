@@ -52,6 +52,28 @@ public class SsafyFinanceClient {
         return post("/demandDeposit/updateDemandDepositAccountWithdrawal", request, SsafyWithdrawResponse.class);
     }
 
+    public SsafyTransferResult transfer(String senderUserKey, String fromAccountNo,
+                                         String receiverUserKey, String toAccountNo,
+                                         long amount, String withdrawSummary, String depositSummary) {
+        SsafyWithdrawResponse withdrawResponse = withdraw(senderUserKey, fromAccountNo, amount, withdrawSummary);
+        try {
+            SsafyDepositResponse depositResponse = deposit(receiverUserKey, toAccountNo, amount, depositSummary);
+            return new SsafyTransferResult(withdrawResponse, depositResponse);
+        } catch (Exception e) {
+            log.error("이체 중 입금 실패, 환불 처리: {}", e.getMessage());
+            deposit(senderUserKey, fromAccountNo, amount, "이체 실패 환불");
+            throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE, "이체 중 입금에 실패하여 환불 처리되었습니다.");
+        }
+    }
+
+    public SsafyTransactionHistoryResponse getTransactionHistory(String userKey, String accountNo,
+                                                                  String startDate, String endDate) {
+        SsafyCommonHeader header = headerBuilder.build("inquireTransactionHistoryList", userKey);
+        SsafyTransactionHistoryRequest request = new SsafyTransactionHistoryRequest(
+                header, accountNo, startDate, endDate, "A", "DESC");
+        return post("/demandDeposit/inquireTransactionHistoryList", request, SsafyTransactionHistoryResponse.class);
+    }
+
     private <T extends SsafyApiResponse> T post(String path, Object request, Class<T> responseType) {
         String url = properties.baseUrl() + path;
         HttpHeaders headers = new HttpHeaders();
