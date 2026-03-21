@@ -39,7 +39,7 @@ fun TaxButton(
                 disabledContentColor = TextSecondary
             )
         ) {
-            Text(text = text, style = Typography.labelLarge)
+            Text(text = text, style = Typography.labelLarge, color = Background)
         }
 
         ButtonVariant.Secondary -> OutlinedButton(
