@@ -11,7 +11,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -29,14 +28,22 @@ fun ResidentNumberScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
-    val totalDigits = uiState.residentFront.length + uiState.residentBack.length
     val sheetState = rememberModalBottomSheetState()
     var showCarrierSheet by remember { mutableStateOf(false) }
 
     val carriers = listOf("SKT", "KT", "LG U+", "SKT 알뜰폰", "KT 알뜰폰", "LG U+ 알뜰폰")
+    val isResidentComplete = uiState.residentFront.length == 6 && uiState.residentBack.length == 1
 
-    LaunchedEffect(totalDigits) {
-        if (uiState.residentFront.length == 6 && uiState.residentBack.length == 1) {
+    // 주민번호 7자리 입력 완료 시 통신사 바텀시트 자동 표시
+    LaunchedEffect(isResidentComplete) {
+        if (isResidentComplete && uiState.carrier.isEmpty()) {
+            showCarrierSheet = true
+        }
+    }
+
+    // 통신사 선택 완료 시 다음 화면으로 이동
+    LaunchedEffect(uiState.carrier) {
+        if (isResidentComplete && uiState.carrier.isNotEmpty()) {
             navController.navigate(Route.NameInput.path)
         }
     }
@@ -65,38 +72,42 @@ fun ResidentNumberScreen(
                 )
             }
             Spacer(modifier = Modifier.height(8.dp))
+
+            // 주민번호 입력 전: "주민등록번호를 입력 해주세요"
+            // 주민번호 완료 후: "통신사를 선택 해주세요"
             Text(
-                text = "통신사를 선택 해주세요",
+                text = if (isResidentComplete) "통신사를 선택 해주세요" else "주민등록번호를\n입력 해주세요",
                 style = Typography.headlineMedium
             )
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 통신사 선택
-            Text("통신사", style = Typography.bodySmall, color = TextSecondary)
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showCarrierSheet = true },
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = uiState.carrier.ifEmpty { "통신사" },
-                    style = Typography.titleLarge,
-                    color = if (uiState.carrier.isEmpty()) TextSecondary else TextPrimary
-                )
-                Icon(
-                    imageVector = Icons.Default.KeyboardArrowDown,
-                    contentDescription = "선택",
-                    tint = TextSecondary
-                )
+            // 통신사 선택 (주민번호 완료 후 표시)
+            if (isResidentComplete) {
+                Text("통신사", style = Typography.bodySmall, color = TextSecondary)
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { showCarrierSheet = true },
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = uiState.carrier.ifEmpty { "통신사" },
+                        style = Typography.titleLarge,
+                        color = if (uiState.carrier.isEmpty()) TextSecondary else TextPrimary
+                    )
+                    Icon(
+                        imageVector = Icons.Default.KeyboardArrowDown,
+                        contentDescription = "선택",
+                        tint = TextSecondary
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                HorizontalDivider(color = Divider)
+                Spacer(modifier = Modifier.height(24.dp))
             }
-            Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = Divider)
-
-            Spacer(modifier = Modifier.height(24.dp))
 
             // 주민등록번호
             Text("주민등록번호", style = Typography.bodySmall, color = TextSecondary)
@@ -135,10 +146,6 @@ fun ResidentNumberScreen(
         }
         PinKeypad(
             onNumberClick = { digit ->
-                if (uiState.carrier.isEmpty()) {
-                    showCarrierSheet = true
-                    return@PinKeypad
-                }
                 if (uiState.residentFront.length < 6) {
                     viewModel.updateResidentFront(uiState.residentFront + digit)
                 } else if (uiState.residentBack.isEmpty()) {
