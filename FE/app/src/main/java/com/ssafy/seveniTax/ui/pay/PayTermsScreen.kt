@@ -30,6 +30,8 @@ private val payTerms = listOf(
     PayTerm("페이 서비스 이용약관", true),
     PayTerm("개인정보 수집 및 이용 동의", true),
     PayTerm("전자금융 이용약관", true),
+    PayTerm("결제내역 수집 및 이용 동의", true),
+    PayTerm("자동 기장 처리 동의", true),
     PayTerm("마케팅 정보 수신 동의", false),
 )
 
@@ -116,7 +118,7 @@ fun PayTermsScreen(navController: NavController) {
         Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             TaxButton(
                 text = "다음으로",
-                onClick = { navController.navigate(Route.PayVerify.path) },
+                onClick = { navController.navigate(Route.PayConfirm.path) },
                 enabled = allRequiredChecked
             )
         }
