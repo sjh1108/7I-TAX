@@ -22,6 +22,7 @@ data class AuthUiState(
     val errorMessage: String = "",
     // 본인인증 입력
     val phone: String = "",
+    val carrier: String = "",         // 통신사 (SKT, KT, LG U+ 등)
     val residentFront: String = "",   // 생년월일 6자리
     val residentBack: String = "",    // 뒷자리 1자리 (성별)
     val name: String = "",
@@ -69,6 +70,11 @@ class AuthViewModel @Inject constructor(
     // ── [2] PhoneInput ────────────────────────────────────
     fun updatePhone(phone: String) {
         _uiState.update { it.copy(phone = phone) }
+    }
+
+    // ── [2.5] Carrier ────────────────────────────────────
+    fun updateCarrier(carrier: String) {
+        _uiState.update { it.copy(carrier = carrier) }
     }
 
     // ── [3] ResidentNumber ────────────────────────────────
