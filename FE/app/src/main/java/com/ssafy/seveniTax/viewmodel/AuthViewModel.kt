@@ -40,6 +40,7 @@ data class AuthUiState(
     val pinFailCount: Int = 0,
     // PIN 로그인 (재방문)
     val loginPin: String = "",
+    val pinNotSet: Boolean = false,
     // 완료
     val authComplete: Boolean = false
 )
@@ -232,7 +233,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun loginWithPin(onSuccess: () -> Unit) = viewModelScope.launch {
-        _uiState.update { it.copy(isLoading = true, errorMessage = "") }
+        _uiState.update { it.copy(isLoading = true, errorMessage = "", pinNotSet = false) }
         try {
             val phoneNumber = authRepository.getStoredPhoneNumber()!!.replace("-", "")
             authRepository.login(phoneNumber, _uiState.value.loginPin)
@@ -240,10 +241,21 @@ class AuthViewModel @Inject constructor(
             onSuccess()
         } catch (e: Exception) {
             Log.e("AuthViewModel", "loginWithPin 실패", e)
+            val isPinNotSet = e.message?.contains("PIN_NOT_SET") == true
             _uiState.update {
-                it.copy(isLoading = false, loginPin = "", errorMessage = e.message ?: "PIN이 올바르지 않습니다")
+                it.copy(
+                    isLoading = false,
+                    loginPin = "",
+                    pinNotSet = isPinNotSet,
+                    errorMessage = if (isPinNotSet) "PIN이 설정되지 않았습니다" else (e.message ?: "PIN이 올바르지 않습니다")
+                )
             }
         }
+    }
+
+    fun resetForPinSetup() {
+        authRepository.clearSession()
+        _uiState.update { AuthUiState() }
     }
 
     fun clearError() {

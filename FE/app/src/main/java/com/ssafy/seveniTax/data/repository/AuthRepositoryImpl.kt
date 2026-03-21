@@ -39,7 +39,8 @@ class AuthRepositoryImpl @Inject constructor(
         }
         val response = authApi.setupPin(verifyToken, SetupPinRequest(pin))
         val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "PIN 설정 실패")
-        body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
+        val data = body.data ?: throw Exception("PIN 설정 응답에 토큰이 없습니다")
+        saveTokens(data.accessToken, data.refreshToken)
         return body
     }
 

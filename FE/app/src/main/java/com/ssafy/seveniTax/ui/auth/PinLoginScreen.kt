@@ -1,12 +1,16 @@
 package com.ssafy.seveniTax.ui.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.components.CodeBoxes
@@ -65,6 +69,24 @@ fun PinLoginScreen(
                     text = uiState.errorMessage,
                     style = Typography.bodySmall,
                     color = Error
+                )
+            }
+
+            // PIN_NOT_SET 에러 시 재설정 버튼
+            if (uiState.pinNotSet) {
+                Spacer(modifier = Modifier.height(20.dp))
+                Text(
+                    text = "본인인증 후 PIN 재설정",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Accent,
+                    textDecoration = TextDecoration.Underline,
+                    modifier = Modifier.clickable {
+                        viewModel.resetForPinSetup()
+                        navController.navigate(Route.PhoneInput.path) {
+                            popUpTo(0) { inclusive = true }
+                        }
+                    }
                 )
             }
 
