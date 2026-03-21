@@ -68,6 +68,11 @@ fun NavGraph(navController: NavHostController) {
                 val vm: AuthViewModel = hiltViewModel(parentEntry)
                 TermsScreen(navController, vm)
             }
+            composable(Route.SmsVerification.path) {
+                val parentEntry = remember(it) { navController.getBackStackEntry("auth_graph") }
+                val vm: AuthViewModel = hiltViewModel(parentEntry)
+                SmsVerificationScreen(navController, vm)
+            }
             composable(Route.AuthSuccess.path) {
                 AuthSuccessScreen(navController)
             }

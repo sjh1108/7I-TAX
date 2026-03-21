@@ -11,6 +11,7 @@ sealed class Route(val path: String) {
     object PinSetup : Route("pin_setup")
     object PinConfirm : Route("pin_confirm")
     object Terms : Route("terms")
+    object SmsVerification : Route("sms_verification")
     object AuthSuccess : Route("auth_success")
     object PinLogin : Route("pin_login")
 
