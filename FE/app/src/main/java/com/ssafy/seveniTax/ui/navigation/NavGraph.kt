@@ -82,8 +82,10 @@ fun NavGraph(navController: NavHostController) {
         composable(Route.Main.path) { MainScreen(navController) }
 
         // ── Pay ───────────────────────────────────────────────
-        composable(Route.PayIntro.path)    { PayIntroScreen(navController) }
-        composable(Route.PayTerms.path)    { PayTermsScreen(navController) }
+        composable(Route.PayIntro.path)        { PayIntroScreen(navController) }
+        composable(Route.PayBusinessInfo.path) { PayBusinessInfoScreen(navController) }
+        composable(Route.PayTerms.path)        { PayTermsScreen(navController) }
+        composable(Route.PayConfirm.path)      { PayConfirmScreen(navController) }
         composable(Route.PayVerify.path) {
             PayVerifyScreen(
                 onBack = { navController.popBackStack() },
