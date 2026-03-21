@@ -188,6 +188,32 @@ fun NameInputScreen(
                 )
                 Spacer(modifier = Modifier.height(24.dp))
 
+                // 전체 동의 버튼
+                val allIds = termDetails.map { it.consentType }.toSet()
+                val isAllAgreed = uiState.agreedTermIds.containsAll(allIds)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { viewModel.toggleAllTerms() }
+                        .padding(vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        Icons.Filled.CheckCircle,
+                        contentDescription = null,
+                        tint = if (isAllAgreed) BrandPurple else Disabled,
+                        modifier = Modifier.size(24.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "전체 동의",
+                        style = Typography.labelLarge.copy(fontWeight = FontWeight.Bold),
+                        color = TextPrimary
+                    )
+                }
+                HorizontalDivider(color = Divider)
+                Spacer(modifier = Modifier.height(4.dp))
+
                 termDetails.forEach { term ->
                     val isAgreed = uiState.agreedTermIds.contains(term.consentType)
                     var expanded by remember { mutableStateOf(false) }
