@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -12,6 +13,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -25,9 +30,20 @@ fun CardBusinessInfoScreen(navController: NavController) {
     var businessName by remember { mutableStateOf("") }
     var representativeName by remember { mutableStateOf("") }
 
+    val businessNameFocus = remember { FocusRequester() }
+    val representativeNameFocus = remember { FocusRequester() }
+    val focusManager = LocalFocusManager.current
+
     val isFormComplete = businessNumber.length == 10
             && businessName.isNotBlank()
             && representativeName.isNotBlank()
+
+    // 사업자등록번호 10자리 입력 완료 시 자동 포커스 이동
+    LaunchedEffect(businessNumber.length) {
+        if (businessNumber.length == 10) {
+            businessNameFocus.requestFocus()
+        }
+    }
 
     // Format business number for display (123-45-67890)
     val displayBusinessNumber = buildString {
@@ -87,7 +103,13 @@ fun CardBusinessInfoScreen(navController: NavController) {
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = { Text("123-45-67890", color = TextSecondary) },
                 shape = RoundedCornerShape(8.dp),
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Number,
+                    imeAction = ImeAction.Next
+                ),
+                keyboardActions = KeyboardActions(
+                    onNext = { businessNameFocus.requestFocus() }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Accent,
                     unfocusedBorderColor = Disabled
@@ -104,9 +126,15 @@ fun CardBusinessInfoScreen(navController: NavController) {
             OutlinedTextField(
                 value = businessName,
                 onValueChange = { businessName = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(businessNameFocus),
                 placeholder = { Text("상호명을 입력하세요", color = TextSecondary) },
                 shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
+                keyboardActions = KeyboardActions(
+                    onNext = { representativeNameFocus.requestFocus() }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Accent,
                     unfocusedBorderColor = Disabled
@@ -123,9 +151,15 @@ fun CardBusinessInfoScreen(navController: NavController) {
             OutlinedTextField(
                 value = representativeName,
                 onValueChange = { representativeName = it },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .focusRequester(representativeNameFocus),
                 placeholder = { Text("대표자명을 입력하세요", color = TextSecondary) },
                 shape = RoundedCornerShape(8.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { focusManager.clearFocus() }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Accent,
                     unfocusedBorderColor = Disabled
