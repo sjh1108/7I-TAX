@@ -22,11 +22,13 @@ data class AuthUiState(
     val errorMessage: String = "",
     // 본인인증 입력
     val phone: String = "",
+    val carrier: String = "",         // 통신사 (SKT, KT, LG U+ 등)
     val residentFront: String = "",   // 생년월일 6자리
     val residentBack: String = "",    // 뒷자리 1자리 (성별)
     val name: String = "",
     // 본인인증 결과
     val userId: Long = 0L,
+    val verifyToken: String = "",
     val requiresPinSetup: Boolean = false,
     val requiresConsent: Boolean = false,
     // 약관
@@ -39,6 +41,7 @@ data class AuthUiState(
     val pinFailCount: Int = 0,
     // PIN 로그인 (재방문)
     val loginPin: String = "",
+    val pinNotSet: Boolean = false,
     // 완료
     val authComplete: Boolean = false
 )
@@ -67,6 +70,11 @@ class AuthViewModel @Inject constructor(
     // ── [2] PhoneInput ────────────────────────────────────
     fun updatePhone(phone: String) {
         _uiState.update { it.copy(phone = phone) }
+    }
+
+    // ── [2.5] Carrier ────────────────────────────────────
+    fun updateCarrier(carrier: String) {
+        _uiState.update { it.copy(carrier = carrier) }
     }
 
     // ── [3] ResidentNumber ────────────────────────────────
@@ -101,6 +109,7 @@ class AuthViewModel @Inject constructor(
                 it.copy(
                     isLoading = false,
                     userId = data.userId,
+                    verifyToken = data.verifyToken,
                     requiresPinSetup = data.requiresPinSetup,
                     requiresConsent = data.requiresConsent
                 )
@@ -140,7 +149,7 @@ class AuthViewModel @Inject constructor(
             viewModelScope.launch {
                 _uiState.update { it.copy(isLoading = true, pinFailCount = 0) }
                 try {
-                    authRepository.setupPin(state.userId, state.pin)
+                    authRepository.setupPin(state.verifyToken, state.pin)
                     _uiState.update { it.copy(isLoading = false, authComplete = true) }
                     onSuccess()
                 } catch (e: Exception) {
@@ -230,7 +239,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun loginWithPin(onSuccess: () -> Unit) = viewModelScope.launch {
-        _uiState.update { it.copy(isLoading = true, errorMessage = "") }
+        _uiState.update { it.copy(isLoading = true, errorMessage = "", pinNotSet = false) }
         try {
             val phoneNumber = authRepository.getStoredPhoneNumber()!!.replace("-", "")
             authRepository.login(phoneNumber, _uiState.value.loginPin)
@@ -238,10 +247,21 @@ class AuthViewModel @Inject constructor(
             onSuccess()
         } catch (e: Exception) {
             Log.e("AuthViewModel", "loginWithPin 실패", e)
+            val isPinNotSet = e.message?.contains("PIN_NOT_SET") == true
             _uiState.update {
-                it.copy(isLoading = false, loginPin = "", errorMessage = e.message ?: "PIN이 올바르지 않습니다")
+                it.copy(
+                    isLoading = false,
+                    loginPin = "",
+                    pinNotSet = isPinNotSet,
+                    errorMessage = if (isPinNotSet) "PIN이 설정되지 않았습니다" else (e.message ?: "PIN이 올바르지 않습니다")
+                )
             }
         }
+    }
+
+    fun resetForPinSetup() {
+        authRepository.clearSession()
+        _uiState.update { AuthUiState() }
     }
 
     fun clearError() {

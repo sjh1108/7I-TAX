@@ -1,8 +1,6 @@
 package com.ssafy.seveniTax.ui.home
 
-import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -24,27 +22,6 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.R
 import com.ssafy.seveniTax.ui.theme.*
 
-// ── 카테고리 데이터 ──────────────────────────────────────
-
-private data class HomeCategory(
-    val label: String,
-    @DrawableRes val iconRes: Int
-)
-
-private val categories = listOf(
-    HomeCategory("카드 관리", R.drawable.ic_07),
-    HomeCategory("결제", R.drawable.ic_03),
-    HomeCategory("간편장부", R.drawable.ic_16),
-    HomeCategory("세금 분류", R.drawable.ic_10),
-    HomeCategory("세금 달력", R.drawable.ic_15),
-    HomeCategory("세금 추정", R.drawable.ic_04),
-    HomeCategory("카드 등록", R.drawable.ic_08),
-    HomeCategory("내보내기", R.drawable.ic_11),
-    HomeCategory("더보기", R.drawable.ic_22),
-)
-
-// ── HomeScreen ───────────────────────────────────────────
-
 @Composable
 fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
     Box(modifier = modifier.fillMaxSize().background(BrandPurple)) {
@@ -53,10 +30,8 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // ── 보라색 헤더 영역 ──
             HomeHeader()
 
-            // ── 흰색 콘텐츠 영역 (라운드 상단) ──
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -69,13 +44,18 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
             ) {
                 CardStack()
                 Spacer(modifier = Modifier.height(28.dp))
-                CategoryGrid(navController)
+
+                // 카테고리 영역 (임시)
+                Box(
+                    modifier = Modifier.fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("임시", style = Typography.bodyMedium, color = TextSecondary)
+                }
             }
         }
     }
 }
-
-// ── 헤더: 아바타 + 인사말 + 알림 벨 ─────────────────────
 
 @Composable
 private fun HomeHeader() {
@@ -85,7 +65,6 @@ private fun HomeHeader() {
             .padding(horizontal = 24.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 아바타
         Box(
             modifier = Modifier
                 .size(50.dp)
@@ -98,7 +77,6 @@ private fun HomeHeader() {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // 인사말
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "안녕하세요,",
@@ -113,7 +91,6 @@ private fun HomeHeader() {
             )
         }
 
-        // 알림 벨
         Box {
             Icon(
                 painter = painterResource(R.drawable.ic_34),
@@ -121,7 +98,6 @@ private fun HomeHeader() {
                 tint = Color.White,
                 modifier = Modifier.size(24.dp)
             )
-            // 배지
             Box(
                 modifier = Modifier
                     .size(16.dp)
@@ -137,8 +113,6 @@ private fun HomeHeader() {
     }
 }
 
-// ── 카드 스택 위젯 ───────────────────────────────────────
-
 @Composable
 private fun CardStack() {
     Box(
@@ -147,7 +121,6 @@ private fun CardStack() {
             .height(220.dp),
         contentAlignment = Alignment.TopCenter
     ) {
-        // 뒤쪽 카드 3 (보라)
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.82f)
@@ -156,7 +129,6 @@ private fun CardStack() {
                 .shadow(8.dp, RoundedCornerShape(10.dp))
                 .background(LogoPurple, RoundedCornerShape(10.dp))
         )
-        // 뒤쪽 카드 2 (빨강)
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.9f)
@@ -165,7 +137,6 @@ private fun CardStack() {
                 .shadow(8.dp, RoundedCornerShape(10.dp))
                 .background(Error, RoundedCornerShape(10.dp))
         )
-        // 메인 카드
         BankCard(modifier = Modifier.fillMaxWidth())
     }
 }
@@ -196,7 +167,6 @@ private fun BankCard(modifier: Modifier = Modifier) {
                 color = Color.White.copy(alpha = 0.8f)
             )
             Spacer(modifier = Modifier.weight(1f))
-            // 카드 번호
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("4756", fontSize = 16.sp, color = Color.White)
                 Spacer(modifier = Modifier.width(12.dp))
@@ -214,62 +184,5 @@ private fun BankCard(modifier: Modifier = Modifier) {
                 color = Color.White
             )
         }
-    }
-}
-
-// ── 카테고리 그리드 (3x3) ────────────────────────────────
-
-@Composable
-private fun CategoryGrid(navController: NavController) {
-    val rows = categories.chunked(3)
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        rows.forEach { rowItems ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(16.dp)
-            ) {
-                rowItems.forEach { category ->
-                    CategoryItem(
-                        category = category,
-                        modifier = Modifier.weight(1f),
-                        onClick = { /* TODO: 네비게이션 연결 */ }
-                    )
-                }
-                // 빈 칸 채우기 (마지막 행이 3개 미만일 때)
-                repeat(3 - rowItems.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun CategoryItem(
-    category: HomeCategory,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier
-            .shadow(4.dp, RoundedCornerShape(15.dp))
-            .background(Color.White, RoundedCornerShape(15.dp))
-            .clickable { onClick() }
-            .padding(vertical = 16.dp, horizontal = 8.dp)
-    ) {
-        Icon(
-            painter = painterResource(category.iconRes),
-            contentDescription = category.label,
-            tint = BrandPurple,
-            modifier = Modifier.size(28.dp)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Text(
-            text = category.label,
-            fontSize = 12.sp,
-            fontWeight = FontWeight.Medium,
-            color = TextSecondary
-        )
     }
 }

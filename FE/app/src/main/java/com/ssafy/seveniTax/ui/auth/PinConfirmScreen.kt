@@ -26,11 +26,7 @@ fun PinConfirmScreen(
         if (uiState.pinConfirm.length == 6) {
             viewModel.confirmPin(
                 onSuccess = {
-                    if (uiState.requiresConsent) {
-                        navController.navigate(Route.Terms.path)
-                    } else {
-                        navController.navigate(Route.AuthSuccess.path)
-                    }
+                    navController.navigate(Route.AuthSuccess.path)
                 },
                 onMismatch = {
                     // ViewModel이 에러 메시지 + pinConfirm 초기화 처리함

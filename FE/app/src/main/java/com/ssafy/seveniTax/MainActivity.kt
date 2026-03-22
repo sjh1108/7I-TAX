@@ -5,8 +5,10 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import androidx.navigation.compose.rememberNavController
 import com.ssafy.seveniTax.ui.navigation.NavGraph
+import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.SevenITaxTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -25,9 +27,21 @@ class MainActivity : ComponentActivity() {
                 android.graphics.Color.TRANSPARENT
             )
         )
+
+        val navigateTo = intent?.getStringExtra("navigate_to")
+
         setContent {
             SevenITaxTheme {
-                NavGraph(rememberNavController())
+                val navController = rememberNavController()
+
+                NavGraph(navController)
+
+                // 알림 탭으로 진입 시 세목 확인 화면으로 이동
+                if (navigateTo == "classification_result") {
+                    LaunchedEffect(Unit) {
+                        navController.navigate(Route.ClassificationResult.path)
+                    }
+                }
             }
         }
     }

@@ -2,6 +2,7 @@ package com.ssafy.seveniTax.ui.card
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -13,9 +14,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.ssafy.seveniTax.ui.components.ButtonVariant
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
@@ -27,7 +31,7 @@ fun CardCompleteScreen(navController: NavController) {
             .fillMaxSize()
             .background(Background)
     ) {
-        // Top bar
+        // 상단 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -42,52 +46,69 @@ fun CardCompleteScreen(navController: NavController) {
                     tint = TextPrimary
                 )
             }
-            Text(
-                text = "카드 등록 완료",
-                style = Typography.titleLarge
-            )
+            Text(text = "카드 등록 완료", style = Typography.titleLarge)
         }
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.weight(1f))
+            Spacer(modifier = Modifier.height(24.dp))
 
-            // Card widget showing registered card info
+            // 카드 미리보기
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(100.dp)
-                    .clip(RoundedCornerShape(12.dp))
+                    .height(170.dp)
+                    .clip(RoundedCornerShape(16.dp))
                     .background(CardGold)
-                    .padding(16.dp)
+                    .padding(20.dp)
             ) {
+                // 원형 장식
+                Box(
+                    modifier = Modifier
+                        .size(70.dp)
+                        .align(Alignment.CenterEnd)
+                        .offset(x = 10.dp)
+                        .background(Color.White.copy(alpha = 0.15f), CircleShape)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(50.dp)
+                        .align(Alignment.BottomEnd)
+                        .offset(x = 15.dp, y = 5.dp)
+                        .background(Color.White.copy(alpha = 0.1f), CircleShape)
+                )
+
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "일반카드",
-                        style = Typography.labelLarge,
+                        text = "일반 카드",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Bottom
-                    ) {
+                    Column {
                         Text(
-                            text = "5876-8847-2283-••••",
-                            style = Typography.bodyMedium,
+                            text = "신한 카드",
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.7f)
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "5876  ••••  ••••  2342",
+                            fontSize = 15.sp,
                             color = Color.White.copy(alpha = 0.9f)
                         )
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
                             text = "12/27",
-                            style = Typography.bodySmall,
-                            color = Color.White.copy(alpha = 0.8f)
+                            fontSize = 13.sp,
+                            color = Color.White.copy(alpha = 0.7f)
                         )
                     }
                 }
@@ -109,9 +130,14 @@ fun CardCompleteScreen(navController: NavController) {
                 color = TextSecondary,
                 textAlign = TextAlign.Center
             )
+        }
 
-            Spacer(modifier = Modifier.weight(1f))
-
+        // 하단 버튼
+        Column(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
             TaxButton(
                 text = "카드 관리 보기",
                 onClick = {
@@ -120,8 +146,15 @@ fun CardCompleteScreen(navController: NavController) {
                     }
                 }
             )
-
-            Spacer(modifier = Modifier.height(32.dp))
+            TaxButton(
+                text = "홈으로 이동",
+                onClick = {
+                    navController.navigate(Route.Main.path) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                },
+                variant = ButtonVariant.Secondary
+            )
         }
     }
 }

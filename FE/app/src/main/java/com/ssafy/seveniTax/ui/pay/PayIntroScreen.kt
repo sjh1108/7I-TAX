@@ -1,6 +1,7 @@
 package com.ssafy.seveniTax.ui.pay
 
 import androidx.annotation.DrawableRes
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -29,14 +30,14 @@ import com.ssafy.seveniTax.ui.theme.*
 private data class PayFeature(
     val title: String,
     val description: String,
-    @DrawableRes val iconRes: Int
+    @DrawableRes val illustRes: Int
 )
 
 private val features = listOf(
-    PayFeature("카드 등록", "일반 카드 및 사업자 카드를\n등록하고 관리하세요", R.drawable.ic_07),
-    PayFeature("간편 결제", "QR 또는 온라인으로 빠르게\n결제하세요", R.drawable.ic_03),
-    PayFeature("결제 내역", "기간별, 카드별로 내역을\n조회할 수 있어요", R.drawable.ic_16),
-    PayFeature("세무 자동화", "간편 장부를 기반으로\n세무 자동화 기능까지 한번에", R.drawable.ic_04),
+    PayFeature("카드 등록", "일반 카드 및 사업자 카드를\n등록하고 관리하세요", R.drawable.ill_01),
+    PayFeature("간편 결제", "QR 또는 온라인으로 빠르게\n결제하세요", R.drawable.ill_02),
+    PayFeature("결제 내역", "기간별, 카드별로 내역을\n조회할 수 있어요", R.drawable.ill_03),
+    PayFeature("세무 자동화", "간편 장부를 기반으로\n세무 자동화 기능까지 한번에", R.drawable.ill_04),
 )
 
 @Composable
@@ -46,11 +47,12 @@ fun PayIntroScreen(navController: NavController) {
             .fillMaxSize()
             .background(Background)
     ) {
-        // ── 상단 네비게이션 바 ──
+        // 상단 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp, bottom = 8.dp),
+                .height(56.dp)
+                .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { navController.popBackStack() }) {
@@ -68,7 +70,7 @@ fun PayIntroScreen(navController: NavController) {
             )
         }
 
-        // ── 카드 목록 (스크롤) ──
+        // 카드 목록
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -76,14 +78,14 @@ fun PayIntroScreen(navController: NavController) {
                 .padding(horizontal = 24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
             features.forEach { feature ->
                 FeatureCard(feature)
             }
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // ── 하단 가입 버튼 ──
+        // 하단 버튼
         Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             TaxButton(
                 text = "가입 시작하기",
@@ -103,12 +105,12 @@ private fun FeatureCard(feature: PayFeature) {
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 텍스트 영역
+        // 텍스트
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = feature.title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(8.dp))
@@ -120,14 +122,13 @@ private fun FeatureCard(feature: PayFeature) {
             )
         }
 
-        Spacer(modifier = Modifier.width(16.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
-        // 아이콘
-        Icon(
-            painter = painterResource(feature.iconRes),
+        // 일러스트
+        Image(
+            painter = painterResource(feature.illustRes),
             contentDescription = feature.title,
-            tint = BrandPurple,
-            modifier = Modifier.size(56.dp)
+            modifier = Modifier.size(80.dp)
         )
     }
 }

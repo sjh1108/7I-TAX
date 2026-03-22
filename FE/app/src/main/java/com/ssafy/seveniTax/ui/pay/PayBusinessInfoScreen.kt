@@ -1,4 +1,4 @@
-package com.ssafy.seveniTax.ui.card
+package com.ssafy.seveniTax.ui.pay
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -16,16 +16,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 
 @Composable
-fun CardBusinessInfoScreen(navController: NavController) {
+fun PayBusinessInfoScreen(navController: NavController) {
+    // TODO: 서버에서 기존 사업자 정보 조회
+    val hasExistingInfo = false
+
     var businessNumber by remember { mutableStateOf("") }
     var businessName by remember { mutableStateOf("") }
     var representativeName by remember { mutableStateOf("") }
@@ -38,18 +43,9 @@ fun CardBusinessInfoScreen(navController: NavController) {
             && businessName.isNotBlank()
             && representativeName.isNotBlank()
 
-    // 사업자등록번호 10자리 입력 완료 시 자동 포커스 이동
     LaunchedEffect(businessNumber.length) {
         if (businessNumber.length == 10) {
             businessNameFocus.requestFocus()
-        }
-    }
-
-    // Format business number for display (123-45-67890)
-    val displayBusinessNumber = buildString {
-        for (i in businessNumber.indices) {
-            if (i == 3 || i == 5) append("-")
-            append(businessNumber[i])
         }
     }
 
@@ -58,38 +54,50 @@ fun CardBusinessInfoScreen(navController: NavController) {
             .fillMaxSize()
             .background(Background)
     ) {
-        // Top bar
+        // 상단 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
-                .padding(horizontal = 4.dp),
+                .padding(top = 8.dp, bottom = 8.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = { navController.popBackStack() }) {
                 Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "뒤로가기",
                     tint = TextPrimary
                 )
             }
             Text(
-                text = "사업자 정보 등록",
-                style = Typography.titleLarge
+                text = "사업자 정보 확인",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
             )
         }
 
         Column(
             modifier = Modifier
-                .fillMaxSize()
+                .weight(1f)
                 .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp)
         ) {
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
             Text(
-                text = "사업자 정보를\n등록해주세요",
-                style = Typography.headlineMedium
+                text = "사업자 정보를\n확인해주세요",
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = TextPrimary,
+                lineHeight = 32.sp
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "페이 서비스 가입에 필요한 정보입니다",
+                style = Typography.bodySmall,
+                color = TextSecondary
             )
 
             Spacer(modifier = Modifier.height(32.dp))
@@ -168,25 +176,15 @@ fun CardBusinessInfoScreen(navController: NavController) {
                 textStyle = Typography.bodyLarge
             )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            Text(
-                text = "입력한 정보는 사업자 카드 구분 및 관련 기능을 제공하기 위해 활용됩니다",
-                style = Typography.bodySmall,
-                color = TextSecondary
-            )
-
             Spacer(modifier = Modifier.height(32.dp))
+        }
 
+        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             TaxButton(
-                text = "등록하기",
-                onClick = {
-                    navController.navigate(Route.CardInput.create("business"))
-                },
+                text = "다음으로",
+                onClick = { navController.navigate(Route.PayTerms.path) },
                 enabled = isFormComplete
             )
-
-            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
