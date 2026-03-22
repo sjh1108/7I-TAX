@@ -5,13 +5,10 @@ sealed class Route(val path: String) {
     object Main : Route("main")
     object Home : Route("home")
     object Dashboard : Route("dashboard")
-    object PhoneInput : Route("phone_input")
-    object ResidentNumber : Route("resident_number")
-    object NameInput : Route("name_input")
+    object IdentityVerify : Route("identity_verify")
+    object SmsAuth : Route("sms_auth")
     object PinSetup : Route("pin_setup")
     object PinConfirm : Route("pin_confirm")
-    object Terms : Route("terms")
-    object SmsVerification : Route("sms_verification")
     object AuthSuccess : Route("auth_success")
     object PinLogin : Route("pin_login")
 
@@ -41,7 +38,6 @@ sealed class Route(val path: String) {
 
     object ServerTest : Route("server_test")
 
-    // AI 세목 자동분류
     object ClassificationLoading : Route("classification_loading")
     object ClassificationResult : Route("classification_result")
     object CategorySelect : Route("category_select")

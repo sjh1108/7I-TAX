@@ -1,10 +1,16 @@
 package com.ssafy.seveniTax.data.repository
 
-import com.ssafy.seveniTax.BuildConfig
 import com.ssafy.seveniTax.data.local.SecureStorage
-import com.ssafy.seveniTax.data.model.auth.*
+import com.ssafy.seveniTax.data.model.auth.LoginRequest
+import com.ssafy.seveniTax.data.model.auth.ReissueRequest
+import com.ssafy.seveniTax.data.model.auth.SetupPinRequest
+import com.ssafy.seveniTax.data.model.auth.TokenResponse
+import com.ssafy.seveniTax.data.model.auth.VerifyIdentityRequest
+import com.ssafy.seveniTax.data.model.auth.VerifyIdentityResponse
 import com.ssafy.seveniTax.data.model.common.ApiResponse
 import com.ssafy.seveniTax.data.remote.AuthApi
+import org.json.JSONObject
+import retrofit2.Response
 import javax.inject.Inject
 
 class AuthRepositoryImpl @Inject constructor(
@@ -12,73 +18,36 @@ class AuthRepositoryImpl @Inject constructor(
     private val secureStorage: SecureStorage
 ) : AuthRepository {
 
-    private val useMock = false
-
     override suspend fun verifyIdentity(request: VerifyIdentityRequest): ApiResponse<VerifyIdentityResponse> {
-        if (useMock) {
-            return ApiResponse(
-                status = "success",
-                data = VerifyIdentityResponse(
-                    userId = 1L,
-                    isNewUser = true,
-                    requiresPinSetup = true,
-                    requiresConsent = true,
-                    verifyToken = "mock-verify-token"
-                )
-            )
-        }
         val response = authApi.verifyIdentity(request)
-        return response.body() ?: throw Exception(response.errorBody()?.string() ?: "본인인증 실패")
+        return response.body() ?: throw Exception(extractErrorMessage(response, "본인인증 요청에 실패했습니다."))
     }
 
     override suspend fun setupPin(verifyToken: String, pin: String): ApiResponse<TokenResponse> {
-        if (useMock) {
-            val mockToken = TokenResponse("mock_access_token", "mock_refresh_token")
-            saveTokens(mockToken.accessToken, mockToken.refreshToken)
-            return ApiResponse(status = "success", data = mockToken)
-        }
         val response = authApi.setupPin(verifyToken, SetupPinRequest(pin))
-        val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "PIN 설정 실패")
-        val data = body.data ?: throw Exception("PIN 설정 응답에 토큰이 없습니다")
-        saveTokens(data.accessToken, data.refreshToken)
-        return body
-    }
-
-    override suspend fun login(phoneNumber: String, pin: String): ApiResponse<TokenResponse> {
-        if (useMock) {
-            val mockToken = TokenResponse("mock_access_token", "mock_refresh_token")
-            saveTokens(mockToken.accessToken, mockToken.refreshToken)
-            return ApiResponse(status = "success", data = mockToken)
-        }
-        val response = authApi.login(LoginRequest(phoneNumber, pin))
-        val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "로그인 실패")
+        val body = response.body() ?: throw Exception(extractErrorMessage(response, "PIN 설정에 실패했습니다."))
         body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
         return body
     }
 
-    override suspend fun submitConsents(consents: List<ConsentItem>): ApiResponse<Unit> {
-        if (useMock) {
-            return ApiResponse(status = "success", data = null)
-        }
-        val response = authApi.submitConsents(consents)
-        return response.body() ?: throw Exception(response.errorBody()?.string() ?: "약관 동의 실패")
+    override suspend fun login(phoneNumber: String, pin: String): ApiResponse<TokenResponse> {
+        val response = authApi.login(LoginRequest(phoneNumber, pin))
+        val body = response.body() ?: throw Exception(extractErrorMessage(response, "로그인에 실패했습니다."))
+        body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
+        return body
     }
 
     override suspend fun reissue(refreshToken: String): ApiResponse<TokenResponse> {
-        if (useMock) {
-            val mockToken = TokenResponse("mock_access_token_new", "mock_refresh_token_new")
-            saveTokens(mockToken.accessToken, mockToken.refreshToken)
-            return ApiResponse(status = "success", data = mockToken)
-        }
         val response = authApi.reissue(ReissueRequest(refreshToken))
-        val body = response.body() ?: throw Exception(response.errorBody()?.string() ?: "토큰 갱신 실패")
+        val body = response.body() ?: throw Exception(extractErrorMessage(response, "토큰 재발급에 실패했습니다."))
         body.data?.let { saveTokens(it.accessToken, it.refreshToken) }
         return body
     }
 
     override suspend fun logout() {
-        if (!useMock) {
-            try { authApi.logout() } catch (_: Exception) {}
+        try {
+            authApi.logout()
+        } catch (_: Exception) {
         }
         clearSession()
     }
@@ -95,10 +64,16 @@ class AuthRepositoryImpl @Inject constructor(
 
     override fun getStoredPhoneNumber(): String? = secureStorage.getPhoneNumber()
 
-    override fun hasStoredCredentials(): Boolean =
-        secureStorage.getAccessToken() != null
+    override fun hasStoredCredentials(): Boolean = secureStorage.isLoggedIn()
 
     override fun clearSession() {
         secureStorage.clearAll()
+    }
+
+    private fun extractErrorMessage(response: Response<*>, fallback: String): String {
+        val raw = response.errorBody()?.string()?.takeIf { it.isNotBlank() } ?: return fallback
+        return runCatching {
+            JSONObject(raw).optString("message").takeIf { it.isNotBlank() } ?: raw
+        }.getOrDefault(raw)
     }
 }
