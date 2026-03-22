@@ -89,7 +89,7 @@ fun PayIntroScreen(navController: NavController) {
         Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             TaxButton(
                 text = "가입 시작하기",
-                onClick = { navController.navigate(Route.PayBusinessInfo.path) }
+                onClick = { navController.navigate(Route.PayTerms.path) }
             )
         }
     }

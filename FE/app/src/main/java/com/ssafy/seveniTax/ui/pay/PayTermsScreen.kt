@@ -118,7 +118,7 @@ fun PayTermsScreen(navController: NavController) {
         Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
             TaxButton(
                 text = "다음으로",
-                onClick = { navController.navigate(Route.PayConfirm.path) },
+                onClick = { navController.navigate(Route.PayVerify.path) },
                 enabled = allRequiredChecked
             )
         }
