@@ -97,7 +97,7 @@ fun PayCompleteScreen(navController: NavController) {
         ) {
             TaxButton(
                 text = "카드 등록하기",
-                onClick = { navController.navigate(Route.CardList.path) }
+                onClick = { navController.navigate(Route.CardTypeSelect.path) }
             )
             TaxButton(
                 text = "홈으로 이동",
