@@ -17,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.theme.*
 
 private data class ChangeCard(
@@ -153,9 +154,20 @@ fun CardChangeScreen(navController: NavController) {
             Text(
                 text = "카드를 탭하여 기본카드를 변경하세요",
                 style = Typography.bodySmall,
-                color = TextSecondary,
-                modifier = Modifier.padding(bottom = 32.dp)
+                color = TextSecondary
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TaxButton(
+                text = "변경하기",
+                onClick = {
+                    // TODO: 서버에 기본 카드 변경 요청
+                    navController.popBackStack()
+                }
+            )
+
+            Spacer(modifier = Modifier.height(32.dp))
         }
     }
 }
