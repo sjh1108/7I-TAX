@@ -1,18 +1,29 @@
 package com.ssafy.seveniTax.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.components.CodeBoxes
 import com.ssafy.seveniTax.ui.components.PinKeypad
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.ui.theme.Background
+import com.ssafy.seveniTax.ui.theme.KeypadBg
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
 @Composable
@@ -36,13 +47,28 @@ fun PinSetupScreen(
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(horizontal = 24.dp, vertical = 32.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 32.dp)
         ) {
+            Spacer(modifier = Modifier.height(88.dp))
             Text(
-                text = "간편 비밀번호를\n입력 해주세요",
-                style = Typography.headlineMedium,
+                text = "간편 비밀번호",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 34.sp,
+                    lineHeight = 42.sp
+                ),
                 modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                text = "6자리를 설정해 주세요",
+                style = MaterialTheme.typography.headlineMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 34.sp,
+                    lineHeight = 42.sp
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp)
             )
 
             Spacer(modifier = Modifier.weight(1f))

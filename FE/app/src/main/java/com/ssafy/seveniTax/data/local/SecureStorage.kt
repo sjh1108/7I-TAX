@@ -36,12 +36,6 @@ class SecureStorage @Inject constructor(
         prefs.edit().putString(Constants.KEY_REFRESH_TOKEN, token).apply()
     }
 
-    fun savePinHash(hash: String) {
-        prefs.edit().putString(Constants.KEY_PIN_HASH, hash).apply()
-    }
-
-    fun getPinHash(): String? = prefs.getString(Constants.KEY_PIN_HASH, null)
-
     fun saveUserId(userId: String) {
         prefs.edit().putString(Constants.KEY_USER_ID, userId).apply()
     }
