@@ -7,6 +7,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -18,32 +19,33 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.ssafy.seveniTax.ui.components.ButtonVariant
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 
-// Mock card data for UI development
 data class MockCard(
     val id: String,
     val name: String,
+    val cardIssuer: String,
     val cardNumber: String,
     val expiry: String,
-    val type: String // "personal" or "business"
+    val type: String,
+    val isDefault: Boolean = false
 )
 
 private val mockCards = listOf(
-    MockCard("1", "일반카드", "5876-8847-2283-••••", "12/27", "personal"),
-    MockCard("2", "사업자카드", "4120-9901-5532-••••", "09/28", "business")
+    MockCard("1", "일반 카드 (기본)", "신한 카드", "5876  ••••  ••••  2342", "12/27", "personal", isDefault = true),
+    MockCard("2", "사업자 카드", "현대 카드", "4756  ••••  ••••  9018", "12/27", "business")
 )
 
 @Composable
 fun CardListScreen(navController: NavController) {
-    // Toggle this to test empty vs filled state
     var cards by remember { mutableStateOf(mockCards) }
     val isEmpty = cards.isEmpty()
 
@@ -52,12 +54,11 @@ fun CardListScreen(navController: NavController) {
             .fillMaxSize()
             .background(Background)
     ) {
-        // Top bar
+        // 상단 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .background(Background)
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -73,57 +74,75 @@ fun CardListScreen(navController: NavController) {
                 style = Typography.titleLarge,
                 modifier = Modifier.weight(1f)
             )
-            Text(
-                text = "기본 카드 변경",
-                style = Typography.bodyMedium,
-                color = Accent,
-                modifier = Modifier
-                    .clickable { navController.navigate(Route.CardChange.path) }
-                    .padding(horizontal = 12.dp, vertical = 8.dp)
-            )
+            if (!isEmpty) {
+                Text(
+                    text = "기본 카드 변경",
+                    style = Typography.bodySmall,
+                    color = TextSecondary,
+                    modifier = Modifier
+                        .clickable { navController.navigate(Route.CardChange.path) }
+                        .padding(horizontal = 12.dp, vertical = 8.dp)
+                )
+            }
         }
 
-        // Content
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(horizontal = 24.dp)
         ) {
             if (isEmpty) {
-                // Empty state
-                Spacer(modifier = Modifier.weight(1f))
+                // 빈 상태 — 점선 카드 + 안내
+                Spacer(modifier = Modifier.height(16.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(160.dp)
                         .border(
-                            border = BorderStroke(1.5.dp, Disabled),
+                            border = BorderStroke(1.5.dp, LogoPurple.copy(alpha = 0.4f)),
                             shape = RoundedCornerShape(12.dp)
                         ),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "등록된 카드가 없습니다",
-                            style = Typography.titleMedium,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "카드를 등록하면 간편하게 결제를 이용할 수 있어요",
-                            style = Typography.bodySmall,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center
-                        )
-                    }
+                    Text(
+                        text = "등록된 카드가 없습니다",
+                        style = Typography.bodyMedium,
+                        color = LogoPurple.copy(alpha = 0.5f)
+                    )
                 }
-                Spacer(modifier = Modifier.weight(1f))
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Text(
+                    text = "카드를 등록하면 간편하게\n결제를 이용할 수 있어요",
+                    style = Typography.bodyMedium,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                TaxButton(
+                    text = "카드 등록하기",
+                    onClick = { navController.navigate(Route.CardTypeSelect.path) }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                Text(
+                    text = "일반 · 사업자 카드 최대 5장까지 등록 가능",
+                    style = Typography.bodySmall,
+                    color = TextSecondary,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
             } else {
-                // Card list
+                // 카드 목록
                 Spacer(modifier = Modifier.height(16.dp))
                 LazyColumn(
                     modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
                     items(cards) { card ->
                         CardWidget(
@@ -134,25 +153,22 @@ fun CardListScreen(navController: NavController) {
                         )
                     }
                 }
-            }
 
-            // Bottom section
-            Column(
-                modifier = Modifier.padding(bottom = 32.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                TaxButton(
-                    text = "카드 등록하기",
-                    onClick = { navController.navigate(Route.CardTypeSelect.path) }
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = "일반·사업자 카드 최대 5장까지 등록 가능",
-                    style = Typography.bodySmall,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.fillMaxWidth()
-                )
+                // 하단 버튼
+                Column(
+                    modifier = Modifier.padding(vertical = 16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    TaxButton(
+                        text = "카드 등록하기",
+                        onClick = { navController.navigate(Route.CardTypeSelect.path) }
+                    )
+                    TaxButton(
+                        text = "기본 카드 변경",
+                        onClick = { navController.navigate(Route.CardChange.path) },
+                        variant = ButtonVariant.Secondary
+                    )
+                }
             }
         }
     }
@@ -168,35 +184,55 @@ private fun CardWidget(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(100.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .height(160.dp)
+            .clip(RoundedCornerShape(16.dp))
             .background(bgColor)
             .clickable(onClick = onClick)
-            .padding(16.dp)
+            .padding(20.dp)
     ) {
+        // 원형 장식
+        Box(
+            modifier = Modifier
+                .size(70.dp)
+                .align(Alignment.CenterEnd)
+                .offset(x = 10.dp)
+                .background(Color.White.copy(alpha = 0.15f), CircleShape)
+        )
+        Box(
+            modifier = Modifier
+                .size(50.dp)
+                .align(Alignment.BottomEnd)
+                .offset(x = 15.dp, y = 5.dp)
+                .background(Color.White.copy(alpha = 0.1f), CircleShape)
+        )
+
         Column(
             modifier = Modifier.fillMaxSize(),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
                 text = card.name,
-                style = Typography.labelLarge,
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
                 color = Color.White
             )
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
+            Column {
+                Text(
+                    text = card.cardIssuer,
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.7f)
+                )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = card.cardNumber,
-                    style = Typography.bodyMedium,
+                    fontSize = 15.sp,
                     color = Color.White.copy(alpha = 0.9f)
                 )
+                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = card.expiry,
-                    style = Typography.bodySmall,
-                    color = Color.White.copy(alpha = 0.8f)
+                    fontSize = 13.sp,
+                    color = Color.White.copy(alpha = 0.7f)
                 )
             }
         }
