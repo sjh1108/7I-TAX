@@ -3,6 +3,7 @@ package com.ssafy.tax7i.auth.service;
 import com.ssafy.tax7i.auth.dto.IdentityVerifyRequest;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;

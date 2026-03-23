@@ -34,4 +34,14 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
             Pageable pageable);
 
     Page<Payment> findByUserIdAndStatus(Long userId, PaymentStatus status, Pageable pageable);
+
+    @Query("SELECT p FROM Payment p JOIN FETCH p.card " +
+            "WHERE p.user.id = :userId AND p.capturedAt BETWEEN :start AND :end AND p.status = :status " +
+            "ORDER BY p.createdAt DESC")
+    Page<Payment> findByUserIdAndCapturedAtBetweenAndStatusWithFetch(
+            @Param("userId") Long userId,
+            @Param("start") LocalDateTime start,
+            @Param("end") LocalDateTime end,
+            @Param("status") PaymentStatus status,
+            Pageable pageable);
 }

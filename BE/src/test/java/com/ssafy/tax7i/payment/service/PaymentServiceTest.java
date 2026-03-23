@@ -7,6 +7,7 @@ import com.ssafy.tax7i.banking.client.dto.*;
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
+import com.ssafy.tax7i.card.repository.CardTransactionRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -42,6 +43,7 @@ class PaymentServiceTest {
 
     @Mock private PaymentRepository paymentRepository;
     @Mock private CardRepository cardRepository;
+    @Mock private CardTransactionRepository cardTransactionRepository;
     @Mock private UserRepository userRepository;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
 
@@ -106,6 +108,17 @@ class PaymentServiceTest {
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
                         .isEqualTo(ErrorCode.CARD_NOT_FOUND));
+    }
+
+    @Test
+    void authorize_userId_null이면_UNAUTHORIZED_예외() {
+        PaymentAuthorizeRequest request = new PaymentAuthorizeRequest(
+                1L, 10000L, null, "스타벅스", null, PaymentMethod.OFFLINE, PaymentPurpose.PERSONAL);
+
+        assertThatThrownBy(() -> paymentService.authorize(null, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.UNAUTHORIZED));
     }
 
     // ───────────── capture ─────────────
