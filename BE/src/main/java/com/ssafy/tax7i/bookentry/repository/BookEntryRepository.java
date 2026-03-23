@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 public interface BookEntryRepository extends JpaRepository<BookEntry, Long> {
@@ -56,4 +57,18 @@ public interface BookEntryRepository extends JpaRepository<BookEntry, Long> {
     Object[] aggregateByUserIdAndDateRange(@Param("userId") Long userId,
                                            @Param("start") LocalDate start,
                                            @Param("end") LocalDate end);
+
+    @Query("SELECT b.categoryCode, b.categoryName, SUM(b.expenseAmount), COUNT(b) " +
+            "FROM BookEntry b WHERE b.userId = :userId AND b.confirmed = true " +
+            "AND b.entryType = 'EXPENSE' AND b.isBusinessExpense = true " +
+            "AND YEAR(b.entryDate) = :year " +
+            "GROUP BY b.categoryCode, b.categoryName ORDER BY SUM(b.expenseAmount) DESC")
+    List<Object[]> sumExpenseByCategoryAndYear(@Param("userId") Long userId, @Param("year") int year);
+
+    @Query("SELECT MONTH(b.entryDate), " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'INCOME' THEN b.incomeAmount ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'EXPENSE' THEN b.expenseAmount ELSE 0 END), 0) " +
+            "FROM BookEntry b WHERE b.userId = :userId AND b.confirmed = true " +
+            "AND YEAR(b.entryDate) = :year GROUP BY MONTH(b.entryDate) ORDER BY MONTH(b.entryDate)")
+    List<Object[]> sumByMonthAndYear(@Param("userId") Long userId, @Param("year") int year);
 }

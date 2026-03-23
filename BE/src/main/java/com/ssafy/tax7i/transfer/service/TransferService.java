@@ -52,8 +52,8 @@ public class TransferService {
         String description = request.description() != null ? request.description() : "P2P 송금";
 
         SsafyTransferResult result = ssafyFinanceClient.transfer(
-                senderKey, senderCard.getSsafyAccountNo(),
-                receiverKey, receiverCard.getSsafyAccountNo(),
+                senderKey, senderCard.getWithdrawalAccountNo(),
+                receiverKey, receiverCard.getWithdrawalAccountNo(),
                 request.amount(), description, description);
 
         Transfer transfer = Transfer.builder()
@@ -81,7 +81,7 @@ public class TransferService {
         String description = request.description() != null ? request.description() : "출금";
 
         SsafyWithdrawResponse withdrawResponse = ssafyFinanceClient.withdraw(
-                userKey, card.getSsafyAccountNo(), request.amount(), description);
+                userKey, card.getWithdrawalAccountNo(), request.amount(), description);
 
         Transfer transfer = Transfer.builder()
                 .senderUser(user)

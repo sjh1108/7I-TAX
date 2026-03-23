@@ -54,6 +54,7 @@ class PaymentControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "cardId", 1,
                                 "amount", 10000,
+                                "merchantId", 1,
                                 "merchantName", "스타벅스",
                                 "paymentMethod", "OFFLINE",
                                 "purpose", "BUSINESS"
@@ -83,6 +84,7 @@ class PaymentControllerTest {
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "cardId", 1,
                                 "amount", 10000,
+                                "merchantId", 1,
                                 "merchantName", "스타벅스",
                                 "paymentMethod", "OFFLINE",
                                 "purpose", "BUSINESS"
@@ -96,15 +98,13 @@ class PaymentControllerTest {
     @Test
     void capture_200_결제확정() throws Exception {
         PaymentCaptureResponse mockResponse = new PaymentCaptureResponse(
-                1L, PaymentStatus.CAPTURED,
-                new PaymentCaptureResponse.CardDebit(1L, 10000L, 490000L),
-                LocalDateTime.now());
+                1L, PaymentStatus.CAPTURED, 1L, 10000L, LocalDateTime.now());
         given(paymentService.capture(any(), eq(1L))).willReturn(mockResponse);
 
         mockMvc.perform(post("/api/payments/1/capture"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.status").value("CAPTURED"))
-                .andExpect(jsonPath("$.data.cardDebited.remainingBalance").value(490000));
+                .andExpect(jsonPath("$.data.amount").value(10000));
     }
 
     @Test

@@ -7,6 +7,7 @@ import com.ssafy.tax7i.auth.dto.IdentityVerifyResponse;
 import com.ssafy.tax7i.auth.dto.LoginResponse;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.auth.service.NiceIdentityMockService.VerificationResult;
+import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.global.jwt.JwtTokenProvider;
@@ -40,6 +41,7 @@ class AuthServiceTest {
     @Mock private JwtTokenProvider jwtTokenProvider;
     @Mock private RedisTemplate<String, String> redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
+    @Mock private SsafyFinanceClient ssafyFinanceClient;
 
     @InjectMocks
     private AuthService authService;
@@ -48,9 +50,9 @@ class AuthServiceTest {
 
     @Test
     void verifyIdentity_신규유저_회원생성() {
-        IdentityVerifyRequest request = new IdentityVerifyRequest("홍길동", "19900101", "M", "01012345678");
+        IdentityVerifyRequest request = new IdentityVerifyRequest("홍길동", "1990-01-01", "M", "01012345678");
         VerificationResult result = new VerificationResult(
-                "ci-hash", "di-hash", "홍길동", "19900101", "M", "01012345678", "5678");
+                "ci-hash", "di-hash", "홍길동", "1990-01-01", "M", "01012345678", "5678");
 
         given(niceIdentityMockService.verify(request)).willReturn(result);
         given(userRepository.findByCi("ci-hash")).willReturn(Optional.empty());
@@ -72,9 +74,9 @@ class AuthServiceTest {
 
     @Test
     void verifyIdentity_기존유저_PIN있음() {
-        IdentityVerifyRequest request = new IdentityVerifyRequest("홍길동", "19900101", "M", "01012345678");
+        IdentityVerifyRequest request = new IdentityVerifyRequest("홍길동", "1990-01-01", "M", "01012345678");
         VerificationResult result = new VerificationResult(
-                "ci-hash", "di-hash", "홍길동", "19900101", "M", "01012345678", "5678");
+                "ci-hash", "di-hash", "홍길동", "1990-01-01", "M", "01012345678", "5678");
         User existingUser = createUser(1L);
         setField(existingUser, "pinHash", "encoded-pin");
 

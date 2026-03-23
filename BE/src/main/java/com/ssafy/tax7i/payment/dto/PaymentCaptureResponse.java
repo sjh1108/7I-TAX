@@ -8,25 +8,16 @@ import java.time.LocalDateTime;
 public record PaymentCaptureResponse(
         Long paymentId,
         PaymentStatus status,
-        CardDebit cardDebited,
+        Long cardId,
+        Long amount,
         LocalDateTime capturedAt
 ) {
-    public record CardDebit(
-            Long cardId,
-            Long debitedAmount,
-            Long remainingBalance
-    ) {
-    }
-
-    public static PaymentCaptureResponse of(Payment payment, Long remainingBalance) {
+    public static PaymentCaptureResponse of(Payment payment) {
         return new PaymentCaptureResponse(
                 payment.getId(),
                 payment.getStatus(),
-                new CardDebit(
-                        payment.getCard().getId(),
-                        payment.getAmount(),
-                        remainingBalance
-                ),
+                payment.getCard().getId(),
+                payment.getAmount(),
                 payment.getCapturedAt()
         );
     }

@@ -7,10 +7,13 @@ import com.ssafy.tax7i.auth.dto.IdentityVerifyResponse;
 import com.ssafy.tax7i.auth.dto.LoginResponse;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.auth.service.NiceIdentityMockService.VerificationResult;
+import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
+import com.ssafy.tax7i.config.SsafyFinanceProperties;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.global.jwt.JwtTokenProvider;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +24,7 @@ import java.util.Optional;
 import io.hypersistence.tsid.TSID;
 import java.util.concurrent.TimeUnit;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AuthService {
@@ -37,6 +41,8 @@ public class AuthService {
     private final UserRepository userRepository;
     private final JwtTokenProvider jwtTokenProvider;
     private final RedisTemplate<String, String> redisTemplate;
+    private final SsafyFinanceClient ssafyFinanceClient;
+    private final SsafyFinanceProperties ssafyFinanceProperties;
 
     @Transactional
     public IdentityVerifyResponse verifyIdentity(IdentityVerifyRequest request) {
@@ -45,20 +51,27 @@ public class AuthService {
         Optional<User> existing = userRepository.findByCi(result.ci());
         boolean isNewUser = existing.isEmpty();
 
-        User user = existing.orElseGet(() -> userRepository.save(
-                User.builder()
-                        .ci(result.ci())
-                        .di(result.di())
-                        .name(result.name())
-                        .birthDate(LocalDate.parse(result.birthDate()))
-                        .gender(result.gender())
-                        .phoneNumber(result.phoneNumber())
-                        .phoneLast4(result.phoneLast4())
-                        .build()
-        ));
+        User user = existing.orElseGet(() -> {
+            User newUser = userRepository.save(
+                    User.builder()
+                            .ci(result.ci())
+                            .di(result.di())
+                            .name(result.name())
+                            .birthDate(LocalDate.parse(result.birthDate()))
+                            .gender(result.gender())
+                            .phoneNumber(result.phoneNumber())
+                            .phoneLast4(result.phoneLast4())
+                            .build()
+            );
+            assignSsafyUserKey(newUser);
+            return newUser;
+        });
 
         if (!isNewUser) {
             checkUserStatus(user);
+            if (user.getSsafyUserKey() == null) {
+                assignSsafyUserKey(user);
+            }
         }
 
         boolean requiresPinSetup = user.getPinHash() == null;
@@ -187,17 +200,21 @@ public class AuthService {
                 : "test-ci-default";
 
         User user = userRepository.findByCi(targetCi)
-                .orElseGet(() -> userRepository.save(
-                        User.builder()
-                                .ci(targetCi)
-                                .di("test-di-" + targetCi)
-                                .name("테스트 사용자")
-                                .birthDate(LocalDate.of(1990, 1, 1))
-                                .gender("M")
-                                .phoneNumber("01000000000")
-                                .phoneLast4("0000")
-                                .build()
-                ));
+                .orElseGet(() -> {
+                    User newUser = userRepository.save(
+                            User.builder()
+                                    .ci(targetCi)
+                                    .di("test-di-" + targetCi)
+                                    .name("테스트 사용자")
+                                    .birthDate(LocalDate.of(1990, 1, 1))
+                                    .gender("M")
+                                    .phoneNumber("01000000000")
+                                    .phoneLast4("0000")
+                                    .build()
+                    );
+                    assignSsafyUserKey(newUser);
+                    return newUser;
+                });
 
         return issueTokens(user.getId());
     }
@@ -216,6 +233,22 @@ public class AuthService {
         );
 
         return new LoginResponse(accessToken, refreshToken);
+    }
+
+    private void assignSsafyUserKey(User user) {
+        try {
+            String memberId = "tax7i-user-" + user.getId();
+            String userKey = ssafyFinanceClient.getOrRegisterMember(memberId);
+            user.assignSsafyUserKey(userKey);
+            log.info("SSAFY 멤버 등록 성공: userId={}, userKey={}", user.getId(), userKey);
+        } catch (Exception e) {
+            log.warn("SSAFY 멤버 등록 실패, 공용 userKey로 대체: {}", e.getMessage());
+            String fallbackKey = ssafyFinanceProperties.userKey();
+            if (fallbackKey != null && !fallbackKey.isBlank()) {
+                user.assignSsafyUserKey(fallbackKey);
+                log.info("공용 userKey 할당: userId={}", user.getId());
+            }
+        }
     }
 
     private void checkUserStatus(User user) {

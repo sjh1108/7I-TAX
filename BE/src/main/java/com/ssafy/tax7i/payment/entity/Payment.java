@@ -40,6 +40,8 @@ public class Payment extends BaseTimeEntity {
     @Column(nullable = false)
     private String currency;
 
+    private Long merchantId;
+
     @Column(nullable = false)
     private String merchantName;
 
@@ -63,6 +65,8 @@ public class Payment extends BaseTimeEntity {
 
     private String cancelReason;
 
+    private Long ssafyTransactionUniqueNo;
+
     private LocalDateTime authorizedAt;
 
     private LocalDateTime capturedAt;
@@ -71,13 +75,14 @@ public class Payment extends BaseTimeEntity {
 
     @Builder
     public Payment(User user, Card card, Long amount, String currency,
-                   String merchantName, String merchantCategoryCode,
+                   Long merchantId, String merchantName, String merchantCategoryCode,
                    PaymentMethod paymentMethod, PaymentPurpose purpose,
                    String authorizationCode) {
         this.user = user;
         this.card = card;
         this.amount = amount;
         this.currency = currency;
+        this.merchantId = merchantId;
         this.merchantName = merchantName;
         this.merchantCategoryCode = merchantCategoryCode;
         this.paymentMethod = paymentMethod;
@@ -99,6 +104,10 @@ public class Payment extends BaseTimeEntity {
         if (this.cancelledAmount >= this.amount) {
             this.status = PaymentStatus.CANCELLED;
         }
+    }
+
+    public void setSsafyTransactionUniqueNo(Long ssafyTransactionUniqueNo) {
+        this.ssafyTransactionUniqueNo = ssafyTransactionUniqueNo;
     }
 
     public void decline() {

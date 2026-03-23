@@ -16,6 +16,9 @@ public record PaymentAuthorizeRequest(
 
         String currency,
 
+        @NotNull(message = "가맹점 ID는 필수입니다.")
+        Long merchantId,
+
         @NotBlank(message = "가맹점명은 필수입니다.")
         String merchantName,
 

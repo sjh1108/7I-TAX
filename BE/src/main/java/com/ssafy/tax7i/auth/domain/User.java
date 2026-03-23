@@ -104,4 +104,8 @@ public class User extends BaseTimeEntity {
     public void withdraw() {
         this.status = UserStatus.WITHDRAWN;
     }
+
+    public void assignSsafyUserKey(String ssafyUserKey) {
+        this.ssafyUserKey = ssafyUserKey;
+    }
 }
