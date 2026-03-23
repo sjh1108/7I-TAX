@@ -104,7 +104,7 @@ public class CardService {
      * 내 카드 목록 조회
      */
     public List<CardResponse> getCards(Long userId) {
-        return cardRepository.findByUser_Id(userId).stream()
+        return cardRepository.findByUser_IdAndDeletedFalse(userId).stream()
                 .map(CardResponse::from)
                 .toList();
     }
@@ -123,7 +123,7 @@ public class CardService {
     @Transactional
     public CardResponse setDefaultCard(Long userId, Long cardId) {
         Card card = getCardWithOwnership(userId, cardId);
-        cardRepository.findByUser_IdAndIsDefaultTrue(userId)
+        cardRepository.findByUser_IdAndIsDefaultTrueAndDeletedFalse(userId)
                 .ifPresent(Card::unmarkDefault);
         card.markDefault();
         return CardResponse.from(card);
@@ -135,7 +135,7 @@ public class CardService {
     @Transactional
     public void deleteCard(Long userId, Long cardId) {
         Card card = getCardWithOwnership(userId, cardId);
-        cardRepository.delete(card);
+        card.softDelete();
     }
 
     /**
@@ -220,7 +220,7 @@ public class CardService {
     }
 
     private Card getCardWithOwnership(Long userId, Long cardId) {
-        return cardRepository.findByIdAndUser_Id(cardId, userId)
+        return cardRepository.findByIdAndUser_IdAndDeletedFalse(cardId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
     }
 

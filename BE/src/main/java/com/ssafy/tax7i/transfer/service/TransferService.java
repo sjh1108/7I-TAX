@@ -38,12 +38,12 @@ public class TransferService {
         }
 
         User sender = getUser(userId);
-        Card senderCard = cardRepository.findByIdAndUser_Id(request.senderCardId(), userId)
+        Card senderCard = cardRepository.findByIdAndUser_IdAndDeletedFalse(request.senderCardId(), userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
         User receiver = userRepository.findById(request.receiverUserId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND, "수신자를 찾을 수 없습니다."));
-        Card receiverCard = cardRepository.findByUser_IdAndIsDefaultTrue(receiver.getId())
+        Card receiverCard = cardRepository.findByUser_IdAndIsDefaultTrueAndDeletedFalse(receiver.getId())
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND, "수신자의 기본 카드가 설정되지 않았습니다."));
 
         String senderKey = getUserKey(sender);
@@ -74,7 +74,7 @@ public class TransferService {
     @Transactional
     public TransferResponse withdraw(Long userId, WithdrawRequest request) {
         User user = getUser(userId);
-        Card card = cardRepository.findByIdAndUser_Id(request.cardId(), userId)
+        Card card = cardRepository.findByIdAndUser_IdAndDeletedFalse(request.cardId(), userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
         String userKey = getUserKey(user);

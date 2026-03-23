@@ -65,7 +65,7 @@ public class PaymentService {
         }
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        Card card = cardRepository.findByIdAndUser_Id(cardId, userId)
+        Card card = cardRepository.findByIdAndUser_IdAndDeletedFalse(cardId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
         String userKey = getUserKey(user);
@@ -346,7 +346,6 @@ public class PaymentService {
     }
 
     private void autoCreateBookEntry(Payment payment) {
-        if (payment.getPurpose() != PaymentPurpose.BUSINESS) return;
         if (payment.getCard().getCardType() != CardType.BUSINESS) return;
 
         try {
@@ -356,9 +355,14 @@ public class PaymentService {
             boolean isConfirmed = false;
 
             try {
+                // MCC: 4자리 숫자 코드만 사용, 그 외는 null (가맹점명으로 자동분류)
+                String mcc = payment.getMerchantCategoryCode();
+                if (mcc != null && !mcc.matches("\\d{4}")) {
+                    mcc = null;
+                }
                 ClassificationRequest clReq = new ClassificationRequest(
                         payment.getMerchantName(),
-                        payment.getMerchantCategoryCode(),
+                        mcc,
                         payment.getAmount(),
                         true,
                         null,

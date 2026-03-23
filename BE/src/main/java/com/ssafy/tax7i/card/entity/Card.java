@@ -52,6 +52,9 @@ public class Card extends BaseTimeEntity {
 
     private String cardExpiryDate;
 
+    @Column(nullable = false)
+    private boolean deleted = false;
+
     @Builder
     public Card(User user, String cardName, CardType cardType, String last4Digits,
                 String cardNo, String cvc, String cardUniqueNo,
@@ -74,6 +77,11 @@ public class Card extends BaseTimeEntity {
     }
 
     public void unmarkDefault() {
+        this.isDefault = false;
+    }
+
+    public void softDelete() {
+        this.deleted = true;
         this.isDefault = false;
     }
 }

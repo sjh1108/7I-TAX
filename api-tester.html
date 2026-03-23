@@ -202,7 +202,10 @@
     <div class="card-title">결제하기</div>
     <div class="form-row">
       <div class="field"><label>결제 카드 *</label><select id="pf-card"></select></div>
-      <div class="field"><label>가맹점 *</label><select id="pf-merchant-sel"><option value="">불러오는 중...</option></select></div>
+      <div class="field"><label>가맹점명 *</label><input type="text" id="pf-merchant-name" placeholder="스타벅스 강남점"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>MCC 코드</label><input type="text" id="pf-mcc" placeholder="5812"></div>
     </div>
     <div class="form-row">
       <div class="field"><label>결제 금액 *</label><input type="number" id="pf-amount" placeholder="50000"></div>
@@ -215,7 +218,10 @@
     <div class="card-title">QR 결제</div>
     <div class="form-row">
       <div class="field"><label>결제 카드 *</label><select id="qr-card"></select></div>
-      <div class="field"><label>가맹점 *</label><select id="qr-merchant-sel"><option value="">불러오는 중...</option></select></div>
+      <div class="field"><label>가맹점명 *</label><input type="text" id="qr-merchant-name" placeholder="스타벅스 강남점"></div>
+    </div>
+    <div class="form-row">
+      <div class="field"><label>MCC 코드</label><input type="text" id="qr-mcc" placeholder="5812"></div>
     </div>
     <div class="form-row">
       <div class="field"><label>결제 금액 *</label><input type="number" id="qr-amount" placeholder="10000"></div>
@@ -585,7 +591,7 @@ async function loadCards() {
   try { const items=await api('GET','/api/cards');
     if(!items.length){document.getElementById('cards-grid').innerHTML='<div class="empty"><p>등록된 카드가 없습니다</p></div>';return;}
     const days={'1':'월','2':'화','3':'수','4':'목','5':'금','6':'토','7':'일'};
-    const mOpts=_merchants.map(m=>`<option value="${m.merchantId}" data-name="${(m.merchantName||'').replace(/"/g,'&quot;')}">${m.merchantName}</option>`).join('');
+    const mOpts=_merchants.map(m=>`<option value="${m.merchantId}" data-name="${(m.merchantName||'').replace(/"/g,'&quot;')}" data-catid="${m.categoryId||''}" data-cat="${m.categoryName||''}">${m.merchantName} (${m.categoryName||'기타'})</option>`).join('');
     document.getElementById('cards-grid').innerHTML=items.map(c=>{
       const biz=c.cardType==='BUSINESS'; const exp=c.cardExpiryDate?(c.cardExpiryDate.substring(0,4)+'/'+c.cardExpiryDate.substring(4,6)):'-';
       return `<div class="card" style="margin-bottom:0;border-left:4px solid ${biz?'#4f46e5':'#9ca3af'};">
@@ -608,13 +614,24 @@ async function loadCards() {
     }).join('');
   } catch{}
 }
-async function cardPay(id) {
-  const sel=document.getElementById('cpm-'+id);
-  const mid=Number(sel.value), amt=Number(document.getElementById('cpa-'+id).value);
+async function cardPay(cardId) {
+  const sel=document.getElementById('cpm-'+cardId);
+  const mid=Number(sel.value), amt=Number(document.getElementById('cpa-'+cardId).value);
   const mName=sel.options[sel.selectedIndex]?.dataset?.name||'';
+  const catId=sel.options[sel.selectedIndex]?.dataset?.catid||'';
   if(!mid){toast('가맹점을 선택하세요');return;}
   if(!amt||amt<=0){toast('금액을 입력하세요');return;}
-  try{const d=await api('POST','/api/cards/'+id+'/payment',{merchantId:mid,paymentBalance:amt});toast(`결제 완료! ${d.merchantName||mName} ${fmt(d.paymentBalance)}원`);}catch{}
+  // Payment API로 결제 (장부 자동 연동)
+  const cards=await api('GET','/api/cards');
+  const card=cards.find(c=>c.id===cardId);
+  const purpose=card&&card.cardType==='BUSINESS'?'BUSINESS':'PERSONAL';
+  const b={cardId,amount:amt,currency:'KRW',merchantId:mid,merchantName:mName,paymentMethod:'OFFLINE',purpose};
+  if(catId) b.merchantCategoryCode=catId;
+  try{
+    const auth=await api('POST','/api/payments/authorize',b);
+    if(auth.paymentId){await api('POST','/api/payments/'+auth.paymentId+'/capture');toast(`결제 완료! ${mName} ${fmt(amt)}원`);}
+    loadCards();
+  }catch{}
 }
 async function loadCardTx(id) {
   const now=new Date(), ed=now.toISOString().slice(0,10).replace(/-/g,''), s=new Date(now); s.setMonth(s.getMonth()-3); const sd=s.toISOString().slice(0,10).replace(/-/g,'');
@@ -644,36 +661,40 @@ let _merchants=[];
 async function loadMerchants() {
   try {
     _merchants=await api('GET','/api/cards/merchants');
-    const html=_merchants.map(m=>`<option value="${m.merchantId}" data-name="${(m.merchantName||'').replace(/"/g,'&quot;')}" data-cat="${m.categoryName||''}">${m.merchantName} (${m.categoryName||'기타'})</option>`).join('');
-    document.getElementById('pf-merchant-sel').innerHTML=html||'<option value="">가맹점 없음</option>';
-    document.getElementById('qr-merchant-sel').innerHTML=html||'<option value="">가맹점 없음</option>';
   } catch(e) {
-    document.getElementById('pf-merchant-sel').innerHTML='<option value="">가맹점 조회 실패</option>';
-    document.getElementById('qr-merchant-sel').innerHTML='<option value="">가맹점 조회 실패</option>';
+    _merchants=[];
   }
 }
 function getSelectedMerchant(selId) {
   const sel=document.getElementById(selId);
   const opt=sel.options[sel.selectedIndex];
-  return {merchantId:Number(sel.value),merchantName:opt?.dataset?.name||'',categoryName:opt?.dataset?.cat||''};
+  return {merchantId:Number(sel.value),merchantName:opt?.dataset?.name||'',categoryId:opt?.dataset?.catid||'',categoryName:opt?.dataset?.cat||''};
 }
 async function createPayment() {
   const cardSel=document.getElementById('pf-card'), cardId=Number(cardSel.value);
-  const m=getSelectedMerchant('pf-merchant-sel');
+  const merchantName=document.getElementById('pf-merchant-name').value.trim();
+  const mcc=document.getElementById('pf-mcc').value.trim();
   const amount=Number(document.getElementById('pf-amount').value);
-  if(!m.merchantId){toast('가맹점을 선택하세요');return;}
+  if(!merchantName){toast('가맹점명을 입력하세요');return;}
   if(!amount||amount<=0){toast('금액을 입력하세요');return;}
+  if(!_merchants.length){toast('가맹점 목록을 불러오지 못했습니다. 로그인 후 다시 시도하세요.');return;}
+  const merchantId=_merchants[0].merchantId;
   const purpose=cardSel.options[cardSel.selectedIndex]?.dataset?.type==='BUSINESS'?'BUSINESS':document.getElementById('pf-purpose').value;
-  const b={cardId,amount,currency:'KRW',merchantId:m.merchantId,merchantName:m.merchantName,paymentMethod:document.getElementById('pf-method').value,purpose};
+  const b={cardId,amount,currency:'KRW',merchantId,merchantName,paymentMethod:document.getElementById('pf-method').value,purpose};
+  if(mcc) b.merchantCategoryCode=mcc;
   try{const auth=await api('POST','/api/payments/authorize',b);
-    if(auth.paymentId){await api('POST','/api/payments/'+auth.paymentId+'/capture');toast('결제 완료! ('+m.merchantName+' '+fmt(amount)+'원)');}
+    if(auth.paymentId){await api('POST','/api/payments/'+auth.paymentId+'/capture');toast('결제 완료! ('+merchantName+' '+fmt(amount)+'원)');}
     toggleEl('pay-form');loadPayments();
   }catch{}
 }
 async function createQrToken() {
-  const m=getSelectedMerchant('qr-merchant-sel');
-  if(!m.merchantId){toast('가맹점을 선택하세요');return;}
-  const b={cardId:Number(document.getElementById('qr-card').value),amount:Number(document.getElementById('qr-amount').value),merchantId:m.merchantId,merchantName:m.merchantName,purpose:document.getElementById('qr-purpose').value};
+  const merchantName=document.getElementById('qr-merchant-name').value.trim();
+  const mcc=document.getElementById('qr-mcc').value.trim();
+  if(!merchantName){toast('가맹점명을 입력하세요');return;}
+  if(!_merchants.length){toast('가맹점 목록을 불러오지 못했습니다. 로그인 후 다시 시도하세요.');return;}
+  const merchantId=_merchants[0].merchantId;
+  const b={cardId:Number(document.getElementById('qr-card').value),amount:Number(document.getElementById('qr-amount').value),merchantId,merchantName,purpose:document.getElementById('qr-purpose').value};
+  if(mcc) b.merchantCategoryCode=mcc;
   try{const d=await api('POST','/api/payments/qr/token',b);
     const qrData=JSON.stringify({token:d.token,amount:d.amount,payer:d.payerName,merchant:b.merchantName});
     const qrUrl='https://api.qrserver.com/v1/create-qr-code/?size=200x200&data='+encodeURIComponent(qrData);

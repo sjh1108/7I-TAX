@@ -46,7 +46,7 @@ public class TaxPaymentService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        Card card = cardRepository.findByIdAndUser_Id(cardId, userId)
+        Card card = cardRepository.findByIdAndUser_IdAndDeletedFalse(cardId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
         String userKey = user.getSsafyUserKey();
@@ -96,7 +96,7 @@ public class TaxPaymentService {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
-        Card card = cardRepository.findByIdAndUser_Id(cardId, userId)
+        Card card = cardRepository.findByIdAndUser_IdAndDeletedFalse(cardId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.CARD_NOT_FOUND));
 
         String userKey = user.getSsafyUserKey();

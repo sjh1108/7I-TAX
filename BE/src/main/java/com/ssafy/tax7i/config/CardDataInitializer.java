@@ -42,7 +42,7 @@ public class CardDataInitializer implements CommandLineRunner {
         for (int i = 0; i < targetUserCount; i++) {
             User user = users.get(i);
 
-            List<Card> existingCards = cardRepository.findByUser_Id(user.getId());
+            List<Card> existingCards = cardRepository.findByUser_IdAndDeletedFalse(user.getId());
             if (!existingCards.isEmpty()) {
                 log.info("[CardDataInitializer] 유저 {}에 이미 카드 {}개 존재, 건너뜁니다.", user.getId(), existingCards.size());
                 continue;
