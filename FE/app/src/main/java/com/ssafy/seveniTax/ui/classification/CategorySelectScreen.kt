@@ -64,6 +64,7 @@ fun CategorySelectScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         TaxHeader(

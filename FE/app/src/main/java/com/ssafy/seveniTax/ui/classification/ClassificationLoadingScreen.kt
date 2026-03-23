@@ -31,6 +31,7 @@ fun ClassificationLoadingScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         TaxHeader(

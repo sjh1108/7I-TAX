@@ -46,6 +46,7 @@ fun PayTermsScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // ── 상단 바 ──
@@ -115,7 +116,11 @@ fun PayTermsScreen(navController: NavController) {
         }
 
         // ── 하단 버튼 ──
-        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+        Box(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
             TaxButton(
                 text = "다음으로",
                 onClick = { navController.navigate(Route.PayVerify.path) },

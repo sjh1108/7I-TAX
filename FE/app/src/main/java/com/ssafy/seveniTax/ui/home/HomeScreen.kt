@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.R
+import com.ssafy.seveniTax.ui.components.TaxButton
+import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 
 @Composable
@@ -45,13 +47,10 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
                 CardStack()
                 Spacer(modifier = Modifier.height(28.dp))
 
-                // 카테고리 영역 (임시)
-                Box(
-                    modifier = Modifier.fillMaxWidth(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text("임시", style = Typography.bodyMedium, color = TextSecondary)
-                }
+                TaxButton(
+                    text = "카드 등록",
+                    onClick = { navController.navigate(Route.CardTypeSelect.path) }
+                )
             }
         }
     }

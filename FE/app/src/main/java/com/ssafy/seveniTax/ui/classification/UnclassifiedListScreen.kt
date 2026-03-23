@@ -53,6 +53,7 @@ fun UnclassifiedListScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .statusBarsPadding()
                 .background(Background)
         ) {
             TaxHeader(title = "미분류 내역")

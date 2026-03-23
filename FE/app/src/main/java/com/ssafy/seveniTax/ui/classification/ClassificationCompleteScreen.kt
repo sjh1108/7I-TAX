@@ -36,6 +36,7 @@ fun ClassificationCompleteScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

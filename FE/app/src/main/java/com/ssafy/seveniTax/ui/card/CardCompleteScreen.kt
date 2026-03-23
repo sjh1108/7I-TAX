@@ -29,6 +29,7 @@ fun CardCompleteScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // 상단 바
@@ -135,6 +136,7 @@ fun CardCompleteScreen(navController: NavController) {
         // 하단 버튼
         Column(
             modifier = Modifier
+                .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {

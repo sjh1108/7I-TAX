@@ -87,6 +87,7 @@ fun CardInputScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // 상단 바
@@ -323,7 +324,9 @@ fun CardInputScreen(
                 enabled = isFormComplete
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier
+                .navigationBarsPadding()
+                .height(32.dp))
         }
     }
 }

@@ -31,6 +31,7 @@ fun CardTypeSelectScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // 상단 바
@@ -89,7 +90,11 @@ fun CardTypeSelectScreen(navController: NavController) {
         }
 
         // 하단 버튼
-        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+        Box(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
             TaxButton(
                 text = "다음으로",
                 onClick = {

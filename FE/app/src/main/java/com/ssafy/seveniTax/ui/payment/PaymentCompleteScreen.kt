@@ -29,6 +29,7 @@ fun PaymentCompleteScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // ── 상단 영역 ──
@@ -91,7 +92,9 @@ fun PaymentCompleteScreen(navController: NavController) {
 
         // ── 하단 버튼 ──
         Column(
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TaxButton(

@@ -1,12 +1,21 @@
 package com.ssafy.seveniTax.ui.payment
 
+import android.Manifest
 import android.graphics.Bitmap
+import android.util.Log
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -19,12 +28,21 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
+import com.google.mlkit.vision.barcode.BarcodeScanning
+import com.google.mlkit.vision.common.InputImage
+import com.google.zxing.BarcodeFormat
+import com.google.zxing.qrcode.QRCodeWriter
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import java.util.concurrent.Executors
 
 private data class MockCard(
     val name: String,
@@ -41,12 +59,28 @@ private val mockCards = listOf(
 
 @Composable
 fun QrPaymentScreen(navController: NavController) {
-    var selectedTab by remember { mutableStateOf(1) } // 0=바코드, 1=QR스캔
-    var selectedCard by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) } // 0=바코드, 1=QR스캔
+    var selectedCard by remember { mutableIntStateOf(0) }
+    var scannedResult by remember { mutableStateOf<String?>(null) }
+    var cameraPermissionGranted by remember { mutableStateOf(false) }
+
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { granted ->
+        cameraPermissionGranted = granted
+    }
+
+    // QR스캔 탭 선택 시 카메라 권한 요청
+    LaunchedEffect(selectedTab) {
+        if (selectedTab == 1 && !cameraPermissionGranted) {
+            permissionLauncher.launch(Manifest.permission.CAMERA)
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // ── 상단 바 ──
@@ -82,36 +116,115 @@ fun QrPaymentScreen(navController: NavController) {
                 .border(1.dp, Divider, RoundedCornerShape(24.dp))
                 .clip(RoundedCornerShape(24.dp))
         ) {
-            TabButton("바코드", selectedTab == 0, Modifier.weight(1f)) { selectedTab = 0 }
-            TabButton("QR스캔", selectedTab == 1, Modifier.weight(1f)) { selectedTab = 1 }
+            TabButton("바코드", selectedTab == 0, Modifier.weight(1f)) {
+                selectedTab = 0
+                scannedResult = null
+            }
+            TabButton("QR스캔", selectedTab == 1, Modifier.weight(1f)) {
+                selectedTab = 1
+                scannedResult = null
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── QR / 바코드 영역 ──
+        // ── 컨텐츠 영역 ──
         Box(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
                 .fillMaxWidth()
                 .aspectRatio(1f)
-                .border(1.dp, Divider, RoundedCornerShape(16.dp))
                 .clip(RoundedCornerShape(16.dp))
+                .border(1.dp, Divider, RoundedCornerShape(16.dp))
                 .background(Color.White),
             contentAlignment = Alignment.Center
         ) {
-            if (selectedTab == 1) {
-                // QR 코드 (Mock)
-                val qrBitmap = remember { generateMockQr() }
-                Image(
-                    bitmap = qrBitmap.asImageBitmap(),
-                    contentDescription = "QR 코드",
-                    modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxSize()
-                )
+            if (selectedTab == 0) {
+                // ── QR코드 생성 ──
+                val card = mockCards[selectedCard]
+                val qrData = "PAY-${card.last4}-${System.currentTimeMillis() / 1000}"
+                val qrBitmap = remember(qrData) { generateQrCode(qrData) }
+
+                if (qrBitmap != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        Image(
+                            bitmap = qrBitmap.asImageBitmap(),
+                            contentDescription = "QR코드",
+                            modifier = Modifier
+                                .size(200.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "${card.name} ••••${card.last4}",
+                            fontSize = 13.sp,
+                            color = TextSecondary,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                } else {
+                    Text("QR코드 생성 실패", color = TextSecondary, fontSize = 14.sp)
+                }
             } else {
-                // 바코드 (빈 상태)
-                Text("바코드 영역", color = TextSecondary, fontSize = 14.sp)
+                // ── QR 스캔 (카메라) ──
+                if (scannedResult != null) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(24.dp)
+                    ) {
+                        Text(
+                            text = "스캔 완료",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = TextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = scannedResult!!,
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(BrandPurple)
+                                .clickable { scannedResult = null }
+                                .padding(horizontal = 24.dp, vertical = 10.dp)
+                        ) {
+                            Text("다시 스캔", color = Color.White, fontSize = 14.sp)
+                        }
+                    }
+                } else if (cameraPermissionGranted) {
+                    QrScannerView(
+                        onQrScanned = { result ->
+                            scannedResult = result
+                        }
+                    )
+                } else {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.Center
+                    ) {
+                        Text("카메라 권한이 필요합니다", color = TextSecondary, fontSize = 14.sp)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(BrandPurple)
+                                .clickable {
+                                    permissionLauncher.launch(Manifest.permission.CAMERA)
+                                }
+                                .padding(horizontal = 24.dp, vertical = 10.dp)
+                        ) {
+                            Text("권한 허용", color = Color.White, fontSize = 14.sp)
+                        }
+                    }
+                }
             }
         }
 
@@ -121,7 +234,9 @@ fun QrPaymentScreen(navController: NavController) {
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            modifier = Modifier.padding(bottom = 32.dp)
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(bottom = 32.dp)
         ) {
             items(mockCards.size) { index ->
                 val card = mockCards[index]
@@ -136,6 +251,7 @@ fun QrPaymentScreen(navController: NavController) {
                             color = if (index == selectedCard) BrandPurple else Color.Transparent,
                             shape = RoundedCornerShape(12.dp)
                         )
+                        .clickable { selectedCard = index }
                         .padding(12.dp),
                     contentAlignment = Alignment.BottomStart
                 ) {
@@ -145,8 +261,104 @@ fun QrPaymentScreen(navController: NavController) {
                     }
                 }
             }
+
+            // ── 카드 추가 버튼 ──
+            item {
+                Box(
+                    modifier = Modifier
+                        .width(100.dp)
+                        .height(140.dp)
+                        .clip(RoundedCornerShape(12.dp))
+                        .border(2.dp, Divider, RoundedCornerShape(12.dp))
+                        .clickable { navController.navigate(Route.CardTypeSelect.path) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "+",
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Light,
+                        color = TextSecondary
+                    )
+                }
+            }
         }
     }
+}
+
+@Composable
+private fun QrScannerView(
+    onQrScanned: (String) -> Unit
+) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val cameraExecutor = remember { Executors.newSingleThreadExecutor() }
+    var hasScanned by remember { mutableStateOf(false) }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            cameraExecutor.shutdown()
+        }
+    }
+
+    AndroidView(
+        factory = { ctx ->
+            val previewView = PreviewView(ctx)
+            val cameraProviderFuture = ProcessCameraProvider.getInstance(ctx)
+
+            cameraProviderFuture.addListener({
+                val cameraProvider = cameraProviderFuture.get()
+
+                val preview = Preview.Builder().build().also {
+                    it.surfaceProvider = previewView.surfaceProvider
+                }
+
+                val imageAnalysis = ImageAnalysis.Builder()
+                    .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                    .build()
+
+                val scanner = BarcodeScanning.getClient()
+
+                imageAnalysis.setAnalyzer(cameraExecutor) { imageProxy ->
+                    val mediaImage = imageProxy.image
+                    if (mediaImage != null && !hasScanned) {
+                        val inputImage = InputImage.fromMediaImage(
+                            mediaImage,
+                            imageProxy.imageInfo.rotationDegrees
+                        )
+                        scanner.process(inputImage)
+                            .addOnSuccessListener { barcodes ->
+                                val barcode = barcodes.firstOrNull()
+                                if (barcode != null && !hasScanned) {
+                                    hasScanned = true
+                                    val value = barcode.rawValue ?: "알 수 없는 데이터"
+                                    onQrScanned(value)
+                                }
+                            }
+                            .addOnCompleteListener {
+                                imageProxy.close()
+                            }
+                    } else {
+                        imageProxy.close()
+                    }
+                }
+
+                try {
+                    cameraProvider.unbindAll()
+                    cameraProvider.bindToLifecycle(
+                        lifecycleOwner,
+                        CameraSelector.DEFAULT_BACK_CAMERA,
+                        preview,
+                        imageAnalysis
+                    )
+                } catch (e: Exception) {
+                    Log.e("QrScanner", "카메라 바인딩 실패", e)
+                }
+            }, ContextCompat.getMainExecutor(ctx))
+
+            previewView
+        },
+        modifier = Modifier.fillMaxSize()
+    )
 }
 
 @Composable
@@ -158,6 +370,7 @@ private fun TabButton(
 ) {
     Box(
         modifier = modifier
+            .clickable(onClick = onClick)
             .background(if (selected) TextPrimary else Color.Transparent)
             .padding(vertical = 10.dp),
         contentAlignment = Alignment.Center
@@ -167,54 +380,30 @@ private fun TabButton(
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
             color = if (selected) Color.White else TextSecondary,
-            modifier = Modifier.then(
-                Modifier.padding(horizontal = 8.dp)
-            )
+            modifier = Modifier.padding(horizontal = 8.dp)
         )
     }
 }
 
-private fun generateMockQr(): Bitmap {
-    val size = 256
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
-    val random = java.util.Random(42)
-    val moduleCount = 25
-    val moduleSize = size / moduleCount
-
-    // 흰색 배경
-    for (x in 0 until size) {
-        for (y in 0 until size) {
-            bitmap.setPixel(x, y, android.graphics.Color.WHITE)
-        }
-    }
-
-    // QR 패턴 생성 (Mock)
-    for (row in 0 until moduleCount) {
-        for (col in 0 until moduleCount) {
-            val isFinderPattern = (row < 7 && col < 7) ||
-                    (row < 7 && col >= moduleCount - 7) ||
-                    (row >= moduleCount - 7 && col < 7)
-
-            val isFilled = if (isFinderPattern) {
-                val lr = if (row < 7) row else row - (moduleCount - 7)
-                val lc = if (col < 7) col else col - (moduleCount - 7)
-                lr == 0 || lr == 6 || lc == 0 || lc == 6 || (lr in 2..4 && lc in 2..4)
-            } else {
-                random.nextBoolean()
-            }
-
-            if (isFilled) {
-                for (px in 0 until moduleSize) {
-                    for (py in 0 until moduleSize) {
-                        val x = col * moduleSize + px
-                        val y = row * moduleSize + py
-                        if (x < size && y < size) {
-                            bitmap.setPixel(x, y, android.graphics.Color.BLACK)
-                        }
-                    }
-                }
+private fun generateQrCode(data: String): Bitmap? {
+    return try {
+        val writer = QRCodeWriter()
+        val bitMatrix = writer.encode(data, BarcodeFormat.QR_CODE, 512, 512)
+        val width = bitMatrix.width
+        val height = bitMatrix.height
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        for (x in 0 until width) {
+            for (y in 0 until height) {
+                bitmap.setPixel(
+                    x, y,
+                    if (bitMatrix.get(x, y)) android.graphics.Color.BLACK
+                    else android.graphics.Color.WHITE
+                )
             }
         }
+        bitmap
+    } catch (e: Exception) {
+        Log.e("QrCode", "QR코드 생성 실패", e)
+        null
     }
-    return bitmap
 }

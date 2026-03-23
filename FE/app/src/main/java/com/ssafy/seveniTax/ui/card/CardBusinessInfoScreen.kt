@@ -56,6 +56,7 @@ fun CardBusinessInfoScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // Top bar
@@ -186,7 +187,9 @@ fun CardBusinessInfoScreen(navController: NavController) {
                 enabled = isFormComplete
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier
+                .navigationBarsPadding()
+                .height(32.dp))
         }
     }
 }

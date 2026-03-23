@@ -53,6 +53,7 @@ fun PinLoginScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         Column(
@@ -110,7 +111,8 @@ fun PinLoginScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(KeypadBg)
-                .padding(vertical = 8.dp)
+                .navigationBarsPadding()
+                .padding(top = 8.dp, bottom = 48.dp)
         )
     }
 }

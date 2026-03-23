@@ -119,6 +119,7 @@ fun ServerTestScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
             .padding(20.dp)
             .verticalScroll(rememberScrollState())

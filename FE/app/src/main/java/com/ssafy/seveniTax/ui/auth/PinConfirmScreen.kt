@@ -50,6 +50,7 @@ fun PinConfirmScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         Column(
@@ -105,7 +106,8 @@ fun PinConfirmScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(KeypadBg)
-                .padding(vertical = 8.dp)
+                .navigationBarsPadding()
+                .padding(top = 8.dp, bottom = 48.dp)
         )
     }
 }

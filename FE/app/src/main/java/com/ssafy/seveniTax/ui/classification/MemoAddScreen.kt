@@ -43,6 +43,7 @@ fun MemoAddScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // 헤더 (건너뛰기 포함)

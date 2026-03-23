@@ -52,6 +52,7 @@ fun PayBusinessInfoScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // 상단 바
@@ -179,7 +180,11 @@ fun PayBusinessInfoScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(32.dp))
         }
 
-        Box(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+        Box(
+            modifier = Modifier
+                .navigationBarsPadding()
+                .padding(horizontal = 24.dp, vertical = 16.dp)
+        ) {
             TaxButton(
                 text = "다음으로",
                 onClick = { navController.navigate(Route.PayTerms.path) },

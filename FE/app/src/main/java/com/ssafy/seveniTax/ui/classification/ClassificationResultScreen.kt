@@ -40,6 +40,7 @@ fun ClassificationResultScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         TaxHeader(

@@ -39,6 +39,7 @@ fun CardChangeScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // Top bar
@@ -167,7 +168,9 @@ fun CardChangeScreen(navController: NavController) {
                 }
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier
+                .navigationBarsPadding()
+                .height(32.dp))
         }
     }
 }

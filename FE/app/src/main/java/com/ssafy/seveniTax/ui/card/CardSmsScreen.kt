@@ -40,6 +40,7 @@ fun CardSmsScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // Top bar
@@ -171,7 +172,9 @@ fun CardSmsScreen(navController: NavController) {
                 enabled = smsCode.length == 6 && remainingSeconds > 0
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier
+                .navigationBarsPadding()
+                .height(32.dp))
         }
     }
 }

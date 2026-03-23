@@ -26,6 +26,7 @@ fun CardOwnerVerifyScreen(navController: NavController) {
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // Top bar
@@ -94,7 +95,9 @@ fun CardOwnerVerifyScreen(navController: NavController) {
                 text = "인증 5회 실패 시 등록이 제한됩니다",
                 style = Typography.bodySmall,
                 color = TextSecondary,
-                modifier = Modifier.padding(bottom = 32.dp)
+                modifier = Modifier
+                    .navigationBarsPadding()
+                    .padding(bottom = 32.dp)
             )
         }
     }

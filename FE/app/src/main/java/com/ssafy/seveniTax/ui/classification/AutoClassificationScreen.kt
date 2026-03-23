@@ -40,6 +40,7 @@ fun AutoClassificationScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         TaxHeader(title = "자동 분류 알림")

@@ -27,6 +27,7 @@ fun CardDetailScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // Top bar
@@ -87,7 +88,9 @@ fun CardDetailScreen(
                     .padding(vertical = 16.dp)
             )
 
-            Spacer(modifier = Modifier.height(32.dp))
+            Spacer(modifier = Modifier
+                .navigationBarsPadding()
+                .height(32.dp))
         }
     }
 }

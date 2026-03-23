@@ -42,6 +42,7 @@ fun BottomTabBar(
                     spotColor = Color(0x123629B7)
                 )
                 .background(Color.White)
+                .navigationBarsPadding()
                 .padding(top = 12.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.Bottom

@@ -36,6 +36,7 @@ fun PayVerifyScreen(
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .statusBarsPadding()
             .background(Background)
     ) {
         // ── 상단 바 ──
@@ -107,7 +108,8 @@ fun PayVerifyScreen(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(KeypadBg)
-                .padding(vertical = 8.dp)
+                .navigationBarsPadding()
+                .padding(top = 8.dp, bottom = 48.dp)
         )
     }
 }
