@@ -1,5 +1,7 @@
 package com.ssafy.tax7i.tax.service;
 
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.tax.dto.TaxCalculationResult;
 import com.ssafy.tax7i.tax.entity.TaxBracket;
 import com.ssafy.tax7i.tax.repository.TaxBracketRepository;
@@ -42,17 +44,28 @@ public class TaxCalculationEngine {
 
         // 4. 세율 구간 로드
         List<TaxBracket> brackets = loadBrackets(taxYear);
+        if (brackets.isEmpty()) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    taxYear + "년도 세율 구간 데이터가 없습니다.");
+        }
 
         // 5. 적용 세율 및 산출세액 계산
         double taxRate = 0.0;
         long calculatedTax = 0L;
+        boolean matched = false;
 
         for (TaxBracket bracket : brackets) {
             if (taxableIncome >= bracket.getBracketMin() && taxableIncome <= bracket.getBracketMax()) {
                 taxRate = bracket.getRate();
                 calculatedTax = (long) Math.floor(taxableIncome * bracket.getRate() - bracket.getProgressiveDeduction());
+                matched = true;
                 break;
             }
+        }
+
+        if (!matched && taxableIncome > 0) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    "과세표준에 해당하는 세율 구간이 없습니다.");
         }
 
         // 6. 결정세액 = max(0, 산출세액)

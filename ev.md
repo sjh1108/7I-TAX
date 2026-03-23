@@ -91,11 +91,10 @@ Authorization: Bearer <access_token>
 ```
 Header: X-Verify-Token: <verifyToken>
 ```
-```json
+```json'/
 // Request
 { "pin": "123456" }
-
-// Response
+7
 { "accessToken": "eyJ...", "refreshToken": "eyJ..." }
 ```
 

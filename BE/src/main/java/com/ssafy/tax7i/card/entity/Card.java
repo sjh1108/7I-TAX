@@ -1,6 +1,7 @@
 package com.ssafy.tax7i.card.entity;
 
 import com.ssafy.tax7i.auth.domain.User;
+import com.ssafy.tax7i.global.crypto.AesEncryptor;
 import com.ssafy.tax7i.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -37,10 +38,12 @@ public class Card extends BaseTimeEntity {
     @Column(nullable = false)
     private boolean isDefault;
 
-    @Column(nullable = false, length = 16)
+    @Convert(converter = AesEncryptor.class)
+    @Column(nullable = false, length = 512)
     private String cardNo;
 
-    @Column(nullable = false, length = 3)
+    @Convert(converter = AesEncryptor.class)
+    @Column(nullable = false, length = 512)
     private String cvc;
 
     @Column(nullable = false)

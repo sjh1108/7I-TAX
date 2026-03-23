@@ -106,8 +106,8 @@ public class Payment extends BaseTimeEntity {
         }
     }
 
-    public void setSsafyTransactionUniqueNo(Long ssafyTransactionUniqueNo) {
-        this.ssafyTransactionUniqueNo = ssafyTransactionUniqueNo;
+    public void assignSsafyTransaction(Long transactionUniqueNo) {
+        this.ssafyTransactionUniqueNo = transactionUniqueNo;
     }
 
     public void decline() {

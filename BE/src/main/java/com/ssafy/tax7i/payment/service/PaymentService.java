@@ -25,6 +25,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import com.ssafy.tax7i.payment.event.BookEntryCreationFailedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -54,6 +56,7 @@ public class PaymentService {
     private final BookEntryService bookEntryService;
     private final TaxClassificationService taxClassificationService;
     private final RedisTemplate<String, String> redisTemplate;
+    private final ApplicationEventPublisher eventPublisher;
 
     private final Map<String, SseEmitter> qrEmitters = new ConcurrentHashMap<>();
 
@@ -118,7 +121,7 @@ public class PaymentService {
         }
 
         payment.capture();
-        payment.setSsafyTransactionUniqueNo(transactionResponse.rec().transactionUniqueNo());
+        payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
 
         autoCreateBookEntry(payment);
 
@@ -212,7 +215,7 @@ public class PaymentService {
         }
 
         payment.capture();
-        payment.setSsafyTransactionUniqueNo(transactionResponse.rec().transactionUniqueNo());
+        payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
 
         autoCreateBookEntry(payment);
 
@@ -251,7 +254,7 @@ public class PaymentService {
     }
 
     public QrPaymentInfoResponse getQrPaymentInfo(String token) {
-        Long paymentId = getPaymentIdFromToken(token);
+        Long paymentId = peekPaymentIdFromToken(token);
         Payment payment = paymentRepository.findByIdWithFetch(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -267,8 +270,8 @@ public class PaymentService {
 
     @Transactional
     public QrPaymentResponse confirmQrPayment(String token) {
-        Long paymentId = getPaymentIdFromToken(token);
-        Payment payment = paymentRepository.findByIdWithFetch(paymentId)
+        Long paymentId = consumePaymentToken(token);
+        Payment payment = paymentRepository.findByIdWithFetchForUpdate(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         if (payment.getStatus() != PaymentStatus.AUTHORIZED) {
@@ -291,7 +294,7 @@ public class PaymentService {
         }
 
         payment.capture();
-        payment.setSsafyTransactionUniqueNo(transactionResponse.rec().transactionUniqueNo());
+        payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
 
         autoCreateBookEntry(payment);
 
@@ -300,7 +303,7 @@ public class PaymentService {
     }
 
     public QrPaymentStatusResponse getQrPaymentStatus(Long userId, String token) {
-        Long paymentId = getPaymentIdFromToken(token);
+        Long paymentId = peekPaymentIdFromToken(token);
         Payment payment = paymentRepository.findByIdAndUserId(paymentId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -309,7 +312,7 @@ public class PaymentService {
     }
 
     public SseEmitter subscribeQrPayment(Long userId, String token) {
-        Long paymentId = getPaymentIdFromToken(token);
+        Long paymentId = peekPaymentIdFromToken(token);
         paymentRepository.findByIdAndUserId(paymentId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -319,6 +322,12 @@ public class PaymentService {
         emitter.onCompletion(() -> qrEmitters.remove(token));
         emitter.onTimeout(() -> qrEmitters.remove(token));
         emitter.onError(e -> qrEmitters.remove(token));
+
+        try {
+            emitter.send(SseEmitter.event().name("connect").data("connected"));
+        } catch (Exception e) {
+            log.debug("SSE 초기 이벤트 전송 실패: {}", e.getMessage());
+        }
 
         return emitter;
     }
@@ -337,8 +346,18 @@ public class PaymentService {
         }
     }
 
-    private Long getPaymentIdFromToken(String token) {
+    /** 토큰 조회 (읽기 전용 — 정보 조회, 상태 확인, SSE 구독용) */
+    private Long peekPaymentIdFromToken(String token) {
         String paymentIdStr = redisTemplate.opsForValue().get(QR_TOKEN_PREFIX + token);
+        if (paymentIdStr == null) {
+            throw new BusinessException(ErrorCode.QR_TOKEN_EXPIRED);
+        }
+        return Long.parseLong(paymentIdStr);
+    }
+
+    /** 토큰 소비 (원자적 조회+삭제 — 결제 확정 전용, 중복 결제 방어) */
+    private Long consumePaymentToken(String token) {
+        String paymentIdStr = redisTemplate.opsForValue().getAndDelete(QR_TOKEN_PREFIX + token);
         if (paymentIdStr == null) {
             throw new BusinessException(ErrorCode.QR_TOKEN_EXPIRED);
         }
@@ -410,6 +429,7 @@ public class PaymentService {
                     payment.getId(), payment.getAmount(), categoryName, isConfirmed);
         } catch (Exception e) {
             log.warn("장부 자동 생성 실패 (결제는 정상): paymentId={}, error={}", payment.getId(), e.getMessage());
+            eventPublisher.publishEvent(new BookEntryCreationFailedEvent(payment.getId()));
         }
     }
 

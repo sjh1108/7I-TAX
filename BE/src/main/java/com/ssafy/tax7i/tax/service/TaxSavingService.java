@@ -30,7 +30,7 @@ public class TaxSavingService {
         Object[] agg = rawAgg;
         if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
         long totalRevenue = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
+        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
 
         // 2. Base deductions
         Map<String, Long> baseDeductions = new HashMap<>();

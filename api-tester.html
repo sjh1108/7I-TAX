@@ -103,7 +103,6 @@
     <a data-page="calendar">세금일정</a>
     <a data-page="tax">세금관리</a>
     <a data-page="vat">부가세</a>
-    <a data-page="classification">세목분류</a>
     <a data-page="export">내보내기</a>
   </div>
   <div class="gnb-right">
@@ -383,23 +382,6 @@
     </div>
   </div>
   <div id="vat-returns-list"></div>
-</div>
-
-<!-- ===== CLASSIFICATION ===== -->
-<div class="page" id="page-classification">
-  <h2 class="section-title">세목 자동 분류</h2>
-  <div class="card">
-    <div class="card-title">세목 분류 테스트</div>
-    <div class="form-row">
-      <div class="field"><label>가맹점명 *</label><input id="clf-merchant" placeholder="스타벅스"></div>
-      <div class="field"><label>MCC 코드</label><input id="clf-mcc" placeholder="5812"></div>
-      <div class="field"><label>금액</label><input type="number" id="clf-amount" value="55000"></div>
-      <div class="field"><label>거래처 동행?</label><select id="clf-client"><option value="">모름</option><option value="true">예</option><option value="false">아니오</option></select></div>
-    </div>
-    <div class="btn-group"><button class="btn btn-primary" onclick="doClassify()">분류하기</button><button class="btn btn-secondary" onclick="doClassifyBatch()">일괄 테스트</button></div>
-    <div id="clf-result" style="margin-top:12px;"></div>
-  </div>
-  <div class="card" id="clf-batch-card" style="display:none;"><div class="card-title">일괄 테스트 결과</div><div class="table-wrap"><table><thead><tr><th>가맹점</th><th>MCC</th><th>금액</th><th>세목</th><th>부가세</th><th>신뢰도</th><th>비고</th></tr></thead><tbody id="clf-batch-tbody"></tbody></table></div></div>
 </div>
 
 <!-- ===== EXPORT ===== -->
@@ -937,31 +919,6 @@ async function loadVatReturns() {
   }catch{}
 }
 async function submitVat(id){try{await api('POST','/api/tax/vat-returns/'+id+'/submit');toast('부가세 신고 제출 완료');loadVatReturns();}catch{}}
-
-// ── Classification ──
-async function doClassify() {
-  const merchant=document.getElementById('clf-merchant').value.trim();
-  if(!merchant){toast('가맹점명을 입력하세요');return;}
-  const b={merchantName:merchant,amount:parseInt(document.getElementById('clf-amount').value)||null,isBusinessPurpose:true};
-  const mcc=document.getElementById('clf-mcc').value.trim(); if(mcc) b.mcc=mcc;
-  const cv=document.getElementById('clf-client').value; if(cv!=='') b.isClientAccompanied=cv==='true';
-  try{const r=await api('POST','/api/classification',b);
-    const badge=r.confidence==='CONFIRMED'?'background:#059669;color:#fff;':r.confidence==='RECOMMENDED'?'background:#2563eb;color:#fff;':'background:#d97706;color:#fff;';
-    let h=`<div style="padding:16px;background:#f8fafc;border-radius:12px;border:1px solid #e2e8f0;">
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:8px;"><span style="padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600;${badge}">${r.confidence}</span><span style="font-size:20px;font-weight:700;">${r.taxCategory}</span></div>
-      <div style="font-size:13px;"><strong>VAT:</strong> ${r.vat필요경비||'-'} | <strong>Legal:</strong> ${r.legalBasis||'-'}</div>`;
-    if(r.remark) h+=`<div style="margin-top:4px;font-size:12px;color:#6b7280;">${r.remark}</div>`;
-    if(r.entertainmentLimit){const l=r.entertainmentLimit;h+=`<div style="margin-top:8px;padding:6px;background:${l.isOverLimit?'#fef2f2':'#f0fdf4'};border-radius:6px;font-size:12px;">Limit: ${fmt(l.usedAmount)}/${fmt(l.annualLimit)} (remain ${fmt(l.remainingAmount)})${l.isOverLimit?' <strong style="color:#dc2626;">OVER!</strong>':''}</div>`;}
-    h+='</div>'; document.getElementById('clf-result').innerHTML=h;
-  }catch{}
-}
-async function doClassifyBatch() {
-  const examples=[{merchantName:'Taxi',mcc:'4121',amount:15000},{merchantName:'Gas Station',mcc:'5541',amount:80000},{merchantName:'Starbucks',mcc:'5814',amount:5500,isClientAccompanied:false},{merchantName:'Starbucks',mcc:'5814',amount:45000,isClientAccompanied:true},{merchantName:'AWS',mcc:'5817',amount:150000},{merchantName:'GitHub',mcc:'5817',amount:4000},{merchantName:'Bookstore',mcc:'5942',amount:25000},{merchantName:'Naver Ads',mcc:'7311',amount:500000}];
-  document.getElementById('clf-batch-card').style.display='block';
-  let rows='';
-  for(const ex of examples){try{const r=await api('POST','/api/classification',{...ex,isBusinessPurpose:true});const c=r.confidence==='CONFIRMED'?'#059669':r.confidence==='RECOMMENDED'?'#2563eb':'#d97706';rows+=`<tr><td>${ex.merchantName}</td><td>${ex.mcc||'-'}</td><td style="text-align:right;">${fmt(ex.amount)}</td><td><strong>${r.taxCategory}</strong></td><td>${r.vat필요경비||'-'}</td><td style="color:${c};font-weight:600;">${r.confidence}</td><td style="font-size:11px;">${r.remark||''}</td></tr>`;}catch(e){rows+=`<tr><td>${ex.merchantName}</td><td colspan="6" style="color:red;">${e.message}</td></tr>`;}}
-  document.getElementById('clf-batch-tbody').innerHTML=rows; toast('일괄 테스트 완료');
-}
 
 // ── Export ──
 async function doExport(path,yearId) {

@@ -242,12 +242,7 @@ public class AuthService {
             user.assignSsafyUserKey(userKey);
             log.info("SSAFY 멤버 등록 성공: userId={}, userKey={}", user.getId(), userKey);
         } catch (Exception e) {
-            log.warn("SSAFY 멤버 등록 실패, 공용 userKey로 대체: {}", e.getMessage());
-            String fallbackKey = ssafyFinanceProperties.userKey();
-            if (fallbackKey != null && !fallbackKey.isBlank()) {
-                user.assignSsafyUserKey(fallbackKey);
-                log.info("공용 userKey 할당: userId={}", user.getId());
-            }
+            log.error("SSAFY 멤버 등록 실패: userId={}", user.getId(), e);
         }
     }
 

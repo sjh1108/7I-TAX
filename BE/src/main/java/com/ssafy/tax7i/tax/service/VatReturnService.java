@@ -65,7 +65,7 @@ public class VatReturnService {
         Object[] agg = rawAgg;
         if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
         long totalIncome = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long deductibleExpenses = agg != null && agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
+        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
 
         // Calculate VAT amounts
         Long salesVat = bookEntryRepository.sumSalesVat(userId, start, end);
@@ -76,8 +76,8 @@ public class VatReturnService {
 
         // salesAmount = total income (supply value)
         long salesAmount = totalIncome;
-        // purchaseAmount = deductible purchase supply value
-        long purchaseAmount = deductibleExpenses;
+        // purchaseAmount = total expense (supply value)
+        long purchaseAmount = totalExpense;
 
         // preliminaryPaid defaults to 0
         long preliminaryPaid = request.preliminaryPaid() != null ? request.preliminaryPaid() : 0L;
