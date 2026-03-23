@@ -1,0 +1,265 @@
+package com.ssafy.seveniTax.ui.navigation
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.navigation.NavHostController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.navArgument
+import androidx.navigation.navigation
+import com.ssafy.seveniTax.ui.auth.AuthSuccessScreen
+import com.ssafy.seveniTax.ui.auth.IdentityVerificationScreen
+import com.ssafy.seveniTax.ui.auth.PinConfirmScreen
+import com.ssafy.seveniTax.ui.auth.PinLoginScreen
+import com.ssafy.seveniTax.ui.auth.PinSetupScreen
+import com.ssafy.seveniTax.ui.auth.SmsAuthScreen
+import com.ssafy.seveniTax.ui.auth.SplashScreen
+import com.ssafy.seveniTax.ui.card.CardBusinessInfoScreen
+import com.ssafy.seveniTax.ui.card.CardChangeScreen
+import com.ssafy.seveniTax.ui.card.CardCompleteScreen
+import com.ssafy.seveniTax.ui.card.CardDetailScreen
+import com.ssafy.seveniTax.ui.card.CardInputScreen
+import com.ssafy.seveniTax.ui.card.CardListScreen
+import com.ssafy.seveniTax.ui.card.CardOwnerVerifyScreen
+import com.ssafy.seveniTax.ui.card.CardSmsScreen
+import com.ssafy.seveniTax.ui.card.CardTypeSelectScreen
+import com.ssafy.seveniTax.ui.classification.AutoClassificationScreen
+import com.ssafy.seveniTax.ui.classification.CategorySelectScreen
+import com.ssafy.seveniTax.ui.classification.ClassificationCompleteScreen
+import com.ssafy.seveniTax.ui.classification.ClassificationLoadingScreen
+import com.ssafy.seveniTax.ui.classification.ClassificationResultScreen
+import com.ssafy.seveniTax.ui.classification.MemoAddScreen
+import com.ssafy.seveniTax.ui.classification.UnclassifiedListScreen
+import com.ssafy.seveniTax.ui.main.MainScreen
+import com.ssafy.seveniTax.ui.pay.PayBusinessInfoScreen
+import com.ssafy.seveniTax.ui.pay.PayCompleteScreen
+import com.ssafy.seveniTax.ui.pay.PayConfirmScreen
+import com.ssafy.seveniTax.ui.pay.PayIntroScreen
+import com.ssafy.seveniTax.ui.pay.PayTermsScreen
+import com.ssafy.seveniTax.ui.pay.PayVerifyScreen
+import com.ssafy.seveniTax.ui.payment.PaymentCompleteScreen
+import com.ssafy.seveniTax.ui.payment.PaymentProcessingScreen
+import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
+import com.ssafy.seveniTax.ui.test.ServerTestScreen
+import com.ssafy.seveniTax.viewmodel.AuthViewModel
+
+private const val AUTH_GRAPH_ROUTE = "auth_graph"
+
+@Composable
+fun NavGraph(navController: NavHostController) {
+    NavHost(
+        navController = navController,
+        startDestination = AUTH_GRAPH_ROUTE
+    ) {
+        composable(Route.ServerTest.path) {
+            ServerTestScreen(navController)
+        }
+
+        navigation(
+            startDestination = Route.Splash.path,
+            route = AUTH_GRAPH_ROUTE
+        ) {
+            composable(Route.Splash.path) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(AUTH_GRAPH_ROUTE)
+                }
+                val viewModel: AuthViewModel = hiltViewModel(parentEntry)
+                SplashScreen(navController, viewModel)
+            }
+
+            composable(Route.PinLogin.path) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(AUTH_GRAPH_ROUTE)
+                }
+                val viewModel: AuthViewModel = hiltViewModel(parentEntry)
+                PinLoginScreen(navController, viewModel)
+            }
+
+            composable(Route.IdentityVerify.path) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(AUTH_GRAPH_ROUTE)
+                }
+                val viewModel: AuthViewModel = hiltViewModel(parentEntry)
+                IdentityVerificationScreen(navController, viewModel)
+            }
+
+            composable(Route.SmsAuth.path) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(AUTH_GRAPH_ROUTE)
+                }
+                val viewModel: AuthViewModel = hiltViewModel(parentEntry)
+                SmsAuthScreen(navController, viewModel)
+            }
+
+            composable(Route.PinSetup.path) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(AUTH_GRAPH_ROUTE)
+                }
+                val viewModel: AuthViewModel = hiltViewModel(parentEntry)
+                PinSetupScreen(navController, viewModel)
+            }
+
+            composable(Route.PinConfirm.path) { backStackEntry ->
+                val parentEntry = remember(backStackEntry) {
+                    navController.getBackStackEntry(AUTH_GRAPH_ROUTE)
+                }
+                val viewModel: AuthViewModel = hiltViewModel(parentEntry)
+                PinConfirmScreen(navController, viewModel)
+            }
+
+            composable(Route.AuthSuccess.path) {
+                AuthSuccessScreen(navController)
+            }
+        }
+
+        composable(Route.Main.path) {
+            MainScreen(navController)
+        }
+
+        composable(Route.PayIntro.path) {
+            PayIntroScreen(navController)
+        }
+
+        composable(Route.PayBusinessInfo.path) {
+            PayBusinessInfoScreen(navController)
+        }
+
+        composable(Route.PayTerms.path) {
+            PayTermsScreen(navController)
+        }
+
+        composable(Route.PayConfirm.path) {
+            PayConfirmScreen(navController)
+        }
+
+        composable(Route.PayVerify.path) {
+            PayVerifyScreen(
+                onBack = { navController.popBackStack() },
+                onNext = { navController.navigate(Route.PayComplete.path) }
+            )
+        }
+
+        composable(Route.PayComplete.path) {
+            PayCompleteScreen(navController)
+        }
+
+        composable(Route.QrPayment.path) {
+            QrPaymentScreen(navController)
+        }
+
+        composable(Route.PaymentProcessing.path) {
+            PaymentProcessingScreen(navController)
+        }
+
+        composable(Route.PaymentComplete.path) {
+            PaymentCompleteScreen(navController)
+        }
+
+        composable(Route.CardList.path) {
+            CardListScreen(navController)
+        }
+
+        composable(Route.CardTypeSelect.path) {
+            CardTypeSelectScreen(navController)
+        }
+
+        composable(
+            route = Route.CardInput.path,
+            arguments = listOf(navArgument("cardType") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val cardType = backStackEntry.arguments?.getString("cardType") ?: "personal"
+            CardInputScreen(navController, cardType)
+        }
+
+        composable(Route.CardBusinessInfo.path) {
+            CardBusinessInfoScreen(navController)
+        }
+
+        composable(Route.CardOwnerVerify.path) {
+            CardOwnerVerifyScreen(navController)
+        }
+
+        composable(Route.CardSms.path) {
+            CardSmsScreen(navController)
+        }
+
+        composable(Route.CardComplete.path) {
+            CardCompleteScreen(navController)
+        }
+
+        composable(Route.CardChange.path) {
+            CardChangeScreen(navController)
+        }
+
+        composable(
+            route = Route.CardDetail.path,
+            arguments = listOf(navArgument("cardId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val cardId = backStackEntry.arguments?.getString("cardId").orEmpty()
+            CardDetailScreen(navController, cardId)
+        }
+
+        composable(Route.ClassificationLoading.path) {
+            ClassificationLoadingScreen(navController)
+        }
+
+        composable(Route.ClassificationResult.path) {
+            ClassificationResultScreen(
+                navController = navController,
+                onConfirm = { navController.navigate(Route.MemoAdd.path) },
+                onChangeCategory = { navController.navigate(Route.CategorySelect.path) }
+            )
+        }
+
+        composable(Route.CategorySelect.path) {
+            CategorySelectScreen(
+                navController = navController,
+                onCategorySelected = { navController.popBackStack() }
+            )
+        }
+
+        composable(Route.MemoAdd.path) {
+            MemoAddScreen(
+                navController = navController,
+                onSave = { navController.navigate(Route.ClassificationComplete.path) },
+                onSkip = { navController.navigate(Route.ClassificationComplete.path) }
+            )
+        }
+
+        composable(Route.ClassificationComplete.path) {
+            ClassificationCompleteScreen(
+                navController = navController,
+                onConfirm = {
+                    navController.navigate(Route.Main.path) {
+                        popUpTo(Route.Main.path) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(Route.UnclassifiedList.path) {
+            UnclassifiedListScreen(
+                navController = navController,
+                onBulkConfirm = {
+                    navController.navigate(Route.ClassificationComplete.path)
+                },
+                onReviewAll = {
+                    navController.navigate(Route.ClassificationResult.path)
+                },
+                onTransactionClick = {
+                    navController.navigate(Route.ClassificationResult.path)
+                }
+            )
+        }
+
+        composable(Route.AutoClassification.path) {
+            AutoClassificationScreen(
+                navController = navController,
+                onConfirm = { navController.popBackStack() },
+                onEditCategory = { navController.navigate(Route.CategorySelect.path) }
+            )
+        }
+    }
+}
