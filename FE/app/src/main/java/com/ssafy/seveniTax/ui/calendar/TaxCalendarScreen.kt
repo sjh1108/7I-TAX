@@ -66,9 +66,21 @@ fun TaxCalendarScreen(
                 .fillMaxSize()
                 .verticalScroll(rememberScrollState())
         ) {
-            // 임박 일정 배너
+            // 임박 일정 배너 → 클릭 시 상세 이동
             if (urgentDeadline != null && selectedFilter == TaxFilter.ALL) {
-                UrgentBanner(urgentDeadline)
+                UrgentBanner(
+                    deadline = urgentDeadline,
+                    onClick = {
+                        navController.navigate(
+                            Route.TaxCalendarDetail.create(
+                                taxName = urgentDeadline.taxName,
+                                deadline = urgentDeadline.deadline,
+                                dDay = urgentDeadline.dDay,
+                                description = urgentDeadline.description
+                            )
+                        )
+                    }
+                )
             }
 
             // 필터에 따라 제목 변경
@@ -194,12 +206,15 @@ private fun CalendarHeader(
 // ─── 임박 일정 배너 ─────────────────────────────────────
 
 @Composable
-private fun UrgentBanner(deadline: TaxDeadline) {
+private fun UrgentBanner(deadline: TaxDeadline, onClick: () -> Unit = {}) {
+    val ddayColor = getDdayColor(deadline.dDay)
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp)
             .background(AlertBannerBg, RoundedCornerShape(16.dp))
+            .clickable { onClick() }
             .padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -210,7 +225,7 @@ private fun UrgentBanner(deadline: TaxDeadline) {
                 Text(
                     text = "가장 임박한 일정",
                     fontSize = 13.sp,
-                    color = DdayBadge,
+                    color = ddayColor,
                     fontWeight = FontWeight.Medium
                 )
             }
@@ -225,12 +240,12 @@ private fun UrgentBanner(deadline: TaxDeadline) {
 
         Box(
             modifier = Modifier
-                .background(DdayBadge, RoundedCornerShape(12.dp))
+                .background(ddayColor, RoundedCornerShape(12.dp))
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "D-${deadline.dDay}",
+                text = if (deadline.dDay == 0) "D-Day" else "D-${deadline.dDay}",
                 fontSize = 16.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
@@ -620,6 +635,10 @@ private fun ScheduleItem(deadline: TaxDeadline, onClick: () -> Unit) {
     } catch (e: Exception) {
         deadline.deadline
     }
+    val ddayColor = getDdayColor(deadline.dDay)
+
+    // 신고 기간 표기
+    val filingPeriod = getFilingPeriod(deadline)
 
     Row(
         modifier = Modifier
@@ -633,13 +652,13 @@ private fun ScheduleItem(deadline: TaxDeadline, onClick: () -> Unit) {
             text = dateFormatted,
             fontSize = 16.sp,
             fontWeight = FontWeight.Bold,
-            color = DdayBadge,
+            color = ddayColor,
             modifier = Modifier.width(56.dp)
         )
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // 세금명 + 설명
+        // 세금명 + 설명 + 신고기간
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = deadline.taxName,
@@ -653,6 +672,14 @@ private fun ScheduleItem(deadline: TaxDeadline, onClick: () -> Unit) {
                 fontSize = 13.sp,
                 color = TextSecondary
             )
+            if (filingPeriod != null) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Text(
+                    text = "신고기간: $filingPeriod",
+                    fontSize = 11.sp,
+                    color = TextSecondary
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(12.dp))
@@ -660,7 +687,7 @@ private fun ScheduleItem(deadline: TaxDeadline, onClick: () -> Unit) {
         // D-day 배지
         Box(
             modifier = Modifier
-                .background(DdayBadge, RoundedCornerShape(8.dp))
+                .background(ddayColor, RoundedCornerShape(8.dp))
                 .padding(horizontal = 12.dp, vertical = 6.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -674,6 +701,22 @@ private fun ScheduleItem(deadline: TaxDeadline, onClick: () -> Unit) {
     }
 
     HorizontalDivider(color = Surface, thickness = 1.dp)
+}
+
+private fun getFilingPeriod(deadline: TaxDeadline): String? {
+    val name = deadline.taxName
+    val deadlineDate = try { LocalDate.parse(deadline.deadline) } catch (e: Exception) { return null }
+    val year = deadlineDate.year
+
+    return when {
+        name.contains("부가") && name.contains("1기") -> "$year.01.01 ~ $year.06.30"
+        name.contains("부가") && name.contains("2기") -> "$year.07.01 ~ $year.12.31"
+        name.contains("부가") && deadlineDate.monthValue <= 6 -> "$year.01.01 ~ $year.06.30"
+        name.contains("부가") -> "$year.07.01 ~ $year.12.31"
+        name.contains("종합소득세") -> "$year.05.01 ~ $year.05.31"
+        name.contains("지방소득세") -> "$year.05.01 ~ $year.05.31"
+        else -> null
+    }
 }
 
 // ─── 연간 타임라인 뷰 (필터 선택 시) ────────────────────
@@ -894,14 +937,15 @@ private fun TimelineItem(
                     color = TextSecondary
                 )
             }
-        } else if (isNext) {
+        } else if (isNext && dDay != null) {
+            val badgeColor = getDdayColor(dDay)
             Box(
                 modifier = Modifier
-                    .background(TextPrimary, RoundedCornerShape(8.dp))
+                    .background(badgeColor, RoundedCornerShape(8.dp))
                     .padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
                 Text(
-                    text = "D-$dDay",
+                    text = if (dDay == 0) "D-Day" else "D-$dDay",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.Bold,
                     color = Color.White
@@ -981,5 +1025,13 @@ private fun getTaxColor(type: TaxType): Color {
         TaxType.VAT -> TaxVat
         TaxType.INCOME -> TaxIncome
         TaxType.LOCAL -> TaxLocal
+    }
+}
+
+private fun getDdayColor(dDay: Int): Color {
+    return when {
+        dDay <= 3 -> DdayError
+        dDay <= 7 -> DdayWarning
+        else -> DdayNormal
     }
 }

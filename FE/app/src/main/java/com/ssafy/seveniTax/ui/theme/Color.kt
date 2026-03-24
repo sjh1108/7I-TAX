@@ -30,7 +30,10 @@ val TaxVat = Color(0xFFFF6B8A)           // 부가세 - 핑크
 val TaxIncome = Color(0xFFFB6B18)        // 소득세 - 오렌지 (= LogoOrange)
 val TaxLocal = Color(0xFF52D5BA)         // 지방세 - 민트 (= LogoTeal)
 val TaxToday = Color(0xFF534AB7)         // 오늘 - 퍼플 (= Accent)
-val DdayBadge = Color(0xFFFF6B8A)        // D-day 배지
+val DdayBadge = Color(0xFFFF6B8A)        // D-day 배지 (기본)
+val DdayError = Color(0xFFFF4267)        // D-day <= 3
+val DdayWarning = Color(0xFFFB6B18)      // D-day <= 7
+val DdayNormal = Color(0xFF5655B9)       // D-day > 7 (Primary600)
 val AlertBannerBg = Color(0xFFFFF0F3)    // 임박 일정 배너 배경
 val CalendarSunday = Color(0xFFFF6B6B)   // 일요일
 val CalendarSaturday = Color(0xFF6B8FFF) // 토요일

@@ -15,6 +15,8 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -135,8 +137,21 @@ fun TaxCalendarDetailScreen(
     val detailInfo = remember(taxName, deadline, description) {
         buildTaxDetailInfo(taxName, deadline, description)
     }
-    val completedCount = detailInfo.checklist.count { it.isCompleted }
+
+    // 체크리스트 상태 관리
+    var checkStates by remember {
+        mutableStateOf(detailInfo.checklist.map { it.isCompleted })
+    }
+    val completedCount = checkStates.count { it }
     val totalCount = detailInfo.checklist.size
+    val allCompleted = totalCount > 0 && completedCount == totalCount
+
+    // D-day 색상
+    val ddayColor = when {
+        dDay <= 3 -> DdayError
+        dDay <= 7 -> DdayWarning
+        else -> DdayNormal
+    }
 
     Column(
         modifier = Modifier
@@ -155,7 +170,8 @@ fun TaxCalendarDetailScreen(
             DetailTopSection(
                 taxName = taxName,
                 deadlineFormatted = detailInfo.deadlineFormatted,
-                dDay = dDay
+                dDay = dDay,
+                ddayColor = ddayColor
             )
 
             // 정보 카드
@@ -167,9 +183,48 @@ fun TaxCalendarDetailScreen(
             if (detailInfo.checklist.isNotEmpty()) {
                 ChecklistCard(
                     items = detailInfo.checklist,
+                    checkStates = checkStates,
+                    onToggle = { index ->
+                        checkStates = checkStates.toMutableList().also {
+                            it[index] = !it[index]
+                        }
+                    },
                     completedCount = completedCount,
                     totalCount = totalCount
                 )
+
+                // 전부 체크 완료 시 홈택스 메시지
+                if (allCompleted) {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF8F6))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(16.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("✅", fontSize = 18.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    "준비 완료!",
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF1D9E75)
+                                )
+                                Text(
+                                    "홈택스에서 신고를 진행하세요",
+                                    fontSize = 13.sp,
+                                    color = TextSecondary
+                                )
+                            }
+                        }
+                    }
+                }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -182,7 +237,7 @@ fun TaxCalendarDetailScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             // 하단 버튼들
-            BottomButtons()
+            BottomButtons(allCompleted = allCompleted)
 
             Spacer(modifier = Modifier.height(24.dp))
         }
@@ -231,7 +286,8 @@ private fun DetailHeader(onBack: () -> Unit) {
 private fun DetailTopSection(
     taxName: String,
     deadlineFormatted: String,
-    dDay: Int
+    dDay: Int,
+    ddayColor: Color = DdayNormal
 ) {
     Column(
         modifier = Modifier
@@ -278,7 +334,7 @@ private fun DetailTopSection(
         // D-day 배지
         Box(
             modifier = Modifier
-                .background(Accent, RoundedCornerShape(12.dp))
+                .background(ddayColor, RoundedCornerShape(12.dp))
                 .padding(horizontal = 20.dp, vertical = 8.dp),
             contentAlignment = Alignment.Center
         ) {
@@ -357,6 +413,8 @@ private fun InfoDivider() {
 @Composable
 private fun ChecklistCard(
     items: List<ChecklistItem>,
+    checkStates: List<Boolean>,
+    onToggle: (Int) -> Unit,
     completedCount: Int,
     totalCount: Int
 ) {
@@ -416,19 +474,23 @@ private fun ChecklistCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             // 체크리스트 항목들
-            items.forEach { item ->
-                ChecklistItemRow(item)
+            items.forEachIndexed { index, item ->
+                val isChecked = checkStates.getOrElse(index) { item.isCompleted }
+                ChecklistItemRow(
+                    item = item.copy(isCompleted = isChecked),
+                    onToggle = { onToggle(index) }
+                )
             }
         }
     }
 }
 
 @Composable
-private fun ChecklistItemRow(item: ChecklistItem) {
+private fun ChecklistItemRow(item: ChecklistItem, onToggle: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { }
+            .clickable { onToggle() }
             .padding(vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -580,7 +642,7 @@ private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
 // ─── 하단 버튼들 ────────────────────────────────────────
 
 @Composable
-private fun BottomButtons() {
+private fun BottomButtons(allCompleted: Boolean = false) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -606,21 +668,39 @@ private fun BottomButtons() {
             )
         }
 
-        // 홈택스에서 신고하기
-        OutlinedButton(
-            onClick = { },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(15.dp),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Disabled)
-        ) {
-            Text(
-                text = "홈택스에서 신고하기",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = BrandPurple
-            )
+        // 홈택스에서 신고하기 (체크리스트 완료 시 강조)
+        if (allCompleted) {
+            Button(
+                onClick = { },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(15.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D9E75))
+            ) {
+                Text(
+                    text = "홈택스에서 신고하기",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+            }
+        } else {
+            OutlinedButton(
+                onClick = { },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(54.dp),
+                shape = RoundedCornerShape(15.dp),
+                border = androidx.compose.foundation.BorderStroke(1.dp, Disabled)
+            ) {
+                Text(
+                    text = "홈택스에서 신고하기",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = BrandPurple
+                )
+            }
         }
     }
 }
