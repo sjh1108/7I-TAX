@@ -37,6 +37,14 @@ sealed class Route(val path: String) {
     }
 
     object ServerTest : Route("server_test")
+    object NotificationSettings : Route("notification_settings")
+
+    object TaxCalendar : Route("tax_calendar")
+    object TaxCalendarDetail : Route("tax_calendar_detail/{taxName}/{deadline}/{dDay}/{description}") {
+        fun create(taxName: String, deadline: String, dDay: Int, description: String): String {
+            return "tax_calendar_detail/${java.net.URLEncoder.encode(taxName, "UTF-8")}/${deadline}/${dDay}/${java.net.URLEncoder.encode(description, "UTF-8")}"
+        }
+    }
 
     object ClassificationLoading : Route("classification_loading")
     object ClassificationResult : Route("classification_result")

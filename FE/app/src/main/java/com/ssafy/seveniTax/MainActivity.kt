@@ -36,10 +36,13 @@ class MainActivity : ComponentActivity() {
 
                 NavGraph(navController)
 
-                // 알림 탭으로 진입 시 세목 확인 화면으로 이동
-                if (navigateTo == "classification_result") {
+                // 알림 탭으로 진입 시 해당 화면으로 이동
+                if (navigateTo != null) {
                     LaunchedEffect(Unit) {
-                        navController.navigate(Route.ClassificationResult.path)
+                        when (navigateTo) {
+                            "classification_result" -> navController.navigate(Route.ClassificationResult.path)
+                            "tax_calendar" -> navController.navigate(Route.TaxCalendar.path)
+                        }
                     }
                 }
             }

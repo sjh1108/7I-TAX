@@ -22,6 +22,7 @@ class TaxFirebaseMessagingService : FirebaseMessagingService() {
 
         when (type) {
             "classification" -> handleClassificationNotification(data)
+            "tax_calendar" -> handleTaxCalendarNotification(data)
             else -> handleDefaultNotification(message)
         }
     }
@@ -40,6 +41,21 @@ class TaxFirebaseMessagingService : FirebaseMessagingService() {
             amount = amount,
             aiCategory = aiCategory,
             confidence = confidence
+        )
+    }
+
+    private fun handleTaxCalendarNotification(data: Map<String, String>) {
+        val taxName = data["taxName"] ?: return
+        val deadlineDate = data["deadlineDate"] ?: ""
+        val dDay = data["dDay"]?.toIntOrNull() ?: 0
+        val additionalInfo = data["additionalInfo"]
+
+        NotificationHelper.showTaxCalendarNotification(
+            context = this,
+            taxName = taxName,
+            deadlineDate = deadlineDate,
+            dDay = dDay,
+            additionalInfo = additionalInfo
         )
     }
 

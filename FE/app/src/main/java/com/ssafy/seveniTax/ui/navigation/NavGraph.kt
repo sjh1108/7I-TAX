@@ -42,6 +42,9 @@ import com.ssafy.seveniTax.ui.pay.PayVerifyScreen
 import com.ssafy.seveniTax.ui.payment.PaymentCompleteScreen
 import com.ssafy.seveniTax.ui.payment.PaymentProcessingScreen
 import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
+import com.ssafy.seveniTax.ui.calendar.NotificationSettingsScreen
+import com.ssafy.seveniTax.ui.calendar.TaxCalendarDetailScreen
+import com.ssafy.seveniTax.ui.calendar.TaxCalendarScreen
 import com.ssafy.seveniTax.ui.test.ServerTestScreen
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 
@@ -252,6 +255,34 @@ fun NavGraph(navController: NavHostController) {
                     navController.navigate(Route.ClassificationResult.path)
                 }
             )
+        }
+
+        composable(Route.TaxCalendar.path) {
+            TaxCalendarScreen(navController)
+        }
+
+        composable(Route.NotificationSettings.path) {
+            NotificationSettingsScreen(navController)
+        }
+
+        composable(
+            route = Route.TaxCalendarDetail.path,
+            arguments = listOf(
+                navArgument("taxName") { type = NavType.StringType },
+                navArgument("deadline") { type = NavType.StringType },
+                navArgument("dDay") { type = NavType.IntType },
+                navArgument("description") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val taxName = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("taxName").orEmpty(), "UTF-8"
+            )
+            val deadline = backStackEntry.arguments?.getString("deadline").orEmpty()
+            val dDay = backStackEntry.arguments?.getInt("dDay") ?: 0
+            val description = java.net.URLDecoder.decode(
+                backStackEntry.arguments?.getString("description").orEmpty(), "UTF-8"
+            )
+            TaxCalendarDetailScreen(navController, taxName, deadline, dDay, description)
         }
 
         composable(Route.AutoClassification.path) {

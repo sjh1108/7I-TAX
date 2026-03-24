@@ -16,8 +16,14 @@ object NotificationHelper {
     private const val CHANNEL_NAME = "세목 분류 알림"
     private const val CHANNEL_DESC = "AI 세목 자동분류 결과를 알려드립니다"
 
+    private const val TAX_CALENDAR_CHANNEL_ID = "tax_calendar_channel"
+    private const val TAX_CALENDAR_CHANNEL_NAME = "세금 캘린더 알림"
+    private const val TAX_CALENDAR_CHANNEL_DESC = "세금 신고/납부 마감일 리마인드 알림"
+
     fun createNotificationChannel(context: Context) {
-        val channel = NotificationChannel(
+        val manager = context.getSystemService(NotificationManager::class.java)
+
+        val classificationChannel = NotificationChannel(
             CHANNEL_ID,
             CHANNEL_NAME,
             NotificationManager.IMPORTANCE_HIGH
@@ -25,9 +31,17 @@ object NotificationHelper {
             description = CHANNEL_DESC
             enableVibration(true)
         }
+        manager.createNotificationChannel(classificationChannel)
 
-        val manager = context.getSystemService(NotificationManager::class.java)
-        manager.createNotificationChannel(channel)
+        val taxCalendarChannel = NotificationChannel(
+            TAX_CALENDAR_CHANNEL_ID,
+            TAX_CALENDAR_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = TAX_CALENDAR_CHANNEL_DESC
+            enableVibration(true)
+        }
+        manager.createNotificationChannel(taxCalendarChannel)
     }
 
     fun showClassificationNotification(
@@ -76,5 +90,47 @@ object NotificationHelper {
             .build()
 
         manager.notify(transactionId.hashCode(), notification)
+    }
+
+    fun showTaxCalendarNotification(
+        context: Context,
+        taxName: String,
+        deadlineDate: String,
+        dDay: Int,
+        additionalInfo: String? = null
+    ) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra("navigate_to", "tax_calendar")
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            "tax_$taxName".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = "$taxName D-$dDay"
+        val body = buildString {
+            append("$deadlineDate 마감 · ${dDay}일 남았습니다")
+            if (!additionalInfo.isNullOrEmpty()) {
+                append("\n$additionalInfo")
+            }
+        }
+
+        val notification = NotificationCompat.Builder(context, TAX_CALENDAR_CHANNEL_ID)
+            .setSmallIcon(R.drawable.logo_symbol)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        manager.notify("tax_$taxName".hashCode(), notification)
     }
 }
