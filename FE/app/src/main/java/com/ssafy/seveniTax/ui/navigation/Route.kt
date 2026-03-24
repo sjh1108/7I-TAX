@@ -39,6 +39,22 @@ sealed class Route(val path: String) {
     object ServerTest : Route("server_test")
     object NotificationSettings : Route("notification_settings")
 
+    object BookEntryList : Route("book_entry_list")
+    object BookEntryDetail : Route("book_entry_detail/{entryId}") {
+        fun create(entryId: Long) = "book_entry_detail/$entryId"
+    }
+    object ExportPurpose : Route("export_purpose")
+    object ExportDateRange : Route("export_date_range/{purpose}") {
+        fun create(purpose: String) = "export_date_range/$purpose"
+    }
+    object TaxReport : Route("tax_report")
+    object TaxSavingsDetail : Route("tax_savings_detail")
+
+    object ExportFormat : Route("export_format/{purpose}/{startDate}/{endDate}") {
+        fun create(purpose: String, startDate: String, endDate: String) =
+            "export_format/$purpose/$startDate/$endDate"
+    }
+
     object TaxCalendar : Route("tax_calendar")
     object TaxCalendarDetail : Route("tax_calendar_detail/{taxName}/{deadline}/{dDay}/{description}") {
         fun create(taxName: String, deadline: String, dDay: Int, description: String): String {

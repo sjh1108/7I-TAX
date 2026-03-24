@@ -42,6 +42,13 @@ import com.ssafy.seveniTax.ui.pay.PayVerifyScreen
 import com.ssafy.seveniTax.ui.payment.PaymentCompleteScreen
 import com.ssafy.seveniTax.ui.payment.PaymentProcessingScreen
 import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
+import com.ssafy.seveniTax.ui.book.BookEntryDetailScreen
+import com.ssafy.seveniTax.ui.book.BookEntryListScreen
+import com.ssafy.seveniTax.ui.book.ExportDateRangeScreen
+import com.ssafy.seveniTax.ui.book.ExportFormatScreen
+import com.ssafy.seveniTax.ui.book.ExportPurposeScreen
+import com.ssafy.seveniTax.ui.book.TaxReportScreen
+import com.ssafy.seveniTax.ui.book.TaxSavingsDetailScreen
 import com.ssafy.seveniTax.ui.calendar.NotificationSettingsScreen
 import com.ssafy.seveniTax.ui.calendar.TaxCalendarDetailScreen
 import com.ssafy.seveniTax.ui.calendar.TaxCalendarScreen
@@ -255,6 +262,52 @@ fun NavGraph(navController: NavHostController) {
                     navController.navigate(Route.ClassificationResult.path)
                 }
             )
+        }
+
+        composable(Route.BookEntryList.path) {
+            BookEntryListScreen(navController)
+        }
+
+        composable(Route.TaxReport.path) {
+            TaxReportScreen(navController)
+        }
+
+        composable(Route.TaxSavingsDetail.path) {
+            TaxSavingsDetailScreen(navController)
+        }
+
+        composable(
+            route = Route.BookEntryDetail.path,
+            arguments = listOf(navArgument("entryId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val entryId = backStackEntry.arguments?.getLong("entryId") ?: 0L
+            BookEntryDetailScreen(navController, entryId)
+        }
+
+        composable(Route.ExportPurpose.path) {
+            ExportPurposeScreen(navController)
+        }
+
+        composable(
+            route = Route.ExportDateRange.path,
+            arguments = listOf(navArgument("purpose") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val purpose = backStackEntry.arguments?.getString("purpose").orEmpty()
+            ExportDateRangeScreen(navController, purpose)
+        }
+
+        composable(
+            route = Route.ExportFormat.path,
+            arguments = listOf(
+                navArgument("purpose") { type = NavType.StringType },
+                navArgument("startDate") { type = NavType.StringType },
+                navArgument("endDate") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val purpose = backStackEntry.arguments?.getString("purpose").orEmpty()
+            val startDate = backStackEntry.arguments?.getString("startDate").orEmpty()
+            val endDate = backStackEntry.arguments?.getString("endDate").orEmpty()
+            ExportFormatScreen(navController, purpose, startDate, endDate)
         }
 
         composable(Route.TaxCalendar.path) {
