@@ -11,6 +11,7 @@ import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.sms.service.SmsOtpService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +27,7 @@ public class CardService {
     private final UserRepository userRepository;
     private final SsafyCreditCardClient ssafyCreditCardClient;
     private final SsafyFinanceClient ssafyFinanceClient;
+    private final SmsOtpService smsOtpService;
 
     /**
      * 가맹점 목록 조회
@@ -73,6 +75,9 @@ public class CardService {
      */
     @Transactional
     public CardResponse createCard(Long userId, CreateCardRequest request) {
+        // OTP 토큰 검증 (1회용 — 검증 후 토큰 삭제됨)
+        smsOtpService.validateOtpToken(userId, request.otpToken());
+
         User user = getUser(userId);
         String userKey = getUserKey(user);
 
