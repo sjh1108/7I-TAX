@@ -3,6 +3,7 @@ package com.ssafy.tax7i.card.service;
 import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyCreditCardClient;
+import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.*;
 import com.ssafy.tax7i.card.dto.*;
 import com.ssafy.tax7i.card.entity.Card;
@@ -10,6 +11,7 @@ import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.sms.service.SmsOtpService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -32,6 +34,8 @@ class CardServiceTest {
     @Mock private CardRepository cardRepository;
     @Mock private UserRepository userRepository;
     @Mock private SsafyCreditCardClient ssafyCreditCardClient;
+    @Mock private SsafyFinanceClient ssafyFinanceClient;
+    @Mock private SmsOtpService smsOtpService;
 
     @InjectMocks
     private CardService cardService;
@@ -50,7 +54,7 @@ class CardServiceTest {
             return c;
         });
 
-        CreateCardRequest request = new CreateCardRequest("사업용 카드", CardType.BUSINESS, "1003-xxx", "0123456789012345", "4");
+        CreateCardRequest request = new CreateCardRequest("사업용 카드", CardType.BUSINESS, "1003-xxx", "0123456789012345", "4", "test-otp-token");
         CardResponse response = cardService.createCard(1L, request);
 
         assertThat(response.cardName()).isEqualTo("사업용 카드");
@@ -67,8 +71,8 @@ class CardServiceTest {
         setField(oldDefault, "isDefault", true);
         Card newDefault = createCard(1L, user);
 
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(newDefault));
-        given(cardRepository.findByUser_IdAndIsDefaultTrue(1L)).willReturn(Optional.of(oldDefault));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(newDefault));
+        given(cardRepository.findByUser_IdAndIsDefaultTrueAndDeletedFalse(1L)).willReturn(Optional.of(oldDefault));
 
         CardResponse response = cardService.setDefaultCard(1L, 1L);
 
@@ -84,7 +88,7 @@ class CardServiceTest {
         Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
         given(ssafyCreditCardClient.createTransaction("user-key", "1005518816096479", "725", 1L, 50000L))
                 .willReturn(createTransactionResponse());
 
@@ -103,7 +107,7 @@ class CardServiceTest {
         Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
         given(ssafyCreditCardClient.getTransactionHistory("user-key", "1005518816096479", "725", "20260301", "20260331"))
                 .willReturn(createTransactionListResponse());
 
@@ -117,7 +121,7 @@ class CardServiceTest {
 
     @Test
     void getCard_소유권불일치_예외() {
-        given(cardRepository.findByIdAndUser_Id(99L, 1L)).willReturn(Optional.empty());
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(99L, 1L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> cardService.getCard(1L, 99L))
                 .isInstanceOf(BusinessException.class)
@@ -132,11 +136,11 @@ class CardServiceTest {
         User user = createUser(1L, "user-key");
         Card card = createCard(1L, user);
 
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
 
         cardService.deleteCard(1L, 1L);
 
-        verify(cardRepository).delete(card);
+        assertThat(card.isDeleted()).isTrue();
     }
 
     // ───────────── helpers ─────────────
