@@ -237,7 +237,7 @@ public class AuthService {
 
     private void assignSsafyUserKey(User user) {
         try {
-            String memberId = "tax7i-user-" + user.getId();
+            String memberId = "tax7i-user-" + user.getId() + "@tax7i.dev";
             String userKey = ssafyFinanceClient.getOrRegisterMember(memberId);
             user.assignSsafyUserKey(userKey);
             log.info("SSAFY 멤버 등록 성공: userId={}, userKey={}", user.getId(), userKey);
