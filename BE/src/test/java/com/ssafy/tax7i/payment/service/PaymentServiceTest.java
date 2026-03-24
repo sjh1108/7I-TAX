@@ -59,7 +59,7 @@ class PaymentServiceTest {
         Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
             Payment p = invocation.getArgument(0);
             setField(p, "id", 1L);
@@ -79,7 +79,7 @@ class PaymentServiceTest {
     void authorize_카드없음_예외() {
         User user = createUser(1L, "user-key");
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(99L, 1L)).willReturn(Optional.empty());
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(99L, 1L)).willReturn(Optional.empty());
 
         PaymentAuthorizeRequest request = new PaymentAuthorizeRequest(
                 99L, 10000L, null, 1L, "테스트", null, PaymentMethod.ONLINE, PaymentPurpose.PERSONAL);
@@ -215,7 +215,7 @@ class PaymentServiceTest {
         Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
             Payment p = invocation.getArgument(0);
             setField(p, "id", 1L);
@@ -238,7 +238,7 @@ class PaymentServiceTest {
         Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
             Payment p = invocation.getArgument(0);
             setField(p, "id", 1L);
@@ -317,7 +317,7 @@ class PaymentServiceTest {
         Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
         given(paymentRepository.save(any(Payment.class))).willAnswer(invocation -> {
             Payment p = invocation.getArgument(0);
             setField(p, "id", 1L);
