@@ -4,7 +4,9 @@ import com.ssafy.tax7i.payment.entity.Payment;
 import com.ssafy.tax7i.payment.entity.PaymentStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -20,6 +22,10 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     @Query("SELECT p FROM Payment p JOIN FETCH p.user JOIN FETCH p.card WHERE p.id = :id")
     Optional<Payment> findByIdWithFetch(@Param("id") Long id);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM Payment p JOIN FETCH p.user JOIN FETCH p.card WHERE p.id = :id")
+    Optional<Payment> findByIdWithFetchForUpdate(@Param("id") Long id);
 
     @Query("SELECT p FROM Payment p JOIN FETCH p.card WHERE p.user.id = :userId ORDER BY p.createdAt DESC")
     Page<Payment> findByUserIdWithFetch(@Param("userId") Long userId, Pageable pageable);

@@ -28,8 +28,18 @@ public class AesEncryptor implements AttributeConverter<String, String> {
     }
 
     public AesEncryptor() {
-        // JPA가 no-arg constructor로 인스턴스를 생성할 때
-        // Spring이 먼저 초기화한 static secretKey를 공유
+        // JPA/Hibernate가 Spring보다 먼저 이 인스턴스를 생성할 수 있음
+        // Spring 빈이 아직 키를 설정하지 않은 경우 환경 변수에서 직접 로드
+        if (secretKey == null) {
+            String envKey = System.getenv("AES_ENCRYPTION_KEY");
+            if (envKey == null) {
+                envKey = System.getProperty("encryption.aes-key");
+            }
+            if (envKey != null && !envKey.isBlank()) {
+                byte[] keyBytes = Base64.getDecoder().decode(envKey);
+                AesEncryptor.secretKey = new SecretKeySpec(keyBytes, "AES");
+            }
+        }
     }
 
     private void ensureKeyAvailable() {

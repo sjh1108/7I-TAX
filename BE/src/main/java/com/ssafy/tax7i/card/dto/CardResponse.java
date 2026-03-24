@@ -8,7 +8,9 @@ public record CardResponse(
         String cardName,
         CardType cardType,
         String last4Digits,
-        Boolean isDefault
+        Boolean isDefault,
+        String cardExpiryDate,
+        String withdrawalDate
 ) {
     public static CardResponse from(Card card) {
         return new CardResponse(
@@ -16,7 +18,9 @@ public record CardResponse(
                 card.getCardName(),
                 card.getCardType(),
                 card.getLast4Digits(),
-                card.isDefault()
+                card.isDefault(),
+                card.getCardExpiryDate(),
+                card.getWithdrawalDate()
         );
     }
 }

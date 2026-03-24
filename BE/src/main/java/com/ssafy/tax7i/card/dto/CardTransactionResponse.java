@@ -1,26 +1,25 @@
 package com.ssafy.tax7i.card.dto;
 
-import com.ssafy.tax7i.card.entity.CardTransaction;
-import com.ssafy.tax7i.card.entity.CardTransactionType;
-
-import java.time.LocalDateTime;
+import com.ssafy.tax7i.banking.client.dto.SsafyCreditCardTransactionListResponse;
 
 public record CardTransactionResponse(
-        Long id,
-        CardTransactionType transactionType,
-        Long amount,
-        Long balanceAfter,
-        String description,
-        LocalDateTime createdAt
+        Long transactionUniqueNo,
+        String transactionDate,
+        String transactionTime,
+        String merchantName,
+        String categoryName,
+        Long paymentBalance,
+        String status
 ) {
-    public static CardTransactionResponse from(CardTransaction tx) {
+    public static CardTransactionResponse from(SsafyCreditCardTransactionListResponse.TransactionRec rec) {
         return new CardTransactionResponse(
-                tx.getId(),
-                tx.getTransactionType(),
-                tx.getAmount(),
-                tx.getBalanceAfter(),
-                tx.getDescription(),
-                tx.getCreatedAt()
+                rec.transactionUniqueNo(),
+                rec.transactionDate(),
+                rec.transactionTime(),
+                rec.merchantName(),
+                rec.categoryName(),
+                rec.paymentBalance(),
+                rec.status()
         );
     }
 }

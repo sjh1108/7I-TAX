@@ -46,9 +46,16 @@ public enum ErrorCode {
     CONFLICT(HttpStatus.CONFLICT, "리소스 충돌이 발생했습니다."),
     DUPLICATE_BOOK_ENTRY(HttpStatus.CONFLICT, "이미 장부가 생성된 결제입니다."), // 동일 paymentId 중복 장부 방지
     ALREADY_CONFIRMED(HttpStatus.CONFLICT, "이미 확인된 전표입니다."), // 확인 완료된 전표 재확인 방지
+    TAX_ALREADY_SUBMITTED(HttpStatus.CONFLICT, "이미 제출된 신고서입니다."),
+    TAX_ALREADY_PAID(HttpStatus.CONFLICT, "이미 납부 완료된 세금입니다."),
+    TAX_NATIONAL_FIRST(HttpStatus.BAD_REQUEST, "국세 납부를 먼저 완료해주세요."),
+    TAX_RETURN_NOT_FOUND(HttpStatus.NOT_FOUND, "신고서를 찾을 수 없습니다."),
 
     // 402 Payment Required
     PAYMENT_DECLINED(HttpStatus.valueOf(402), "결제가 거절되었습니다."),
+
+    // 410 Gone
+    QR_TOKEN_EXPIRED(HttpStatus.valueOf(410), "QR 결제 토큰이 만료되었습니다."),
 
     // 404 Not Found
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다."),

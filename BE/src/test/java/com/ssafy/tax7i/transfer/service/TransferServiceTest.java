@@ -212,19 +212,24 @@ class TransferServiceTest {
                 .gender("M")
                 .phoneNumber("01012345678")
                 .phoneLast4("5678")
+                .ssafyUserKey(userKey)
                 .build();
         setField(user, "id", id);
-        user.registerFinanceKey(userKey);
         return user;
     }
 
-    private Card createCard(Long id, User user, String accountNo) {
+    private Card createCard(Long id, User user, String withdrawalAccountNo) {
         Card card = Card.builder()
                 .user(user)
                 .cardName("테스트 카드")
                 .cardType(CardType.BUSINESS)
                 .last4Digits("7890")
-                .ssafyAccountNo(accountNo)
+                .cardNo("1005518816097890")
+                .cvc("725")
+                .cardUniqueNo("1003-xxx")
+                .withdrawalAccountNo(withdrawalAccountNo)
+                .withdrawalDate("4")
+                .cardExpiryDate("20290401")
                 .build();
         setField(card, "id", id);
         return card;
