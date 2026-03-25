@@ -76,7 +76,7 @@ Content-Type: application/json
 {
   "description": "거래처 접대 저녁 식사비 15만원"
 }
-# > 응답 기대: reason="거래처 접대 관련 비용", legal_basis="소득세법 제35조"
+> 응답 기대: reason="거래처 접대 관련 비용", legal_basis="소득세법 제35조"
 
 ###
 
