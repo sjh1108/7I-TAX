@@ -23,6 +23,9 @@ KOREAN_LAW_SEPARATORS: list[str] = [
 DEFAULT_CHUNK_SIZE: int = 1000
 DEFAULT_CHUNK_OVERLAP: int = 200
 
+# 임베딩 모델 토큰 한도(8192) 기준: 한국어 1자 ≈ 1.5토큰 → 안전 마진 포함 4000자
+MAX_EMBED_CHARS: int = 4000
+
 
 @dataclass
 class RawDocument:
@@ -222,6 +225,37 @@ class DocumentProcessor:
         logger.info("재귀적 청크 분할 완료: %s -> %d개 청크", law_name, len(chunks))
         return chunks
 
+    def _build_chunk_header(self, metadata: dict) -> str:
+        """청크에 prepend할 구조 경로 헤더를 생성한다.
+
+        예시 출력:
+        [소득세법 (법률)] > 제3편 소득금액의 계산 > 제1장 총칙 > 제19조(사업소득)
+        """
+        parts = []
+
+        law_name = metadata.get("law_name", "")
+        law_type = metadata.get("law_type", "")
+        if law_name:
+            parts.append(f"[{law_name} ({law_type})]")
+
+        if metadata.get("part"):
+            title = metadata.get("part_title", "")
+            parts.append(f"제{metadata['part']}편 {title}".strip())
+
+        if metadata.get("chapter"):
+            title = metadata.get("chapter_title", "")
+            parts.append(f"제{metadata['chapter']}장 {title}".strip())
+
+        if metadata.get("section"):
+            title = metadata.get("section_title", "")
+            parts.append(f"제{metadata['section']}절 {title}".strip())
+
+        if metadata.get("article"):
+            title = metadata.get("article_title", "")
+            parts.append(f"제{metadata['article']}조({title})")
+
+        return " > ".join(parts)
+
     def _hierarchical_chunk(self, raw_doc: RawDocument) -> list[TextChunk]:
         """계층적 청킹 (법률 문서용, LegalParser 사용)."""
         law_name = raw_doc.metadata.get("law_name", "unknown")
@@ -239,15 +273,42 @@ class DocumentProcessor:
             logger.warning("계층적 청킹 결과 없음, 재귀적 청킹으로 폴백: %s", law_name)
             return self._recursive_chunk(raw_doc)
 
-        chunks = [
-            TextChunk(
-                content=lc.content,
-                metadata={**raw_doc.metadata, **lc.metadata, "source_path": raw_doc.source_path},
-            )
-            for lc in legal_chunks
-        ]
+        chunks = []
+        for lc in legal_chunks:
+            merged_meta = {**raw_doc.metadata, **lc.metadata, "source_path": raw_doc.source_path}
+            header = self._build_chunk_header(merged_meta)
+            content_with_header = f"{header}\n{lc.content}" if header else lc.content
+            chunks.append(TextChunk(content=content_with_header, metadata=merged_meta))
+
         logger.info("계층적 청크 분할 완료: %s -> %d개 청크", law_name, len(chunks))
         return chunks
+
+    def _split_oversized(self, chunks: list[TextChunk]) -> list[TextChunk]:
+        """임베딩 토큰 한도를 초과하는 청크를 재분할한다.
+
+        한국어 1자 ≈ 1.5 토큰 기준, MAX_EMBED_CHARS(4000자) 초과 시
+        RecursiveCharacterTextSplitter로 추가 분할한다.
+        """
+        result: list[TextChunk] = []
+        oversized = 0
+
+        for chunk in chunks:
+            if len(chunk.content) <= MAX_EMBED_CHARS:
+                result.append(chunk)
+            else:
+                oversized += 1
+                sub_texts = self.splitter.split_text(chunk.content)
+                header = self._build_chunk_header(chunk.metadata)
+                for i, text in enumerate(sub_texts):
+                    meta = dict(chunk.metadata)
+                    meta["chunk_id"] = f"{meta['chunk_id']}_s{i:02d}"
+                    if header and not text.startswith(header):
+                        text = f"{header}\n{text}"
+                    result.append(TextChunk(content=text, metadata=meta))
+
+        if oversized:
+            logger.info("초과 청크 재분할: %d개 → %d개", oversized, len(result))
+        return result
 
     def process_all(self) -> list[TextChunk]:
         """전체 파이프라인: PDF 추출 -> 청킹 -> TextChunk 리스트 반환.
@@ -255,7 +316,8 @@ class DocumentProcessor:
         1. extract_all()로 모든 PDF 추출
         2. 각 RawDocument에 대해 chunk_document() 호출
         3. 모든 청크를 하나의 리스트로 결합
-        4. 총 청크 수를 로그로 출력
+        4. _split_oversized()로 토큰 한도 초과 청크 재분할
+        5. 총 청크 수를 로그로 출력
 
         Returns:
             모든 문서의 TextChunk를 합친 리스트.
@@ -267,5 +329,6 @@ class DocumentProcessor:
             chunks = self.chunk_document(raw_doc)
             all_chunks.extend(chunks)
 
+        all_chunks = self._split_oversized(all_chunks)
         logger.info("전체 청크 수: %d", len(all_chunks))
         return all_chunks

@@ -1,7 +1,12 @@
+import logging
+
 from langchain_chroma import Chroma
 from langchain_openai import OpenAIEmbeddings
 
 from app.core.config import Settings
+from app.core.exceptions import VectorStoreError
+
+logger = logging.getLogger(__name__)
 
 
 class VectorStoreService:
@@ -15,6 +20,8 @@ class VectorStoreService:
             model=settings.embedding_model,
             openai_api_key=settings.gms_api_key,
             openai_api_base=settings.gms_base_url,
+            chunk_size=10,
+            check_embedding_ctx_length=False,
         )
         self.vectorstore = Chroma(
             collection_name=self.COLLECTION_NAME,
@@ -53,6 +60,8 @@ class VectorStoreService:
         for key, value in metadata_filter.items():
             if isinstance(value, dict):
                 conditions.append({key: value})
+            elif isinstance(value, list):
+                conditions.append({key: {"$in": value}})
             else:
                 conditions.append({key: {"$eq": value}})
 
@@ -74,11 +83,15 @@ class VectorStoreService:
             [{"content": str, "metadata": dict, "score": float}, ...]
         """
         chroma_filter = self.convert_filter(filter)
-        results = self.vectorstore.similarity_search_with_relevance_scores(
-            query=query,
-            k=k,
-            filter=chroma_filter,
-        )
+        try:
+            results = self.vectorstore.similarity_search_with_relevance_scores(
+                query=query,
+                k=k,
+                filter=chroma_filter,
+            )
+        except Exception as e:
+            logger.error("ChromaDB 유사도 검색 실패: %s", e, exc_info=True)
+            raise VectorStoreError("벡터 저장소 검색 중 오류가 발생했습니다.") from e
         return [
             {
                 "content": doc.page_content,
@@ -94,8 +107,12 @@ class VectorStoreService:
         Returns:
             [{"content": str, "metadata": dict}, ...]
         """
-        collection = self.vectorstore._collection
-        result = collection.get(include=["documents", "metadatas"])
+        try:
+            collection = self.vectorstore._collection
+            result = collection.get(include=["documents", "metadatas"])
+        except Exception as e:
+            logger.error("ChromaDB 전체 문서 조회 실패: %s", e, exc_info=True)
+            raise VectorStoreError("벡터 저장소 문서 조회 중 오류가 발생했습니다.") from e
         documents = result.get("documents") or []
         metadatas = result.get("metadatas") or []
         return [

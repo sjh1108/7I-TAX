@@ -3,6 +3,7 @@ package com.ssafy.tax7i.tax.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -79,11 +80,9 @@ public class TaxReturnService {
         // Aggregate BookEntry data for the year
         LocalDate start = LocalDate.of(taxYear, 1, 1);
         LocalDate end = LocalDate.of(taxYear, 12, 31);
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        Object[] agg = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
-        long totalRevenue = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long totalRevenue = agg.totalIncome();
+        long totalExpense = agg.totalExpense();
 
         // Prepaid tax and deductions
         long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;
@@ -165,11 +164,9 @@ public class TaxReturnService {
         int taxYear = taxReturn.getTaxYear();
         LocalDate start = LocalDate.of(taxYear, 1, 1);
         LocalDate end = LocalDate.of(taxYear, 12, 31);
-        Object[] rawAgg2 = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        Object[] agg = rawAgg2;
-        if (rawAgg2 != null && rawAgg2.length > 0 && rawAgg2[0] instanceof Object[]) agg = (Object[]) rawAgg2[0];
-        long totalRevenue = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long totalRevenue = agg.totalIncome();
+        long totalExpense = agg.totalExpense();
 
         // Updated prepaid tax and deductions
         long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;
@@ -217,7 +214,7 @@ public class TaxReturnService {
         // Transition DRAFT → SUBMITTED → ACCEPTED (simulation: instant acceptance)
         taxReturn.transitionTo(TaxReturnStatus.SUBMITTED);
         taxReturn.transitionTo(TaxReturnStatus.ACCEPTED);
-        taxReturn.setReceiptNumber(receiptNumber);
+        taxReturn.assignReceiptNumber(receiptNumber);
 
         // Create NATIONAL tax payment record
         String nationalVirtualAccount = "880-" + TAX_OFFICE_CODE + "-" + String.format("%08d", random.nextInt(100000000));

@@ -11,7 +11,7 @@
         "양도소득세 세율표 보여줘"
       ],
       "search_strategy": "metadata_filter",
-      "metadata_filter": {"topic": ["세율", "과세표준", "세율표"]},
+      "metadata_filter": {"topics": {"$contains": "세율"}},
       "model_tier": "mini",
       "rag_required": true,
       "be_data_required": false
@@ -32,7 +32,7 @@
         "교통비 경비 처리 범위"
       ],
       "search_strategy": "hybrid_with_be_data",
-      "metadata_filter": {"topic": ["경비", "필요경비", "접대비"]},
+      "metadata_filter": {"topics": {"$contains": "경비"}},
       "model_tier": "standard",
       "rag_required": true,
       "be_data_required": true

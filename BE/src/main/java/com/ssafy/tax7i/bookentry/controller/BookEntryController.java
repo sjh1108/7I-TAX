@@ -2,10 +2,14 @@ package com.ssafy.tax7i.bookentry.controller;
 
 import com.ssafy.tax7i.bookentry.dto.BookEntryCategoryUpdateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryCreateRequest;
+import com.ssafy.tax7i.bookentry.dto.BookEntryNoteUpdateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryResponse;
 import com.ssafy.tax7i.bookentry.dto.BookEntrySummaryResponse;
 import com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest;
+import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.service.BookEntryService;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,10 +17,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
 
 @RestController
 @RequestMapping("/api/book-entries")
@@ -45,6 +52,9 @@ public class BookEntryController {
     public ResponseEntity<SuccessResponse<BookEntrySummaryResponse>> getSummary(
             @AuthenticationPrincipal Long userId,
             @RequestParam int year) {
+        if (year < 1900 || year > 2099) {
+            throw new BusinessException(ErrorCode.INVALID_ARGUMENT, "연도는 1900~2099 범위여야 합니다.");
+        }
         BookEntrySummaryResponse response = bookEntryService.getSummary(userId, year);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
@@ -53,8 +63,17 @@ public class BookEntryController {
     public ResponseEntity<SuccessResponse<Page<BookEntryResponse>>> getEntries(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) Boolean confirmed,
+            @RequestParam(required = false) EntryType entryType,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate,
+            @RequestParam(required = false) String categoryCode,
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) Boolean hasEvidence,
+            @RequestParam(required = false) Boolean unclassified,
             @PageableDefault(size = 20, sort = "entryDate", direction = Sort.Direction.DESC) Pageable pageable) {
-        Page<BookEntryResponse> response = bookEntryService.getEntries(userId, confirmed, pageable);
+        Page<BookEntryResponse> response = bookEntryService.getEntries(
+                userId, confirmed, entryType, startDate, endDate,
+                categoryCode, keyword, hasEvidence, unclassified, pageable);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
@@ -87,6 +106,15 @@ public class BookEntryController {
             @PathVariable Long entryId,
             @Valid @RequestBody BookEntryCategoryUpdateRequest request) {
         BookEntryResponse response = bookEntryService.updateCategory(userId, entryId, request);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    @PatchMapping("/{entryId}/note")
+    public ResponseEntity<SuccessResponse<BookEntryResponse>> updateNote(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long entryId,
+            @Valid @RequestBody BookEntryNoteUpdateRequest request) {
+        BookEntryResponse response = bookEntryService.updateNote(userId, entryId, request.note());
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 

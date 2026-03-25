@@ -5,6 +5,13 @@ import java.util.List;
 public record TaxSavingResponse(
         long currentFinalTax,
         List<TaxSavingRecommendation> recommendations,
-        long potentialTotalSaving
+        long potentialTotalSaving,
+        TotalSavingSummary totalSummary
 ) {
+    public record TotalSavingSummary(
+            long totalMaxAmount,
+            long totalUsedAmount,
+            long totalRemainingAmount,
+            double overallUsageRate
+    ) {}
 }

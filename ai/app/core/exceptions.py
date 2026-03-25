@@ -17,3 +17,18 @@ class LLMRateLimitError(AIServiceError):
 class LLMAuthError(AIServiceError):
     def __init__(self, message: str = "API 인증 실패"):
         super().__init__(message, status_code=401)
+
+
+class BackendClientError(AIServiceError):
+    def __init__(self, message: str = "백엔드 서버 오류"):
+        super().__init__(message, status_code=503)
+
+
+class VectorStoreError(AIServiceError):
+    def __init__(self, message: str = "벡터 저장소 오류"):
+        super().__init__(message, status_code=503)
+
+
+class EmbeddingError(AIServiceError):
+    def __init__(self, message: str = "임베딩 생성 오류"):
+        super().__init__(message, status_code=503)

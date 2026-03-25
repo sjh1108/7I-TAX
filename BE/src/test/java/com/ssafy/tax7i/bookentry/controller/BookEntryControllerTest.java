@@ -78,7 +78,8 @@ class BookEntryControllerTest {
     @Test
     void getEntries_200_미확인필터() throws Exception {
         BookEntryResponse response = createResponse(1L, false);
-        given(bookEntryService.getEntries(any(), eq(false), any()))
+        given(bookEntryService.getEntries(
+                any(), eq(false), any(), any(), any(), any(), any(), any(), any(), any()))
                 .willReturn(new PageImpl<>(List.of(response), PageRequest.of(0, 20), 1));
 
         mockMvc.perform(get("/api/book-entries")

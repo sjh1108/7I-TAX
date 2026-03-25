@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.tax.entity;
 
+import com.ssafy.tax7i.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -10,7 +11,7 @@ import lombok.NoArgsConstructor;
 @Table(name = "expense_details")
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class ExpenseDetail {
+public class ExpenseDetail extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
