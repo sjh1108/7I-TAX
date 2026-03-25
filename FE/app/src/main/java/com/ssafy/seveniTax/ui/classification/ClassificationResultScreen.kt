@@ -164,7 +164,8 @@ fun ClassificationResultScreen(
                 Text(
                     text = "확인",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
         }
