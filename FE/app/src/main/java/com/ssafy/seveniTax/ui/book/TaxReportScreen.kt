@@ -25,7 +25,7 @@ import java.text.NumberFormat
 import java.util.Locale
 
 private enum class ReportTab(val label: String) {
-    MONTHLY("이번 달"), ANNUAL("연간")
+    MONTHLY("월간"), ANNUAL("연간")
 }
 
 @Composable
@@ -98,7 +98,7 @@ fun TaxReportScreen(navController: NavController) {
     }
 }
 
-// ─── 이번 달 리포트 ─────────────────────────────────────
+// ─── 월간 리포트 ─────────────────────────────────────
 
 @Composable
 private fun MonthlyReport() {
@@ -107,12 +107,12 @@ private fun MonthlyReport() {
     Spacer(Modifier.height(20.dp))
 
     // 순이익 카드
-    ReportSummaryCard("이번 달 순이익", 9_448_100, 10_880_000, -1_431_900)
+    ReportSummaryCard("월간 순이익", 9_448_100, 10_880_000, -1_431_900)
 
     Spacer(Modifier.height(24.dp))
 
     // 세금 추정
-    SectionTitle("이번 달 세금 추정")
+    SectionTitle("월간 세금 추정")
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("부가가치세", listOf(
@@ -124,9 +124,9 @@ private fun MonthlyReport() {
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("종합소득세", listOf(
-        "이번 달 수입" to "10,880,000원",
-        "이번 달 경비" to "-1,431,900원",
-        "이번 달 예상 소득세" to "1,417,215원"
+        "월간 수입" to "10,880,000원",
+        "월간 경비" to "-1,431,900원",
+        "월간 예상 소득세" to "1,417,215원"
     ))
 
     Spacer(Modifier.height(12.dp))
@@ -138,7 +138,7 @@ private fun MonthlyReport() {
 
     Spacer(Modifier.height(12.dp))
 
-    TotalTaxBox("이번 달 총 예상 세금", "2,416,764원")
+    TotalTaxBox("월간 총 예상 세금", "2,416,764원")
 }
 
 // ─── 연간 리포트 ────────────────────────────────────────
