@@ -14,7 +14,7 @@ import lombok.NoArgsConstructor;
 
 @Entity
 @Table(name = "tax_brackets", indexes = {
-        @Index(name = "idx_tb_year", columnList = "year")
+        @Index(name = "idx_tb_year", columnList = "`year`")
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
@@ -24,7 +24,7 @@ public class TaxBracket {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "`year`", nullable = false)
     private int year;
 
     @Column(nullable = false)
