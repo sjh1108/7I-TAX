@@ -189,6 +189,19 @@ fun TaxCalendarDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 리마인드 알림
+            ReminderCard(
+                enabled = reminderEnabled,
+                onToggle = { viewModel.setReminderEnabled(it) },
+                d7 = d7,
+                d3 = d3,
+                d1 = d1,
+                dDay = dDayReminder,
+                onChangeReminder = { navController.navigate(Route.NotificationSettings.path) }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // 준비 체크리스트
             if (detailInfo.checklist.isNotEmpty()) {
                 ChecklistCard(
@@ -207,18 +220,7 @@ fun TaxCalendarDetailScreen(
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // 리마인드 알림
-            ReminderCard(
-                enabled = reminderEnabled,
-                onToggle = { viewModel.setReminderEnabled(it) },
-                d7 = d7,
-                d3 = d3,
-                d1 = d1,
-                dDay = dDayReminder,
-                onChangeReminder = { navController.navigate(Route.NotificationSettings.path) }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // 하단 버튼들
             BottomButtons(allCompleted = allCompleted)
