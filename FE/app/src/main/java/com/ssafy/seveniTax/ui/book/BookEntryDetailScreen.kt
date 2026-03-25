@@ -210,14 +210,14 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
                 Text("분류 변경", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             }
 
-            // 메모 추가
+            // 증빙 내역 추가
             OutlinedButton(
                 onClick = { navController.navigate(Route.BookMemoAdd.path) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(15.dp),
                 border = BorderStroke(1.dp, Disabled)
             ) {
-                Text("메모 추가", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text("증빙 내역 추가", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             }
 
             // 확인
