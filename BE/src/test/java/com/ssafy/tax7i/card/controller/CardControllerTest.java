@@ -36,6 +36,7 @@ class CardControllerTest {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private CardService cardService;
+    @MockitoBean private com.ssafy.tax7i.sms.service.SmsOtpService smsOtpService;
     @MockitoBean private com.ssafy.tax7i.global.jwt.JwtTokenProvider jwtTokenProvider;
     @MockitoBean private org.springframework.data.redis.core.RedisTemplate<String, String> redisTemplate;
 
@@ -53,7 +54,8 @@ class CardControllerTest {
                                 "cardType", "BUSINESS",
                                 "cardUniqueNo", "1003-xxx",
                                 "withdrawalAccountNo", "0123456789012345",
-                                "withdrawalDate", "4"
+                                "withdrawalDate", "4",
+                                "otpToken", "test-otp-token"
                         ))))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("success"))

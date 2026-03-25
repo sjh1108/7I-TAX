@@ -66,6 +66,17 @@ public enum ErrorCode {
     // 500 Internal Server Error
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
 
+    // 400 Bad Request (OTP)
+    OTP_EXPIRED(HttpStatus.BAD_REQUEST, "인증번호가 만료되었습니다."),
+    OTP_INVALID(HttpStatus.BAD_REQUEST, "인증번호가 올바르지 않습니다."),
+    OTP_ATTEMPTS_EXCEEDED(HttpStatus.BAD_REQUEST, "인증번호 입력 횟수를 초과했습니다."),
+
+    // 401 Unauthorized (OTP Token)
+    OTP_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "OTP 인증 토큰이 유효하지 않습니다."),
+
+    // 429 Too Many Requests
+    OTP_SEND_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 발송 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
+
     // 503 Service Unavailable
     BANK_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "은행 연동 서비스가 일시적으로 불가합니다.");
 
