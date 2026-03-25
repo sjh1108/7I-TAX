@@ -2,7 +2,9 @@ package com.ssafy.tax7i.taxestimation;
 
 import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
+import com.ssafy.tax7i.taxestimation.dto.MonthlyTaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.service.TaxEstimationService;
 import org.junit.jupiter.api.DisplayName;
@@ -67,9 +69,9 @@ class TaxEstimationServiceTest {
     void estimationWithExpenses() {
         Long userId = 1L;
 
-        given(bookEntryRepository.aggregateByUserIdAndDateRange(
+        given(bookEntryRepository.safeAggregate(
                 eq(userId), any(LocalDate.class), any(LocalDate.class)))
-                .willReturn(new Object[]{50_000_000L, 20_000_000L, 0L, 20_000_000L});
+                .willReturn(new AggregateResult(50_000_000L, 20_000_000L, 0L, 20_000_000L));
         given(bookEntryRepository.sumSalesVat(eq(userId), any(), any())).willReturn(4_545_455L);
         given(bookEntryRepository.sumDeductiblePurchaseVat(eq(userId), any(), any())).willReturn(1_818_182L);
 
@@ -91,9 +93,9 @@ class TaxEstimationServiceTest {
         Long userId = 1L;
 
         // aggregate query already filters confirmed=true, so unconfirmed entries return zeros
-        given(bookEntryRepository.aggregateByUserIdAndDateRange(
+        given(bookEntryRepository.safeAggregate(
                 eq(userId), any(LocalDate.class), any(LocalDate.class)))
-                .willReturn(new Object[]{0L, 0L, 0L, 0L});
+                .willReturn(new AggregateResult(0L, 0L, 0L, 0L));
         given(bookEntryRepository.sumSalesVat(eq(userId), any(), any())).willReturn(0L);
         given(bookEntryRepository.sumDeductiblePurchaseVat(eq(userId), any(), any())).willReturn(0L);
 
@@ -101,6 +103,75 @@ class TaxEstimationServiceTest {
 
         assertThat(result.totalIncome()).isEqualTo(0L);
         assertThat(result.estimatedIncomeTax()).isEqualTo(0L);
+    }
+
+    // ───────────── estimateMonthly ─────────────
+
+    @Test
+    @DisplayName("월별 추정: 1기(1-6월) VAT 기간 및 종소세 연환산")
+    void estimateMonthly_firstHalf() {
+        Long userId = 1L;
+
+        // VAT 매출/매입세액
+        given(bookEntryRepository.sumSalesVat(eq(userId), any(), any())).willReturn(3_000_000L);
+        given(bookEntryRepository.sumDeductiblePurchaseVat(eq(userId), any(), any())).willReturn(1_000_000L);
+
+        // 종소세: 3월까지 수입 1500만, 사업경비 600만
+        given(bookEntryRepository.safeAggregate(eq(userId), any(), any()))
+                .willReturn(new AggregateResult(15_000_000L, 10_000_000L, 0L, 6_000_000L));
+
+        MonthlyTaxEstimationResponse result = taxEstimationService.estimateMonthly(userId, 2026, 3);
+
+        // VAT = 300만 - 100만 = 200만
+        assertThat(result.estimatedVat().estimatedPayable()).isEqualTo(2_000_000L);
+        assertThat(result.estimatedVat().period()).contains("1기");
+
+        // 연환산: income 1500만 × 12/3 = 6000만, businessExpense 600만 × 12/3 = 2400만
+        assertThat(result.estimatedIncomeTax().projectedAnnualIncome()).isEqualTo(60_000_000L);
+        assertThat(result.estimatedIncomeTax().projectedAnnualExpense()).isEqualTo(24_000_000L);
+
+        // 종소세: 과세표준 3600만 → 15% 구간
+        assertThat(result.estimatedIncomeTax().estimatedTax()).isGreaterThan(0);
+
+        // 지방세: 종소세 × 10%
+        assertThat(result.estimatedLocalTax().amount())
+                .isEqualTo((long) Math.floor(result.estimatedIncomeTax().estimatedTax() * 0.1));
+    }
+
+    @Test
+    @DisplayName("월별 추정: 2기(7-12월) VAT 기간 정확")
+    void estimateMonthly_secondHalf() {
+        Long userId = 1L;
+
+        given(bookEntryRepository.sumSalesVat(eq(userId), any(), any())).willReturn(0L);
+        given(bookEntryRepository.sumDeductiblePurchaseVat(eq(userId), any(), any())).willReturn(0L);
+        given(bookEntryRepository.safeAggregate(eq(userId), any(), any()))
+                .willReturn(new AggregateResult(0L, 0L, 0L, 0L));
+
+        MonthlyTaxEstimationResponse result = taxEstimationService.estimateMonthly(userId, 2026, 9);
+
+        assertThat(result.estimatedVat().period()).contains("2기");
+        assertThat(result.estimatedIncomeTax().estimatedTax()).isZero();
+        assertThat(result.totalEstimatedTax()).isZero();
+    }
+
+    @Test
+    @DisplayName("월별 추정: currentExpense(DTO)는 businessExpense(agg[3])를 사용")
+    void estimateMonthly_usesBusinessExpense_notTotalExpense() {
+        Long userId = 1L;
+
+        given(bookEntryRepository.sumSalesVat(eq(userId), any(), any())).willReturn(0L);
+        given(bookEntryRepository.sumDeductiblePurchaseVat(eq(userId), any(), any())).willReturn(0L);
+        // totalExpense = 20_000_000, businessExpense = 8_000_000
+        given(bookEntryRepository.safeAggregate(eq(userId), any(), any()))
+                .willReturn(new AggregateResult(30_000_000L, 20_000_000L, 0L, 8_000_000L));
+
+        MonthlyTaxEstimationResponse result = taxEstimationService.estimateMonthly(userId, 2026, 6);
+
+        // DTO의 currentExpense 필드에는 businessExpense(800만)가 매핑되어야 함
+        assertThat(result.estimatedIncomeTax().currentExpense()).isEqualTo(8_000_000L);
+        // 연환산: 800만 × 12/6 = 1600만 (전체경비 2000만이 아님)
+        assertThat(result.estimatedIncomeTax().projectedAnnualExpense()).isEqualTo(16_000_000L);
     }
 
     private BookEntry createEntry(EntryType type, long income, long expense, long asset, long vat,

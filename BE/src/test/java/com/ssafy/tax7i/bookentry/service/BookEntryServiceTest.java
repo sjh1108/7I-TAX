@@ -3,8 +3,10 @@ package com.ssafy.tax7i.bookentry.service;
 import com.ssafy.tax7i.bookentry.dto.BookEntryCategoryUpdateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryCreateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryResponse;
+import com.ssafy.tax7i.bookentry.dto.BookEntrySummaryResponse;
 import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -17,6 +19,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -25,6 +28,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -218,11 +222,12 @@ class BookEntryServiceTest {
 
     // ───────────── getEntries ─────────────
 
+    @SuppressWarnings("unchecked")
     @Test
     void getEntries_미확인필터() {
         BookEntry entry = createEntry(1L, 1L, false);
         Pageable pageable = PageRequest.of(0, 20);
-        given(bookEntryRepository.findByUserIdAndConfirmed(1L, false, pageable))
+        given(bookEntryRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of(entry)));
 
         Page<BookEntryResponse> result = bookEntryService.getEntries(1L, false, pageable);
@@ -231,17 +236,49 @@ class BookEntryServiceTest {
         assertThat(result.getContent().get(0).confirmed()).isFalse();
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void getEntries_전체조회() {
         BookEntry entry1 = createEntry(1L, 1L, false);
         BookEntry entry2 = createEntry(2L, 1L, true);
         Pageable pageable = PageRequest.of(0, 20);
-        given(bookEntryRepository.findByUserId(1L, pageable))
+        given(bookEntryRepository.findAll(any(Specification.class), any(Pageable.class)))
                 .willReturn(new PageImpl<>(List.of(entry1, entry2)));
 
         Page<BookEntryResponse> result = bookEntryService.getEntries(1L, null, pageable);
 
         assertThat(result.getTotalElements()).isEqualTo(2);
+    }
+
+    // ───────────── getSummary ─────────────
+
+    @Test
+    void getSummary_기본집계_정상() {
+        given(bookEntryRepository.safeAggregate(eq(1L), any(), any()))
+                .willReturn(new AggregateResult(50_000_000L, 20_000_000L, 3_000_000L, 15_000_000L));
+        given(bookEntryRepository.sumByMonthAndYear(1L, 2026)).willReturn(List.of());
+        given(bookEntryRepository.sumExpenseByCategoryAndYear(1L, 2026)).willReturn(List.of());
+        given(bookEntryRepository.sumIncomeByMerchant(eq(1L), any(), any())).willReturn(List.of());
+
+        BookEntrySummaryResponse result = bookEntryService.getSummary(1L, 2026);
+
+        assertThat(result.year()).isEqualTo(2026);
+        assertThat(result.totalIncome()).isEqualTo(50_000_000L);
+        assertThat(result.totalExpense()).isEqualTo(20_000_000L);
+    }
+
+    @Test
+    void getSummary_전년비교_전년데이터없으면_null() {
+        // 올해 데이터
+        given(bookEntryRepository.safeAggregate(eq(1L), any(), any()))
+                .willReturn(new AggregateResult(0L, 0L, 0L, 0L));
+        given(bookEntryRepository.sumByMonthAndYear(1L, 2026)).willReturn(List.of());
+        given(bookEntryRepository.sumExpenseByCategoryAndYear(1L, 2026)).willReturn(List.of());
+        given(bookEntryRepository.sumIncomeByMerchant(eq(1L), any(), any())).willReturn(List.of());
+
+        BookEntrySummaryResponse result = bookEntryService.getSummary(1L, 2026);
+
+        assertThat(result.comparison()).isNull();
     }
 
     // ───────────── getUnconfirmedCount ─────────────

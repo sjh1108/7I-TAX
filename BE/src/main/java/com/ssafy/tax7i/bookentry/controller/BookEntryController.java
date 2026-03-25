@@ -8,6 +8,8 @@ import com.ssafy.tax7i.bookentry.dto.BookEntrySummaryResponse;
 import com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.service.BookEntryService;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -50,6 +52,9 @@ public class BookEntryController {
     public ResponseEntity<SuccessResponse<BookEntrySummaryResponse>> getSummary(
             @AuthenticationPrincipal Long userId,
             @RequestParam int year) {
+        if (year < 1900 || year > 2099) {
+            throw new BusinessException(ErrorCode.INVALID_ARGUMENT, "연도는 1900~2099 범위여야 합니다.");
+        }
         BookEntrySummaryResponse response = bookEntryService.getSummary(userId, year);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }

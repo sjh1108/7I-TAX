@@ -7,6 +7,7 @@ import com.ssafy.tax7i.bookentry.dto.BookEntrySummaryResponse;
 import com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest;
 import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.bookentry.repository.BookEntrySpecification;
 import com.ssafy.tax7i.global.exception.BusinessException;
@@ -208,11 +209,9 @@ public class BookEntryService {
         LocalDate start = LocalDate.of(year, 1, 1);
         LocalDate end = LocalDate.of(year, 12, 31);
 
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        Object[] aggregate = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) aggregate = (Object[]) rawAgg[0];
-        long totalIncome = aggregate != null && aggregate.length > 0 && aggregate[0] != null ? ((Number) aggregate[0]).longValue() : 0L;
-        long totalExpense = aggregate != null && aggregate.length > 1 && aggregate[1] != null ? ((Number) aggregate[1]).longValue() : 0L;
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long totalIncome = agg.totalIncome();
+        long totalExpense = agg.totalExpense();
 
         List<Object[]> monthlyData = bookEntryRepository.sumByMonthAndYear(userId, year);
         List<BookEntrySummaryResponse.MonthSummary> byMonth = monthlyData.stream()
@@ -274,11 +273,9 @@ public class BookEntryService {
         LocalDate prevStart = LocalDate.of(prevYear, 1, 1);
         LocalDate prevEnd = LocalDate.of(prevYear, 12, 31);
 
-        Object[] rawPrev = bookEntryRepository.aggregateByUserIdAndDateRange(userId, prevStart, prevEnd);
-        Object[] prev = rawPrev;
-        if (rawPrev != null && rawPrev.length > 0 && rawPrev[0] instanceof Object[]) prev = (Object[]) rawPrev[0];
-        long prevIncome = prev != null && prev.length > 0 && prev[0] != null ? ((Number) prev[0]).longValue() : 0L;
-        long prevExpense = prev != null && prev.length > 1 && prev[1] != null ? ((Number) prev[1]).longValue() : 0L;
+        AggregateResult prev = bookEntryRepository.safeAggregate(userId, prevStart, prevEnd);
+        long prevIncome = prev.totalIncome();
+        long prevExpense = prev.totalExpense();
 
         // 전년 데이터가 아예 없으면 비교 불가
         if (prevIncome == 0 && prevExpense == 0) {

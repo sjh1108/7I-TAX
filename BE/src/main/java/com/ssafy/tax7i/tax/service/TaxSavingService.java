@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.tax.service;
 
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.tax.dto.TaxCalculationResult;
 import com.ssafy.tax7i.tax.dto.TaxSavingRecommendation;
@@ -26,11 +27,9 @@ public class TaxSavingService {
         // 1. Aggregate book entries for the year
         LocalDate start = LocalDate.of(taxYear, 1, 1);
         LocalDate end = LocalDate.of(taxYear, 12, 31);
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        Object[] agg = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
-        long totalRevenue = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long totalRevenue = agg.totalIncome();
+        long totalExpense = agg.totalExpense();
 
         // 2. Base deductions
         Map<String, Long> baseDeductions = new HashMap<>();

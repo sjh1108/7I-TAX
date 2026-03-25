@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.tax.controller;
 
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.response.SuccessResponse;
 import com.ssafy.tax7i.tax.dto.TaxCalculateRequest;
@@ -59,11 +60,9 @@ public class TaxController {
         LocalDate end = LocalDate.of(taxYear, 12, 31);
 
         // BookEntry 집계 데이터 조회
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        Object[] agg = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
-        long totalRevenue = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long totalRevenue = agg.totalIncome();
+        long totalExpense = agg.totalExpense();
 
         // 기납부세액 (null이면 0)
         long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;

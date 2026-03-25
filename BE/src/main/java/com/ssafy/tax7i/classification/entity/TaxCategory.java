@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 간편장부 세목 22개 (1인 IT개발자 기준)
+ * 간편장부 세목 (1인 IT개발자 기준)
  */
 @Getter
 @RequiredArgsConstructor

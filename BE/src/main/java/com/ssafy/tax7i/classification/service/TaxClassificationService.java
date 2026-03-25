@@ -121,9 +121,15 @@ public class TaxClassificationService {
         // 가맹점명으로 정확 매칭
         return classificationCacheService.getMerchantByName(request.merchantName())
                 .map(Merchant::getMcc)
-                // 부분 매칭
-                .or(() -> merchantRepository.findByMerchantNameContainedIn(request.merchantName())
-                        .stream().findFirst().map(Merchant::getMcc))
+                // 부분 매칭 — LIKE 특수문자 이스케이프
+                .or(() -> {
+                    String escaped = request.merchantName()
+                            .replace("\\", "\\\\")
+                            .replace("%", "\\%")
+                            .replace("_", "\\_");
+                    return merchantRepository.findByMerchantNameContainedIn(escaped)
+                            .stream().findFirst().map(Merchant::getMcc);
+                })
                 .orElse(null);
     }
 
@@ -265,7 +271,7 @@ public class TaxClassificationService {
                 continue; // 거래처동행 조건에서 처리
             }
 
-            // 사업용 여부 조건 (MCC_EXACT 제외)
+            // 사업용 여부 조건 (conditionExpr = MCC_EXACT)
             if ("MCC_EXACT".equals(condition)) {
                 if (request.isBusinessPurpose() == null) {
                     return ClassificationResult.needsConfirmation(

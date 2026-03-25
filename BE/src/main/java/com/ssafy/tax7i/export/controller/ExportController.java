@@ -1,6 +1,8 @@
 package com.ssafy.tax7i.export.controller;
 
 import com.ssafy.tax7i.export.service.ExportService;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -28,6 +30,10 @@ public class ExportController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
 
         if (startDate != null && endDate != null) {
+            if (startDate.isAfter(endDate)) {
+                throw new BusinessException(ErrorCode.INVALID_ARGUMENT,
+                        "시작일은 종료일보다 이전이어야 합니다.");
+            }
             String csv = exportService.exportBookEntriesToCsv(userId, startDate, endDate);
             return csvResponse(csv, "간편장부_" + startDate + "_" + endDate + ".csv");
         }

@@ -1,11 +1,10 @@
 package com.ssafy.tax7i.classification.entity;
 
+import com.ssafy.tax7i.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-
-import java.time.OffsetDateTime;
 
 /**
  * 세목별 한도·알림 룰 (seed.xlsx 한도_알림_v3 시트 기준)
@@ -20,7 +19,7 @@ import java.time.OffsetDateTime;
 })
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
-public class TaxLimit {
+public class TaxLimit extends BaseTimeEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,9 +49,4 @@ public class TaxLimit {
     @Column(length = 500)
     private String alertMessage;
 
-    @Column(nullable = false, updatable = false)
-    private OffsetDateTime createdAt = OffsetDateTime.now();
-
-    @Column(nullable = false)
-    private OffsetDateTime updatedAt = OffsetDateTime.now();
 }

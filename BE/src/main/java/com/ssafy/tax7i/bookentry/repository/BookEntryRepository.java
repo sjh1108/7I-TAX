@@ -59,6 +59,11 @@ public interface BookEntryRepository extends JpaRepository<BookEntry, Long>, Jpa
                                            @Param("start") LocalDate start,
                                            @Param("end") LocalDate end);
 
+    /** 안전하게 unwrap된 집계 결과 반환 */
+    default AggregateResult safeAggregate(Long userId, LocalDate start, LocalDate end) {
+        return AggregateResult.from(aggregateByUserIdAndDateRange(userId, start, end));
+    }
+
     @Query("SELECT b.categoryCode, b.categoryName, SUM(b.expenseAmount), COUNT(b) " +
             "FROM BookEntry b WHERE b.userId = :userId AND b.confirmed = true " +
             "AND b.entryType = 'EXPENSE' AND b.isBusinessExpense = true " +

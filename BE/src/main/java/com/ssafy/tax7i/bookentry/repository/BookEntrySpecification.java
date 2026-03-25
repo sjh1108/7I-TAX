@@ -52,11 +52,16 @@ public final class BookEntrySpecification {
         return (root, query, cb) -> cb.equal(root.get("categoryCode"), categoryCode);
     }
 
-    /** 거래처(가맹점명) 키워드 검색 — 대소문자 무시 */
+    /** 거래처(가맹점명) 키워드 검색 — 대소문자 무시, LIKE 특수문자 이스케이프 */
     public static Specification<BookEntry> withKeyword(String keyword) {
         if (keyword == null || keyword.isBlank()) return null;
-        return (root, query, cb) ->
-                cb.like(cb.lower(root.get("merchantName")), "%" + keyword.toLowerCase() + "%");
+        return (root, query, cb) -> {
+            String escaped = keyword.toLowerCase()
+                    .replace("\\", "\\\\")
+                    .replace("%", "\\%")
+                    .replace("_", "\\_");
+            return cb.like(cb.lower(root.get("merchantName")), "%" + escaped + "%", '\\');
+        };
     }
 
     /**

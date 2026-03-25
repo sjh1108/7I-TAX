@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.taxestimation.service;
 
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.taxestimation.dto.MonthlyTaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
@@ -40,16 +41,11 @@ public class TaxEstimationService {
         LocalDate end = LocalDate.of(year, 12, 31);
 
         // DB 집계 쿼리로 전체 데이터 로드 없이 합산
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        // JPA may return Object[] directly or wrap in Object[][] depending on result
-        Object[] agg = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) {
-            agg = (Object[]) rawAgg[0];
-        }
-        long totalIncome = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
-        long totalAssetPurchase = agg != null && agg.length > 2 && agg[2] != null ? ((Number) agg[2]).longValue() : 0L;
-        long deductibleExpenses = agg != null && agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long totalIncome = agg.totalIncome();
+        long totalExpense = agg.totalExpense();
+        long totalAssetPurchase = agg.totalAsset();
+        long deductibleExpenses = agg.businessExpense();
 
         // 부가세: 매출세액 - 매입세액
         Long salesVatRaw = bookEntryRepository.sumSalesVat(userId, start, end);
@@ -116,21 +112,20 @@ public class TaxEstimationService {
         LocalDate yearStart = LocalDate.of(year, 1, 1);
         LocalDate monthEnd = LocalDate.of(year, month, LocalDate.of(year, month, 1).lengthOfMonth());
 
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, yearStart, monthEnd);
-        Object[] agg = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
-        long currentIncome = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long currentExpense = agg != null && agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
+        AggregateResult monthlyAgg = bookEntryRepository.safeAggregate(userId, yearStart, monthEnd);
+        long currentIncome = monthlyAgg.totalIncome();
+        long currentBusinessExpense = monthlyAgg.businessExpense(); // agg[3]: 사업용 경비만 추출
 
         // 연환산 = 현재 누적 × (12 / 경과월수)
         long projectedIncome = month > 0 ? currentIncome * 12 / month : 0;
-        long projectedExpense = month > 0 ? currentExpense * 12 / month : 0;
-        long projectedTaxable = Math.max(0, projectedIncome - projectedExpense);
+        long projectedBusinessExpense = month > 0 ? currentBusinessExpense * 12 / month : 0;
+        long projectedTaxable = Math.max(0, projectedIncome - projectedBusinessExpense);
         long incomeTax = calculateIncomeTax(projectedTaxable);
         String incomeTaxDueDate = (year + 1) + "-05-31";
 
+        // businessExpense → DTO의 currentExpense / projectedAnnualExpense 필드에 매핑
         var incomeTaxEstimation = new MonthlyTaxEstimationResponse.IncomeTaxEstimation(
-                currentIncome, currentExpense, projectedIncome, projectedExpense,
+                currentIncome, currentBusinessExpense, projectedIncome, projectedBusinessExpense,
                 incomeTax, incomeTaxDueDate);
 
         // 지방세: 종소세 결정세액 × 10% (지방세법 §92)
