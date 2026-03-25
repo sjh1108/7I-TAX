@@ -81,10 +81,6 @@ public class User extends BaseTimeEntity {
         this.ssafyUserKey = ssafyUserKey;
     }
 
-    public void registerFinanceKey(String ssafyUserKey) {
-        this.ssafyUserKey = ssafyUserKey;
-    }
-
     public void setupPin(String pinHash) {
         this.pinHash = pinHash;
     }
@@ -107,5 +103,9 @@ public class User extends BaseTimeEntity {
 
     public void withdraw() {
         this.status = UserStatus.WITHDRAWN;
+    }
+
+    public void assignSsafyUserKey(String ssafyUserKey) {
+        this.ssafyUserKey = ssafyUserKey;
     }
 }

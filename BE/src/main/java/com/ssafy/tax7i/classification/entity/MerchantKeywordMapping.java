@@ -32,6 +32,9 @@ public class MerchantKeywordMapping {
     @Column(nullable = false)
     private Boolean isDomestic = true;
 
+    /** 키워드 매칭 신뢰도 (0~100). seed.xlsx 키워드매칭_v3 기준 */
+    private Integer confidence;
+
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 

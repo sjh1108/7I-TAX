@@ -7,8 +7,10 @@ import com.ssafy.tax7i.classification.dto.ClassificationResult.EntertainmentLimi
 import com.ssafy.tax7i.classification.entity.MccTaxRule;
 import com.ssafy.tax7i.classification.entity.Merchant;
 import com.ssafy.tax7i.classification.entity.MerchantKeywordMapping;
+import com.ssafy.tax7i.classification.entity.TaxLimit;
 import com.ssafy.tax7i.classification.repository.MerchantKeywordMappingRepository;
 import com.ssafy.tax7i.classification.repository.MerchantRepository;
+import com.ssafy.tax7i.classification.repository.TaxLimitRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -20,11 +22,11 @@ import java.util.List;
  * 세목 자동분류 서비스
  *
  * 분류 우선순위:
- * 1. MCC EXACT (Tier A) → CONFIRMED
+ * 1. MCC EXACT (Tier A) → CONFIRMED (confidence ≥ 90)
  * 2. 금액 조건 (AMOUNT_LT / AMOUNT_GTE) → RECOMMENDED
  * 3. 가맹점명 키워드 (MERCHANT_LIKE / keyword_mapping) → RECOMMENDED
  * 4. 사용자 확인 필요 (거래처동행, 사업용 여부) → NEEDS_CONFIRMATION
- * 5. 미분류 → NEEDS_CONFIRMATION + 기타경비
+ * 5. 미분류 → NEEDS_CONFIRMATION + AI 분류 대상
  */
 @Slf4j
 @Service
@@ -39,6 +41,7 @@ public class TaxClassificationService {
     private final ClassificationCacheService classificationCacheService;
     private final MerchantKeywordMappingRepository keywordMappingRepository;
     private final EntertainmentLimitService entertainmentLimitService;
+    private final TaxLimitRepository taxLimitRepository;
 
     public ClassificationResult classify(ClassificationRequest request) {
         log.info("세목 분류 시작: merchant={}, mcc={}, amount={}",
@@ -65,23 +68,24 @@ public class TaxClassificationService {
         // 3. Tier A 확인 — 자동 확정
         ClassificationResult tierAResult = tryTierA(rules);
         if (tierAResult != null) {
-            log.info("Tier A 확정: mcc={}, category={}", mcc, tierAResult.taxCategory());
+            log.info("Tier A 확정: mcc={}, category={}, score={}",
+                    mcc, tierAResult.taxCategory(), tierAResult.confidenceScore());
             return attachEntertainmentLimitIfNeeded(tierAResult, request);
         }
 
         // 4. Tier B — 금액 조건
         ClassificationResult amountResult = tryAmountCondition(rules, request.amount());
         if (amountResult != null) {
-            log.info("Tier B 금액조건 매칭: mcc={}, amount={}, category={}",
-                    mcc, request.amount(), amountResult.taxCategory());
+            log.info("Tier B 금액조건 매칭: mcc={}, amount={}, category={}, score={}",
+                    mcc, request.amount(), amountResult.taxCategory(), amountResult.confidenceScore());
             return attachEntertainmentLimitIfNeeded(amountResult, request);
         }
 
         // 5. Tier B — 가맹점명 키워드 (룰의 MERCHANT_LIKE + keyword_mapping 테이블)
         ClassificationResult keywordResult = tryKeywordCondition(rules, mcc, request.merchantName());
         if (keywordResult != null) {
-            log.info("Tier B 키워드 매칭: mcc={}, merchant={}, category={}",
-                    mcc, request.merchantName(), keywordResult.taxCategory());
+            log.info("Tier B 키워드 매칭: mcc={}, merchant={}, category={}, score={}",
+                    mcc, request.merchantName(), keywordResult.taxCategory(), keywordResult.confidenceScore());
             return attachEntertainmentLimitIfNeeded(keywordResult, request);
         }
 
@@ -117,9 +121,15 @@ public class TaxClassificationService {
         // 가맹점명으로 정확 매칭
         return classificationCacheService.getMerchantByName(request.merchantName())
                 .map(Merchant::getMcc)
-                // 부분 매칭
-                .or(() -> merchantRepository.findByMerchantNameContainedIn(request.merchantName())
-                        .stream().findFirst().map(Merchant::getMcc))
+                // 부분 매칭 — LIKE 특수문자 이스케이프
+                .or(() -> {
+                    String escaped = request.merchantName()
+                            .replace("\\", "\\\\")
+                            .replace("%", "\\%")
+                            .replace("_", "\\_");
+                    return merchantRepository.findByMerchantNameContainedIn(escaped)
+                            .stream().findFirst().map(Merchant::getMcc);
+                })
                 .orElse(null);
     }
 
@@ -129,9 +139,18 @@ public class TaxClassificationService {
         return rules.stream()
                 .filter(MccTaxRule::isTierA)
                 .findFirst()
-                .map(rule -> ClassificationResult.confirmed(
-                        rule.getTaxCategory(), rule.getVatDeductible(),
-                        rule.getLegalBasis(), rule.getRemark()))
+                .map(rule -> {
+                    int score = rule.getConfidence() != null ? rule.getConfidence() : 90;
+                    // requiresUserConfirm이 true면 RECOMMENDED로 (예: 수도광열비 - 별도사무실 조건)
+                    if (Boolean.TRUE.equals(rule.getRequiresUserConfirm())) {
+                        return ClassificationResult.recommended(
+                                rule.getTaxCategory(), rule.getVatDeductible(),
+                                rule.getLegalBasis(), rule.getRemark(), score);
+                    }
+                    return ClassificationResult.confirmed(
+                            rule.getTaxCategory(), rule.getVatDeductible(),
+                            rule.getLegalBasis(), rule.getRemark(), score);
+                })
                 .orElse(null);
     }
 
@@ -155,9 +174,10 @@ public class TaxClassificationService {
             }
 
             if (matched) {
+                int score = rule.getConfidence() != null ? rule.getConfidence() : 70;
                 return ClassificationResult.recommended(
                         rule.getTaxCategory(), rule.getVatDeductible(),
-                        rule.getLegalBasis(), rule.getRemark());
+                        rule.getLegalBasis(), rule.getRemark(), score);
             }
         }
         return null;
@@ -179,9 +199,10 @@ public class TaxClassificationService {
 
             for (String keyword : keywords) {
                 if (upperName.contains(keyword.trim().toUpperCase())) {
+                    int score = rule.getConfidence() != null ? rule.getConfidence() : 85;
                     return ClassificationResult.recommended(
                             rule.getTaxCategory(), rule.getVatDeductible(),
-                            rule.getLegalBasis(), rule.getRemark());
+                            rule.getLegalBasis(), rule.getRemark(), score);
                 }
             }
         }
@@ -190,8 +211,9 @@ public class TaxClassificationService {
         List<MerchantKeywordMapping> keywordMappings = keywordMappingRepository.findByMcc(mcc);
         for (MerchantKeywordMapping mapping : keywordMappings) {
             if (upperName.contains(mapping.getKeyword().toUpperCase())) {
+                int score = mapping.getConfidence() != null ? mapping.getConfidence() : 80;
                 return ClassificationResult.recommended(
-                        mapping.getTaxCategory(), "확인필요", null, null);
+                        mapping.getTaxCategory(), "확인필요", null, null, score);
             }
         }
 
@@ -200,9 +222,17 @@ public class TaxClassificationService {
             return rules.stream()
                     .filter(r -> "DEFAULT".equals(r.getConditionExpr()))
                     .findFirst()
-                    .map(rule -> ClassificationResult.recommended(
-                            rule.getTaxCategory(), rule.getVatDeductible(),
-                            rule.getLegalBasis(), rule.getRemark()))
+                    .map(rule -> {
+                        int score = rule.getConfidence() != null ? rule.getConfidence() : 55;
+                        if (Boolean.TRUE.equals(rule.getRequiresUserConfirm())) {
+                            return ClassificationResult.needsConfirmation(
+                                    rule.getTaxCategory(), rule.getVatDeductible(),
+                                    rule.getLegalBasis(), rule.getRemark());
+                        }
+                        return ClassificationResult.recommended(
+                                rule.getTaxCategory(), rule.getVatDeductible(),
+                                rule.getLegalBasis(), rule.getRemark(), score);
+                    })
                     .orElse(null);
         }
 
@@ -216,6 +246,7 @@ public class TaxClassificationService {
             if (!rule.isUserChoiceCondition()) continue;
 
             String condition = rule.getConditionExpr();
+            int score = rule.getConfidence() != null ? rule.getConfidence() : 70;
 
             // 거래처 동행 조건
             if ("거래처동행".equals(condition)) {
@@ -227,16 +258,21 @@ public class TaxClassificationService {
                 if (request.isClientAccompanied()) {
                     return ClassificationResult.recommended(
                             rule.getTaxCategory(), rule.getVatDeductible(),
-                            rule.getLegalBasis(), null);
+                            rule.getLegalBasis(), null, score);
                 }
                 // 거래처 동행 아님 → 경비불인정
                 return ClassificationResult.recommended(
                         "경비불인정", "불공제", "소득세법§33①5",
-                        "1인 사업자 본인 식대/카페는 가사경비로 경비불인정");
+                        "1인 사업자 본인 식대/카페는 가사경비로 경비불인정", 90);
             }
 
-            // 사업용 여부 조건
-            if ("사업용확인".equals(condition)) {
+            // 개인식사/개인음주 조건 (사용자가 거래처동행 false 선택 시 매칭)
+            if ("개인식사".equals(condition) || "개인음주".equals(condition)) {
+                continue; // 거래처동행 조건에서 처리
+            }
+
+            // 사업용 여부 조건 (conditionExpr = MCC_EXACT)
+            if ("MCC_EXACT".equals(condition)) {
                 if (request.isBusinessPurpose() == null) {
                     return ClassificationResult.needsConfirmation(
                             rule.getTaxCategory(), rule.getVatDeductible(),
@@ -245,11 +281,23 @@ public class TaxClassificationService {
                 if (request.isBusinessPurpose()) {
                     return ClassificationResult.recommended(
                             rule.getTaxCategory(), rule.getVatDeductible(),
-                            rule.getLegalBasis(), null);
+                            rule.getLegalBasis(), null, score);
                 }
                 return ClassificationResult.recommended(
                         "경비불인정", "불공제", null,
-                        "사업용이 아닌 지출은 경비로 인정되지 않습니다.");
+                        "사업용이 아닌 지출은 경비로 인정되지 않습니다.", 90);
+            }
+
+            // DEFAULT 룰 (5999 편의점 등)
+            if ("DEFAULT".equals(condition)) {
+                if (Boolean.TRUE.equals(rule.getRequiresUserConfirm())) {
+                    return ClassificationResult.needsConfirmation(
+                            rule.getTaxCategory(), rule.getVatDeductible(),
+                            rule.getLegalBasis(), rule.getRemark());
+                }
+                return ClassificationResult.recommended(
+                        rule.getTaxCategory(), rule.getVatDeductible(),
+                        rule.getLegalBasis(), rule.getRemark(), score);
             }
         }
         return null;
@@ -266,7 +314,12 @@ public class TaxClassificationService {
             return result;
         }
 
-        long annualLimit = DEFAULT_ENTERTAINMENT_ANNUAL_LIMIT;
+        // tax_limit 테이블에서 접대비 연간기본한도 조회, 없으면 기본값
+        long annualLimit = taxLimitRepository
+                .findByTaxCategoryAndLimitType(ENTERTAINMENT, "연간기본한도")
+                .map(TaxLimit::getLimitAmount)
+                .orElse(DEFAULT_ENTERTAINMENT_ANNUAL_LIMIT);
+
         long usedAmount = entertainmentLimitService.getUsedEntertainmentAmount(
                 request.userId());
 

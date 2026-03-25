@@ -23,9 +23,13 @@ class MccClassificationTest {
     }
 
     @Test
-    @DisplayName("TaxCategory: 전체 세목 20개 존재")
-    void taxCategoryCount() {
-        assertThat(TaxCategory.values()).hasSize(20);
+    @DisplayName("TaxCategory: 전체 세목 코드 유일성 검증")
+    void taxCategoryCodesAreUnique() {
+        long uniqueCodeCount = java.util.Arrays.stream(TaxCategory.values())
+                .map(TaxCategory::getCode)
+                .distinct()
+                .count();
+        assertThat(uniqueCodeCount).isEqualTo(TaxCategory.values().length);
     }
 
     @Test

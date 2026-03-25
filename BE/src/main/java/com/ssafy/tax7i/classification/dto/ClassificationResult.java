@@ -2,6 +2,7 @@ package com.ssafy.tax7i.classification.dto;
 
 public record ClassificationResult(
         Confidence confidence,
+        int confidenceScore,       // 분류 신뢰도 (0~100). DB mcc_tax_rule.confidence 기준
         String taxCategory,
         String vatDeductible,
         String legalBasis,
@@ -10,9 +11,9 @@ public record ClassificationResult(
 ) {
 
     public enum Confidence {
-        CONFIRMED,          // Tier A: MCC만으로 확정
-        RECOMMENDED,        // Tier B: 조건 매칭으로 추천 (금액/키워드)
-        NEEDS_CONFIRMATION  // Tier B: 사용자 확인 필요
+        CONFIRMED,          // Tier A: MCC만으로 확정 (confidence ≥ 90)
+        RECOMMENDED,        // Tier B: 조건 매칭으로 추천 (confidence 55~89)
+        NEEDS_CONFIRMATION  // 사용자 확인 필요 또는 AI 분류 필요 (confidence < 55)
     }
 
     public record EntertainmentLimitInfo(
@@ -24,24 +25,25 @@ public record ClassificationResult(
     }
 
     public static ClassificationResult confirmed(String taxCategory, String vatDeductible,
-                                                  String legalBasis, String remark) {
+                                                  String legalBasis, String remark, int score) {
         return new ClassificationResult(
-                Confidence.CONFIRMED, taxCategory, vatDeductible, legalBasis, remark, null);
+                Confidence.CONFIRMED, score, taxCategory, vatDeductible, legalBasis, remark, null);
     }
 
     public static ClassificationResult recommended(String taxCategory, String vatDeductible,
-                                                    String legalBasis, String remark) {
+                                                    String legalBasis, String remark, int score) {
         return new ClassificationResult(
-                Confidence.RECOMMENDED, taxCategory, vatDeductible, legalBasis, remark, null);
+                Confidence.RECOMMENDED, score, taxCategory, vatDeductible, legalBasis, remark, null);
     }
 
     public static ClassificationResult needsConfirmation(String taxCategory, String vatDeductible,
                                                           String legalBasis, String remark) {
         return new ClassificationResult(
-                Confidence.NEEDS_CONFIRMATION, taxCategory, vatDeductible, legalBasis, remark, null);
+                Confidence.NEEDS_CONFIRMATION, 0, taxCategory, vatDeductible, legalBasis, remark, null);
     }
 
     public ClassificationResult withEntertainmentLimit(EntertainmentLimitInfo limit) {
-        return new ClassificationResult(confidence, taxCategory, vatDeductible, legalBasis, remark, limit);
+        return new ClassificationResult(confidence, confidenceScore, taxCategory, vatDeductible,
+                legalBasis, remark, limit);
     }
 }
