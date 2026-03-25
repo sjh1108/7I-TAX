@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -31,6 +33,8 @@ private enum class ReportTab(val label: String) {
 @Composable
 fun TaxReportScreen(navController: NavController) {
     var selectedTab by remember { mutableStateOf(ReportTab.MONTHLY) }
+    var selectedYear by remember { mutableIntStateOf(java.time.LocalDate.now().year) }
+    var selectedMonth by remember { mutableIntStateOf(java.time.LocalDate.now().monthValue) }
 
     Column(
         modifier = Modifier
@@ -90,8 +94,23 @@ fun TaxReportScreen(navController: NavController) {
                 .padding(horizontal = 20.dp)
         ) {
             when (selectedTab) {
-                ReportTab.MONTHLY -> MonthlyReport()
-                ReportTab.ANNUAL -> AnnualReport()
+                ReportTab.MONTHLY -> MonthlyReport(
+                    year = selectedYear,
+                    month = selectedMonth,
+                    onPrev = {
+                        if (selectedMonth == 1) { selectedMonth = 12; selectedYear-- }
+                        else selectedMonth--
+                    },
+                    onNext = {
+                        if (selectedMonth == 12) { selectedMonth = 1; selectedYear++ }
+                        else selectedMonth++
+                    }
+                )
+                ReportTab.ANNUAL -> AnnualReport(
+                    year = selectedYear,
+                    onPrev = { selectedYear-- },
+                    onNext = { selectedYear++ }
+                )
             }
             Spacer(Modifier.height(32.dp))
         }
@@ -101,9 +120,9 @@ fun TaxReportScreen(navController: NavController) {
 // ─── 월간 리포트 ─────────────────────────────────────
 
 @Composable
-private fun MonthlyReport() {
+private fun MonthlyReport(year: Int, month: Int, onPrev: () -> Unit, onNext: () -> Unit) {
     Spacer(Modifier.height(16.dp))
-    Text("2025년 3월", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple)
+    DateNavigator(text = "${year}년 ${month}월", onPrev = onPrev, onNext = onNext)
     Spacer(Modifier.height(20.dp))
 
     // 순이익 카드
@@ -144,9 +163,9 @@ private fun MonthlyReport() {
 // ─── 연간 리포트 ────────────────────────────────────────
 
 @Composable
-private fun AnnualReport() {
+private fun AnnualReport(year: Int, onPrev: () -> Unit, onNext: () -> Unit) {
     Spacer(Modifier.height(16.dp))
-    Text("2025년", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple)
+    DateNavigator(text = "${year}년", onPrev = onPrev, onNext = onNext)
     Spacer(Modifier.height(20.dp))
 
     // 연간 순이익
@@ -210,6 +229,30 @@ private fun AnnualReport() {
     SectionTitle("올해 공제 요약")
     Spacer(Modifier.height(12.dp))
     DeductionSummaryCard()
+}
+
+// ─── 날짜 네비게이터 ─────────────────────────────────────
+
+@Composable
+private fun DateNavigator(text: String, onPrev: () -> Unit, onNext: () -> Unit) {
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.Center,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconButton(onClick = onPrev) {
+            Icon(Icons.Default.ChevronLeft, contentDescription = "이전", tint = TextPrimary)
+        }
+        Text(
+            text = text,
+            fontSize = 22.sp,
+            fontWeight = FontWeight.Bold,
+            color = BrandPurple
+        )
+        IconButton(onClick = onNext) {
+            Icon(Icons.Default.ChevronRight, contentDescription = "다음", tint = TextPrimary)
+        }
+    }
 }
 
 // ─── 공통 컴포넌트 ──────────────────────────────────────
