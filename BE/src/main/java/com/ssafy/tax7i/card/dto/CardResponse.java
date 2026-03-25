@@ -2,6 +2,7 @@ package com.ssafy.tax7i.card.dto;
 
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardType;
+import java.time.LocalDateTime;
 
 public record CardResponse(
         Long id,
@@ -10,7 +11,8 @@ public record CardResponse(
         String last4Digits,
         Boolean isDefault,
         String cardExpiryDate,
-        String withdrawalDate
+        String withdrawalDate,
+        LocalDateTime createdAt
 ) {
     public static CardResponse from(Card card) {
         return new CardResponse(
@@ -20,7 +22,8 @@ public record CardResponse(
                 card.getLast4Digits(),
                 card.isDefault(),
                 card.getCardExpiryDate(),
-                card.getWithdrawalDate()
+                card.getWithdrawalDate(),
+                card.getCreatedAt()
         );
     }
 }

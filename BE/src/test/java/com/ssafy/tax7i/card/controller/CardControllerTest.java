@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -44,7 +45,7 @@ class CardControllerTest {
 
     @Test
     void createCard_201() throws Exception {
-        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", false, "20290401", "4");
+        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", false, "20290401", "4", LocalDateTime.now());
         given(cardService.createCard(any(), any())).willReturn(response);
 
         mockMvc.perform(post("/api/cards")
@@ -78,8 +79,8 @@ class CardControllerTest {
     @Test
     void getCards_200() throws Exception {
         List<CardResponse> responses = List.of(
-                new CardResponse(1L, "카드1", CardType.BUSINESS, "1234", true, "20290401", "4"),
-                new CardResponse(2L, "카드2", CardType.PERSONAL, "5678", false, "20290501", "1"));
+                new CardResponse(1L, "카드1", CardType.BUSINESS, "1234", true, "20290401", "4", LocalDateTime.now()),
+                new CardResponse(2L, "카드2", CardType.PERSONAL, "5678", false, "20290501", "1", LocalDateTime.now()));
         given(cardService.getCards(any())).willReturn(responses);
 
         mockMvc.perform(get("/api/cards"))
@@ -93,7 +94,7 @@ class CardControllerTest {
 
     @Test
     void getCard_200() throws Exception {
-        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4");
+        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4", LocalDateTime.now());
         given(cardService.getCard(any(), eq(1L))).willReturn(response);
 
         mockMvc.perform(get("/api/cards/1"))
@@ -116,7 +117,7 @@ class CardControllerTest {
 
     @Test
     void setDefault_200() throws Exception {
-        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4");
+        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4", LocalDateTime.now());
         given(cardService.setDefaultCard(any(), eq(1L))).willReturn(response);
 
         mockMvc.perform(patch("/api/cards/1/default"))

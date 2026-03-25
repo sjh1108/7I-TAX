@@ -5,6 +5,7 @@ import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.*;
 import com.ssafy.tax7i.card.dto.*;
 import com.ssafy.tax7i.card.entity.Card;
+import com.ssafy.tax7i.card.entity.CardStatus;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.auth.domain.User;
@@ -217,6 +218,41 @@ public class CardService {
         return response.rec().stream()
                 .map(CardBillingResponse::from)
                 .toList();
+    }
+
+    /**
+     * 카드 활성화
+     */
+    @Transactional
+    public CardActivateResponse activateCard(Long userId, Long cardId, CardActivateRequest request) {
+        Card card = getCardWithOwnership(userId, cardId);
+
+        if (card.getStatus() == CardStatus.ACTIVE) {
+            throw new BusinessException(ErrorCode.CONFLICT, "이미 활성화된 카드입니다.");
+        }
+
+        card.activate();
+
+        return new CardActivateResponse(
+                card.getId(),
+                card.getStatus().name(),
+                card.getUpdatedAt()
+        );
+    }
+
+    /**
+     * 카드 용도 변경
+     */
+    @Transactional
+    public CardPurposeResponse setCardPurpose(Long userId, Long cardId, CardPurposeRequest request) {
+        Card card = getCardWithOwnership(userId, cardId);
+        card.updateDefaultPurpose(request.defaultPurpose());
+
+        return new CardPurposeResponse(
+                card.getId(),
+                card.getDefaultPurpose(),
+                card.getUpdatedAt()
+        );
     }
 
     private User getUser(Long userId) {
