@@ -57,6 +57,7 @@ import com.ssafy.seveniTax.ui.calendar.TaxCalendarDetailScreen
 import com.ssafy.seveniTax.ui.calendar.TaxCalendarScreen
 import com.ssafy.seveniTax.ui.test.ServerTestScreen
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
+import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
 import com.ssafy.seveniTax.viewmodel.CardViewModel
 import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 
@@ -66,6 +67,7 @@ private const val AUTH_GRAPH_ROUTE = "auth_graph"
 fun NavGraph(navController: NavHostController) {
     val cardViewModel: CardViewModel = hiltViewModel()
     val taxCalendarViewModel: TaxCalendarViewModel = hiltViewModel()
+    val bookEntryViewModel: BookEntryViewModel = hiltViewModel()
 
     NavHost(
         navController = navController,
@@ -302,11 +304,11 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.BookEntryList.path) {
-            BookEntryListScreen(navController)
+            BookEntryListScreen(navController, viewModel = bookEntryViewModel)
         }
 
         composable(Route.BookFilter.path) {
-            BookFilterScreen(navController)
+            BookFilterScreen(navController, viewModel = bookEntryViewModel)
         }
 
         composable(Route.BookMemoAdd.path) {
