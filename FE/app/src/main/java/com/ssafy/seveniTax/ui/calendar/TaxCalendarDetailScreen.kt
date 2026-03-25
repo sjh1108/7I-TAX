@@ -200,41 +200,9 @@ fun TaxCalendarDetailScreen(
                         }
                     },
                     completedCount = completedCount,
-                    totalCount = totalCount
+                    totalCount = totalCount,
+                    allCompleted = allCompleted
                 )
-
-                // 전부 체크 완료 시 홈택스 메시지
-                if (allCompleted) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = BrandPurple.copy(alpha = 0.08f))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("✅", fontSize = 18.sp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    "준비 완료!",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = BrandPurple
-                                )
-                                Text(
-                                    "홈택스에서 신고를 진행하세요",
-                                    fontSize = 13.sp,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
@@ -432,7 +400,8 @@ private fun ChecklistCard(
     checkStates: List<Boolean>,
     onToggle: (Int) -> Unit,
     completedCount: Int,
-    totalCount: Int
+    totalCount: Int,
+    allCompleted: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -442,60 +411,88 @@ private fun ChecklistCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            // 헤더
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "준비 체크리스트",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "$completedCount/$totalCount 완료",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Accent
-                )
-            }
+        Box {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // 헤더
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "준비 체크리스트",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "$completedCount/$totalCount 완료",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Accent
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 프로그레스 바
-            val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(Disabled.copy(alpha = 0.4f))
-            ) {
+                // 프로그레스 바
+                val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(progress)
+                        .fillMaxWidth()
+                        .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(Accent, BrandPurple)
+                        .background(Disabled.copy(alpha = 0.4f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(Accent, BrandPurple)
+                                )
                             )
-                        )
-                )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 체크리스트 항목들
+                items.forEachIndexed { index, item ->
+                    val isChecked = checkStates.getOrElse(index) { item.isCompleted }
+                    ChecklistItemRow(
+                        item = item.copy(isCompleted = isChecked),
+                        onToggle = { onToggle(index) }
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 체크리스트 항목들
-            items.forEachIndexed { index, item ->
-                val isChecked = checkStates.getOrElse(index) { item.isCompleted }
-                ChecklistItemRow(
-                    item = item.copy(isCompleted = isChecked),
-                    onToggle = { onToggle(index) }
-                )
+            // 전부 완료 시 오버레이
+            if (allCompleted) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFF5F5F5).copy(alpha = 0.93f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "준비 완료!",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandPurple
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "홈택스에서 신고를 진행하세요",
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
             }
         }
     }
