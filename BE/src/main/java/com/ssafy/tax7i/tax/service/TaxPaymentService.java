@@ -38,7 +38,7 @@ public class TaxPaymentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.TAX_RETURN_NOT_FOUND));
 
         TaxPayment payment = taxPaymentRepository.findByTaxReturn_IdAndPaymentType(returnId, TaxPaymentType.NATIONAL)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TAX_RETURN_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "국세 납부 정보를 찾을 수 없습니다."));
 
         if (payment.getStatus() != TaxPaymentStatus.PENDING) {
             throw new BusinessException(ErrorCode.TAX_ALREADY_PAID);
@@ -81,14 +81,14 @@ public class TaxPaymentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.TAX_RETURN_NOT_FOUND));
 
         TaxPayment nationalPayment = taxPaymentRepository.findByTaxReturn_IdAndPaymentType(returnId, TaxPaymentType.NATIONAL)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TAX_RETURN_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "국세 납부 정보를 찾을 수 없습니다."));
 
         if (nationalPayment.getStatus() != TaxPaymentStatus.COMPLETED) {
             throw new BusinessException(ErrorCode.TAX_NATIONAL_FIRST);
         }
 
         TaxPayment payment = taxPaymentRepository.findByTaxReturn_IdAndPaymentType(returnId, TaxPaymentType.LOCAL)
-                .orElseThrow(() -> new BusinessException(ErrorCode.TAX_RETURN_NOT_FOUND));
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "지방세 납부 정보를 찾을 수 없습니다."));
 
         if (payment.getStatus() != TaxPaymentStatus.PENDING) {
             throw new BusinessException(ErrorCode.TAX_ALREADY_PAID);

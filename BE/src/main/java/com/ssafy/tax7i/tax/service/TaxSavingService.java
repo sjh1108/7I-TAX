@@ -48,7 +48,7 @@ public class TaxSavingService {
         TaxCalculationResult withNoranTax = taxCalculationEngine.calculate(
                 taxYear, totalRevenue, totalExpense, 0, withNoran);
         long noranSaving = currentTax.determinedTax() - withNoranTax.determinedTax();
-        noranSaving += noranSaving / 10;
+        noranSaving += noranSaving / 10; // 지방세 10% 포함 (지방세법 §92)
         recommendations.add(TaxSavingRecommendation.withUsage(
                 "DEDUCTION", "노란우산공제",
                 "소기업·소상공인 공제부금. 가입 시 연 최대 " + (noranLimit / 10000) + "만원 소득공제.",
@@ -57,6 +57,7 @@ public class TaxSavingService {
         // 5. 연금저축
         double creditRate = totalRevenue <= 55_000_000L ? 0.15 : 0.132;
         long pensionSaving = (long) Math.floor(6_000_000L * creditRate);
+        pensionSaving += pensionSaving / 10; // 지방세 10% 포함 (지방세법 §92)
         recommendations.add(TaxSavingRecommendation.withUsage(
                 "CREDIT", "연금저축",
                 "연 600만원 한도 세액공제 " + (creditRate * 100) + "%",
@@ -70,6 +71,7 @@ public class TaxSavingService {
         if (entertainmentUsed < entertainmentLimit) {
             long entertainRemaining = entertainmentLimit - entertainmentUsed;
             long entertainSaving = (long) Math.floor(entertainRemaining * currentTax.taxRate());
+            entertainSaving += entertainSaving / 10; // 지방세 10% 포함 (지방세법 §92)
             recommendations.add(TaxSavingRecommendation.withUsage(
                     "DEDUCTION", "접대비 한도 여유",
                     "올해 접대비 추가 사용 가능 (소득세법 §35)",
@@ -98,6 +100,7 @@ public class TaxSavingService {
         if (eduUsed < eduRecommendedLimit) {
             long eduRemaining = eduRecommendedLimit - eduUsed;
             long eduSaving = (long) Math.floor(eduRemaining * currentTax.taxRate());
+            eduSaving += eduSaving / 10; // 지방세 10% 포함 (지방세법 §92)
             recommendations.add(TaxSavingRecommendation.withUsage(
                     "EXPENSE",
                     "교육훈련비 경비 활용",

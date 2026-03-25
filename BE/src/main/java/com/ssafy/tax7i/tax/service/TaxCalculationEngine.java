@@ -1,5 +1,7 @@
 package com.ssafy.tax7i.tax.service;
 
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
+import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.tax.dto.TaxCalculationResult;
@@ -9,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -17,10 +21,22 @@ import java.util.Map;
 public class TaxCalculationEngine {
 
     private final TaxBracketRepository taxBracketRepository;
+    private final BookEntryRepository bookEntryRepository;
 
     @Cacheable(value = "taxBrackets", key = "#year")
     public List<TaxBracket> loadBrackets(int year) {
         return taxBracketRepository.findByYearOrderByBracketMinAsc(year);
+    }
+
+    /** 장부 집계 + 세금 계산을 한 번에 수행 (Controller → Service 레이어 규칙 준수) */
+    public TaxCalculationResult calculateForUser(Long userId, int taxYear,
+                                                  Long prepaidTaxInput, Map<String, Long> deductionsInput) {
+        LocalDate start = LocalDate.of(taxYear, 1, 1);
+        LocalDate end = LocalDate.of(taxYear, 12, 31);
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long prepaidTax = prepaidTaxInput != null ? prepaidTaxInput : 0L;
+        Map<String, Long> deductions = deductionsInput != null ? deductionsInput : Collections.emptyMap();
+        return calculate(taxYear, agg.totalIncome(), agg.totalExpense(), prepaidTax, deductions);
     }
 
     public TaxCalculationResult calculate(int taxYear, long totalRevenue, long totalExpense,

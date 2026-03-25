@@ -214,7 +214,7 @@ public class TaxReturnService {
         // Transition DRAFT → SUBMITTED → ACCEPTED (simulation: instant acceptance)
         taxReturn.transitionTo(TaxReturnStatus.SUBMITTED);
         taxReturn.transitionTo(TaxReturnStatus.ACCEPTED);
-        taxReturn.setReceiptNumber(receiptNumber);
+        taxReturn.assignReceiptNumber(receiptNumber);
 
         // Create NATIONAL tax payment record
         String nationalVirtualAccount = "880-" + TAX_OFFICE_CODE + "-" + String.format("%08d", random.nextInt(100000000));

@@ -113,7 +113,7 @@ public class TaxReturn extends BaseTimeEntity {
         this.deductionsJson = deductionsJson;
     }
 
-    public void setReceiptNumber(String receiptNumber) {
+    public void assignReceiptNumber(String receiptNumber) {
         this.receiptNumber = receiptNumber;
     }
 
