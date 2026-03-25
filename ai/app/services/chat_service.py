@@ -1,5 +1,6 @@
+import logging
 import uuid
-from collections import defaultdict
+from cachetools import TTLCache
 
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
@@ -7,10 +8,13 @@ from openai import APITimeoutError, AuthenticationError, RateLimitError
 from tenacity import retry, retry_if_exception_type, stop_after_attempt, wait_exponential
 
 from app.core.config import Settings
-from app.core.exceptions import LLMAuthError, LLMRateLimitError, LLMTimeoutError
+from app.core.exceptions import AIServiceError, LLMAuthError, LLMRateLimitError, LLMTimeoutError
+
+logger = logging.getLogger(__name__)
 from app.core.prompts import build_intent_prompt
 from app.services.intent_classifier import IntentClassifier, IntentResult
 from app.services.retrieval_service import RetrievalService
+from app.utils.query_rewriter import QueryRewriter
 from app.utils.text_utils import format_search_results
 
 MAX_HISTORY_LENGTH = 20
@@ -44,17 +48,20 @@ class ChatService:
         self.intent_classifier = intent_classifier
         self.backend_client = backend_client
         self.cache_service = cache_service
-        self._histories: dict[str, list[BaseMessage]] = defaultdict(list)
+        self._histories: TTLCache = TTLCache(maxsize=1000, ttl=3600)
+        self.query_rewriter = QueryRewriter(llm=self.llm_mini)
 
     async def get_response(
         self,
         message: str,
         session_id: str | None = None,
         user_id: str | None = None,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, str]:
         if session_id is None:
             session_id = uuid.uuid4().hex
 
+        if session_id not in self._histories:
+            self._histories[session_id] = []
         history = self._histories[session_id]
 
         # 1. 인텐트 분류
@@ -62,19 +69,29 @@ class ChatService:
 
         # 2. 시맨틱 캐시 확인 (Phase 4에서 활성화)
         if self.cache_service:
-            cached = await self.cache_service.get(message)
-            if cached:
-                return cached, session_id
+            try:
+                cached = await self.cache_service.get(message)
+                if cached:
+                    return cached, session_id, "cached"
+            except Exception as e:
+                logger.warning("캐시 조회 실패 (무시): %s", e)
 
-        # 3. 인텐트별 검색
+        # 3. 인텐트별 검색 (rag_enabled=False 시 건너뜀)
         context_text = ""
-        if intent_result.rag_required:
-            results = await self.retrieval_service.retrieve(
-                query=message,
-                metadata_filter=intent_result.metadata_filter or None,
-                search_strategy=intent_result.search_strategy,
-            )
-            context_text = format_search_results(results)
+        if self.settings.rag_enabled and intent_result.rag_required:
+            try:
+                search_query = await self.query_rewriter.rewrite(message)
+                results = await self.retrieval_service.retrieve(
+                    query=search_query,
+                    metadata_filter=intent_result.metadata_filter or None,
+                    search_strategy=intent_result.search_strategy,
+                )
+                context_text = format_search_results(results)
+            except AIServiceError:
+                raise
+            except Exception as e:
+                logger.error("검색 서비스 오류: %s", e, exc_info=True)
+                raise AIServiceError("검색 중 오류가 발생했습니다.") from e
 
         # 4. (필요시) 백엔드 데이터 보강
         user_transactions_text = ""
@@ -112,9 +129,12 @@ class ChatService:
 
         # 8. 캐시 저장 (Phase 4에서 활성화)
         if self.cache_service:
-            await self.cache_service.put(message, answer, intent_result.intent)
+            try:
+                await self.cache_service.put(message, answer, intent_result.intent)
+            except Exception as e:
+                logger.warning("캐시 저장 실패 (무시): %s", e)
 
-        return answer, session_id
+        return answer, session_id, llm.model_name
 
     def get_history(self, session_id: str) -> list[dict[str, str]]:
         history = self._histories.get(session_id, [])

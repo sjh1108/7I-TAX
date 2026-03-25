@@ -21,8 +21,8 @@ class Settings(BaseSettings):
     cache_max_entries: int = 10000
     cache_ttl_hours: int = 24
 
-    # RAG (향후 활성화)
-    rag_enabled: bool = False
+    # RAG 검색 활성화 (False 시 LLM만으로 응답)
+    rag_enabled: bool = True
     chroma_persist_directory: str = "./data/chroma"
     embedding_model: str = "text-embedding-3-small"
 

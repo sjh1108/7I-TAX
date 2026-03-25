@@ -1,13 +1,17 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
 from app.core.dependencies import init_services
 from app.core.exceptions import AIServiceError
-from app.routers import chat, health
+from app.routers import chat, health, transaction
+
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -32,6 +36,7 @@ app.add_middleware(
 
 app.include_router(health.router)
 app.include_router(chat.router)
+app.include_router(transaction.router)
 
 
 @app.exception_handler(AIServiceError)
@@ -39,4 +44,21 @@ async def ai_service_error_handler(request: Request, exc: AIServiceError) -> JSO
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message},
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    logger.error("처리되지 않은 예외 발생: %s", exc, exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "서버 내부 오류가 발생했습니다."},
     )
