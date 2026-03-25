@@ -139,6 +139,7 @@ fun TaxCalendarDetailScreen(
     description: String,
     viewModel: TaxCalendarViewModel
 ) {
+    val reminderEnabled by viewModel.reminderEnabled.collectAsState()
     val d7 by viewModel.reminderD7.collectAsState()
     val d3 by viewModel.reminderD3.collectAsState()
     val d1 by viewModel.reminderD1.collectAsState()
@@ -240,6 +241,8 @@ fun TaxCalendarDetailScreen(
 
             // 리마인드 알림
             ReminderCard(
+                enabled = reminderEnabled,
+                onToggle = { viewModel.setReminderEnabled(it) },
                 d7 = d7,
                 d3 = d3,
                 d1 = d1,
@@ -568,19 +571,22 @@ private fun ChecklistItemRow(item: ChecklistItem, onToggle: () -> Unit = {}) {
 
 @Composable
 private fun ReminderCard(
+    enabled: Boolean = true,
+    onToggle: (Boolean) -> Unit = {},
     d7: Boolean = true,
     d3: Boolean = true,
     d1: Boolean = true,
     dDay: Boolean = true,
     onChangeReminder: () -> Unit = {}
 ) {
-    val enabledChips = buildList {
-        if (d7) add("D-7")
-        if (d3) add("D-3")
-        if (d1) add("D-1")
-        if (dDay) add("당일")
-    }
-    val reminderEnabled = enabledChips.isNotEmpty()
+    val enabledChips = if (enabled) {
+        buildList {
+            if (d7) add("D-7")
+            if (d3) add("D-3")
+            if (d1) add("D-1")
+            if (dDay) add("당일")
+        }
+    } else emptyList()
 
     Card(
         modifier = Modifier
@@ -608,8 +614,8 @@ private fun ReminderCard(
                     )
                 }
                 Switch(
-                    checked = reminderEnabled,
-                    onCheckedChange = { },
+                    checked = enabled,
+                    onCheckedChange = onToggle,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = Accent,
@@ -641,16 +647,18 @@ private fun ReminderCard(
                 }
             } else {
                 Text(
-                    text = "설정된 알림이 없습니다",
+                    text = if (enabled) "설정된 알림이 없습니다" else "알림이 꺼져 있습니다",
                     fontSize = 13.sp,
                     color = TextSecondary
                 )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            if (enabled) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
-            // 알림 시점 변경
-            Row(
+            // 알림 시점 변경 (ON일 때만 표시)
+            if (enabled) Row(
                 modifier = Modifier.clickable { onChangeReminder() },
                 verticalAlignment = Alignment.CenterVertically
             ) {

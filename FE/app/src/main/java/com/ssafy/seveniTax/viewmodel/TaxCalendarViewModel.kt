@@ -37,6 +37,10 @@ class TaxCalendarViewModel @Inject constructor(
     private val _selectedFilter = MutableStateFlow(TaxFilter.ALL)
     val selectedFilter: StateFlow<TaxFilter> = _selectedFilter.asStateFlow()
 
+    // 리마인드 알림 마스터 토글
+    private val _reminderEnabled = MutableStateFlow(true)
+    val reminderEnabled: StateFlow<Boolean> = _reminderEnabled.asStateFlow()
+
     // 리마인드 알림 설정
     private val _reminderD7 = MutableStateFlow(true)
     val reminderD7: StateFlow<Boolean> = _reminderD7.asStateFlow()
@@ -50,12 +54,21 @@ class TaxCalendarViewModel @Inject constructor(
     private val _reminderDDay = MutableStateFlow(true)
     val reminderDDay: StateFlow<Boolean> = _reminderDDay.asStateFlow()
 
+    fun setReminderEnabled(enabled: Boolean) {
+        _reminderEnabled.value = enabled
+        applyReminderSettings()
+    }
+
     fun setReminderD7(enabled: Boolean) { _reminderD7.value = enabled }
     fun setReminderD3(enabled: Boolean) { _reminderD3.value = enabled }
     fun setReminderD1(enabled: Boolean) { _reminderD1.value = enabled }
     fun setReminderDDay(enabled: Boolean) { _reminderDDay.value = enabled }
 
     fun applyReminderSettings() {
+        if (!_reminderEnabled.value) {
+            reminderScheduler.cancelAllReminders(_deadlines.value)
+            return
+        }
         reminderScheduler.scheduleReminders(
             deadlines = _deadlines.value,
             d7 = _reminderD7.value,
