@@ -76,6 +76,7 @@ Content-Type: application/json
 {
   "description": "거래처 접대 저녁 식사비 15만원"
 }
+# > 응답 기대: reason="거래처 접대 관련 비용", legal_basis="소득세법 제35조"
 
 ###
 
@@ -126,6 +127,7 @@ Content-Type: application/json
 {
   "description": "사무용 복사용지 및 토너 구매"
 }
+# > 응답 기대: reason="사무용품 등 소모성 자재 구입", legal_basis="소득세법 제33조"
 
 ###
 
@@ -262,4 +264,49 @@ Content-Type: application/json
 
 {
   "description": "이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다 이것은 매우 긴 거래 내역 설명입니다"
+}
+
+# ------------------------------------------------------------
+# E05: 세목 분류 설명 (reason, legal_basis) 테스트
+# 응답에 reason, legal_basis 필드가 포함되는지 확인
+# ExplanationService가 활성화된 환경에서 테스트
+# ------------------------------------------------------------
+
+###
+
+### [소모품비] 명확한 세목 — reason/legal_basis 기대
+# 기대 응답 (ExplanationService 활성 시):
+#   reason: "사무용품 등 소모성 자재 구입에 해당"
+#   legal_basis: "소득세법 제33조" (관련 조문)
+POST {{baseUrl}}/transaction/classify
+Content-Type: application/json
+
+{
+  "description": "사무실 프린터 토너 카트리지 구매"
+}
+
+###
+
+### [접대비] 명확한 세목 — reason/legal_basis 기대
+# 기대 응답 (ExplanationService 활성 시):
+#   reason: "거래처 접대 관련 비용에 해당"
+#   legal_basis: "소득세법 제35조" (접대비 한도 관련)
+POST {{baseUrl}}/transaction/classify
+Content-Type: application/json
+
+{
+  "description": "거래처 담당자 점심 접대 식사비 8만원"
+}
+
+###
+
+### [Fallback] 모호한 입력 — reason 일반 설명 기대
+# 기대 응답 (ExplanationService 활성 시):
+#   reason: 일반적인 분류 설명 (매핑 불가 시 기본값)
+#   legal_basis: "" (근거 불명확)
+POST {{baseUrl}}/transaction/classify
+Content-Type: application/json
+
+{
+  "description": "카드결제 승인"
 }
