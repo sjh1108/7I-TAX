@@ -45,6 +45,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
 private data class MockCard(
@@ -143,9 +144,17 @@ fun QrPaymentScreen(navController: NavController) {
             contentAlignment = Alignment.Center
         ) {
             if (selectedTab == 0) {
-                // ── QR코드 생성 ──
+                // ── QR코드 생성 (1분마다 갱신) ──
                 val card = mockCards[selectedCard]
-                val qrData = "PAY-${card.last4}-${System.currentTimeMillis() / 1000}"
+                var qrTimestamp by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
+                LaunchedEffect(selectedCard) {
+                    qrTimestamp = System.currentTimeMillis() / 1000
+                    while (true) {
+                        delay(60_000L)
+                        qrTimestamp = System.currentTimeMillis() / 1000
+                    }
+                }
+                val qrData = "PAY-${card.last4}-$qrTimestamp"
                 val qrBitmap = remember(qrData) { generateQrCode(qrData) }
 
                 if (qrBitmap != null) {
