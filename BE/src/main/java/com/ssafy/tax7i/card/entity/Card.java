@@ -1,6 +1,7 @@
 package com.ssafy.tax7i.card.entity;
 
 import com.ssafy.tax7i.auth.domain.User;
+import com.ssafy.tax7i.global.crypto.AesEncryptor;
 import com.ssafy.tax7i.global.entity.BaseTimeEntity;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
@@ -37,17 +38,41 @@ public class Card extends BaseTimeEntity {
     @Column(nullable = false)
     private boolean isDefault;
 
+    @Convert(converter = AesEncryptor.class)
+    @Column(nullable = false, length = 512)
+    private String cardNo;
+
+    @Convert(converter = AesEncryptor.class)
+    @Column(nullable = false, length = 512)
+    private String cvc;
+
     @Column(nullable = false)
-    private String ssafyAccountNo;
+    private String cardUniqueNo;
+
+    private String withdrawalAccountNo;
+
+    private String withdrawalDate;
+
+    private String cardExpiryDate;
+
+    @Column(nullable = false)
+    private boolean deleted = false;
 
     @Builder
-    public Card(User user, String cardName, CardType cardType, String last4Digits, String ssafyAccountNo) {
+    public Card(User user, String cardName, CardType cardType, String last4Digits,
+                String cardNo, String cvc, String cardUniqueNo,
+                String withdrawalAccountNo, String withdrawalDate, String cardExpiryDate) {
         this.user = user;
         this.cardName = cardName;
         this.cardType = cardType;
         this.last4Digits = last4Digits;
         this.isDefault = false;
-        this.ssafyAccountNo = ssafyAccountNo;
+        this.cardNo = cardNo;
+        this.cvc = cvc;
+        this.cardUniqueNo = cardUniqueNo;
+        this.withdrawalAccountNo = withdrawalAccountNo;
+        this.withdrawalDate = withdrawalDate;
+        this.cardExpiryDate = cardExpiryDate;
     }
 
     public void markDefault() {
@@ -55,6 +80,11 @@ public class Card extends BaseTimeEntity {
     }
 
     public void unmarkDefault() {
+        this.isDefault = false;
+    }
+
+    public void softDelete() {
+        this.deleted = true;
         this.isDefault = false;
     }
 }

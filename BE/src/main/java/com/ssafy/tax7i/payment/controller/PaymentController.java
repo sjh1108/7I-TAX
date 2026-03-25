@@ -9,9 +9,12 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.time.LocalDate;
 
@@ -72,5 +75,45 @@ public class PaymentController {
             @Valid @RequestBody QrPaymentRequest request) {
         QrPaymentResponse response = paymentService.processQrPayment(userId, request);
         return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    // ───────────── QR 토큰 결제 (MPM) ─────────────
+
+    @PostMapping("/qr/token")
+    public ResponseEntity<SuccessResponse<QrTokenCreateResponse>> createQrToken(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody QrTokenCreateRequest request) {
+        QrTokenCreateResponse response = paymentService.createQrToken(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.of(response));
+    }
+
+    @GetMapping("/qr/token/{token}")
+    public ResponseEntity<SuccessResponse<QrPaymentInfoResponse>> getQrPaymentInfo(
+            @PathVariable String token) {
+        QrPaymentInfoResponse response = paymentService.getQrPaymentInfo(token);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    @PostMapping("/qr/token/{token}/confirm")
+    public ResponseEntity<SuccessResponse<QrPaymentResponse>> confirmQrPayment(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable String token) {
+        QrPaymentResponse response = paymentService.confirmQrPayment(token);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    @GetMapping("/qr/token/{token}/status")
+    public ResponseEntity<SuccessResponse<QrPaymentStatusResponse>> getQrPaymentStatus(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable String token) {
+        QrPaymentStatusResponse response = paymentService.getQrPaymentStatus(userId, token);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    @GetMapping(value = "/qr/token/{token}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeQrPayment(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable String token) {
+        return paymentService.subscribeQrPayment(userId, token);
     }
 }

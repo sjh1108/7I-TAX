@@ -13,7 +13,7 @@ spring:
       port: 6379
 
 encryption:
-  aes-key: dGVzdC1hZXMta2V5LTMyLWJ5dGVzLWxvbmch
+  aes-key: dGVzdC1hZXMtZW5jcnlwdGlvbi1rZXktMzItYnl0ZXM=
 
 jwt:
   secret: test-secret-key-must-be-at-least-32-bytes-long!!
@@ -33,3 +33,8 @@ app:
 
 cors:
   allowed-origins: http://localhost:3000
+
+solapi:
+  api-key: test-key
+  api-secret: test-secret
+  sender-phone: "01000000000"

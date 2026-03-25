@@ -48,6 +48,12 @@ class SecureStorage @Inject constructor(
 
     fun getPhoneNumber(): String? = prefs.getString(Constants.KEY_PHONE_NUMBER, null)
 
+    fun saveUserName(name: String) {
+        prefs.edit().putString(Constants.KEY_USER_NAME, name).apply()
+    }
+
+    fun getUserName(): String? = prefs.getString(Constants.KEY_USER_NAME, null)
+
     fun setPayEnrolled(enrolled: Boolean) {
         prefs.edit().putBoolean(Constants.KEY_PAY_ENROLLED, enrolled).apply()
     }

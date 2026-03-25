@@ -158,7 +158,7 @@ class AuthViewModel @Inject constructor(
             val response = authRepository.verifyIdentity(request)
             val data = response.data ?: throw IllegalStateException("본인인증 응답이 비어 있습니다.")
 
-            authRepository.saveUserInfo(data.userId, rawPhone)
+            authRepository.saveUserInfo(data.userId, rawPhone, state.name.trim())
             _uiState.update {
                 it.copy(
                     isLoading = false,

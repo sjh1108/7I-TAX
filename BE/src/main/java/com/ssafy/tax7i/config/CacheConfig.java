@@ -30,7 +30,8 @@ public class CacheConfig {
                 "mccTaxRules", defaultConfig.entryTtl(Duration.ofHours(1)),
                 "merchants", defaultConfig.entryTtl(Duration.ofHours(1)),
                 "taxDeadlines", defaultConfig.entryTtl(Duration.ofHours(1)),
-                "entertainmentUsed", defaultConfig.entryTtl(Duration.ofMinutes(5))
+                "entertainmentUsed", defaultConfig.entryTtl(Duration.ofMinutes(5)),
+                "taxBrackets", defaultConfig.entryTtl(Duration.ofHours(24))
         );
 
         return RedisCacheManager.builder(connectionFactory)

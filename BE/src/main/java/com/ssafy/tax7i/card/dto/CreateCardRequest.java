@@ -11,6 +11,15 @@ public record CreateCardRequest(
         @NotNull(message = "카드 유형은 필수입니다.")
         CardType cardType,
 
-        @NotBlank(message = "계좌 상품 고유번호는 필수입니다.")
-        String accountTypeUniqueNo
+        @NotBlank(message = "카드 상품 고유번호는 필수입니다.")
+        String cardUniqueNo,
+
+        @NotBlank(message = "출금 계좌번호는 필수입니다.")
+        String withdrawalAccountNo,
+
+        @NotBlank(message = "결제일은 필수입니다.")
+        String withdrawalDate,
+
+        @NotBlank(message = "OTP 인증 토큰은 필수입니다.")
+        String otpToken
 ) {}
