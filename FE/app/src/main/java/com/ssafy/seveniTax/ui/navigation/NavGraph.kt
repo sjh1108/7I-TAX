@@ -342,7 +342,7 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.TaxReport.path) {
-            TaxReportScreen(navController)
+            TaxReportScreen(navController, bookEntryViewModel)
         }
 
         composable(Route.TaxSavingsDetail.path) {

@@ -22,7 +22,10 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
+import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
+import com.ssafy.seveniTax.viewmodel.EntryFilter
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -31,7 +34,7 @@ private enum class ReportTab(val label: String) {
 }
 
 @Composable
-fun TaxReportScreen(navController: NavController) {
+fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryViewModel? = null) {
     var selectedTab by remember { mutableStateOf(ReportTab.MONTHLY) }
     var selectedYear by remember { mutableIntStateOf(java.time.LocalDate.now().year) }
     var selectedMonth by remember { mutableIntStateOf(java.time.LocalDate.now().monthValue) }
@@ -104,6 +107,22 @@ fun TaxReportScreen(navController: NavController) {
                     onNext = {
                         if (selectedMonth == 12) { selectedMonth = 1; selectedYear++ }
                         else selectedMonth++
+                    },
+                    onIncomeClick = {
+                        bookEntryViewModel?.apply {
+                            selectYear(selectedYear)
+                            selectMonth(selectedMonth)
+                            selectFilter(EntryFilter.INCOME)
+                        }
+                        navController.navigate(Route.BookEntryList.path)
+                    },
+                    onExpenseClick = {
+                        bookEntryViewModel?.apply {
+                            selectYear(selectedYear)
+                            selectMonth(selectedMonth)
+                            selectFilter(EntryFilter.EXPENSE)
+                        }
+                        navController.navigate(Route.BookEntryList.path)
                     }
                 )
                 ReportTab.ANNUAL -> AnnualReport(
@@ -120,13 +139,18 @@ fun TaxReportScreen(navController: NavController) {
 // ─── 월간 리포트 ─────────────────────────────────────
 
 @Composable
-private fun MonthlyReport(year: Int, month: Int, onPrev: () -> Unit, onNext: () -> Unit) {
+private fun MonthlyReport(
+    year: Int, month: Int,
+    onPrev: () -> Unit, onNext: () -> Unit,
+    onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {}
+) {
     Spacer(Modifier.height(16.dp))
     DateNavigator(text = "${year}년 ${month}월", onPrev = onPrev, onNext = onNext)
     Spacer(Modifier.height(20.dp))
 
     // 순이익 카드
-    ReportSummaryCard("월간 순이익", 9_448_100, 10_880_000, -1_431_900)
+    ReportSummaryCard("월간 순이익", 9_448_100, 10_880_000, -1_431_900,
+        onIncomeClick = onIncomeClick, onExpenseClick = onExpenseClick)
 
     Spacer(Modifier.height(24.dp))
 
@@ -258,7 +282,10 @@ private fun DateNavigator(text: String, onPrev: () -> Unit, onNext: () -> Unit) 
 // ─── 공통 컴포넌트 ──────────────────────────────────────
 
 @Composable
-private fun ReportSummaryCard(label: String, net: Long, income: Long, expense: Long) {
+private fun ReportSummaryCard(
+    label: String, net: Long, income: Long, expense: Long,
+    onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {}
+) {
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
     Box(
         modifier = Modifier
@@ -273,10 +300,10 @@ private fun ReportSummaryCard(label: String, net: Long, income: Long, expense: L
             Text("+${fmt.format(net)}원", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple)
             Spacer(Modifier.height(12.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Box(Modifier.weight(1f).background(Color(0xFFEDF8F6), RoundedCornerShape(12.dp)).padding(12.dp)) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Color(0xFFEDF8F6)).clickable { onIncomeClick() }.padding(12.dp)) {
                     Column { Text("총 수입", fontSize = 11.sp, color = Color(0xFF7ABFB3)); Text("+${fmt.format(income)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
                 }
-                Box(Modifier.weight(1f).background(Color(0xFFFFF0F3), RoundedCornerShape(12.dp)).padding(12.dp)) {
+                Box(Modifier.weight(1f).clip(RoundedCornerShape(12.dp)).background(Color(0xFFFFF0F3)).clickable { onExpenseClick() }.padding(12.dp)) {
                     Column { Text("총 비용", fontSize = 11.sp, color = Color(0xFFFF9DAE)); Text("${fmt.format(expense)}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary) }
                 }
             }
