@@ -128,4 +128,8 @@ public class BookEntry extends BaseTimeEntity {
     public void markAsBusiness() {
         this.isBusinessExpense = true;
     }
+
+    public void updateNote(String note) {
+        this.note = (note != null && note.isBlank()) ? null : note;
+    }
 }

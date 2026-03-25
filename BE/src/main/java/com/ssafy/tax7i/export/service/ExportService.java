@@ -1,8 +1,12 @@
 package com.ssafy.tax7i.export.service;
 
+import com.ssafy.tax7i.auth.domain.User;
+import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.service.TaxEstimationService;
 import lombok.RequiredArgsConstructor;
@@ -21,13 +25,16 @@ public class ExportService {
 
     private final BookEntryRepository bookEntryRepository;
     private final TaxEstimationService taxEstimationService;
+    private final UserRepository userRepository;
 
     /**
      * 간편장부 전체 CSV (국세청 양식 기반)
      */
     public String exportBookEntriesToCsv(Long userId, int year) {
-        LocalDate start = LocalDate.of(year, 1, 1);
-        LocalDate end = LocalDate.of(year, 12, 31);
+        return exportBookEntriesToCsv(userId, LocalDate.of(year, 1, 1), LocalDate.of(year, 12, 31));
+    }
+
+    public String exportBookEntriesToCsv(Long userId, LocalDate start, LocalDate end) {
 
         StringBuilder sb = new StringBuilder();
         // BOM is added by controller // UTF-8 BOM for Excel
@@ -134,6 +141,35 @@ public class ExportService {
         sb.append("산출세액,").append(est.estimatedIncomeTax()).append('\n');
         sb.append("지방소득세,").append(est.estimatedLocalTax()).append('\n');
         sb.append("경비처리 절세효과,").append(est.taxSavingFromExpenses()).append('\n');
+
+        return sb.toString();
+    }
+
+    /**
+     * 지방소득세 요약 CSV
+     * 세법 근거: 지방세법 §92(세율 = 소득세의 1/10), §95(종소세와 동시 신고 5.1~5.31)
+     * 주의: 개인지방소득세 = "결정세액"의 10% (납부세액의 10%가 아님)
+     */
+    public String exportLocalTaxSummaryCsv(Long userId, int year) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+        TaxEstimationResponse est = taxEstimationService.estimate(userId, year);
+
+        // 지방세법 §92: 개인지방소득세 = 종합소득세 결정세액 × 10% (원 단위 절사)
+        long incomeTax = est.estimatedIncomeTax();
+        long localTax = (long) Math.floor(incomeTax * 0.1);
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("개인지방소득세 신고 요약,").append(year).append("년\n");
+        sb.append("법적근거,\"지방세법 §92(세율) §95(신고기한)\"\n\n");
+        sb.append("항목,내용\n");
+        sb.append("귀속연도,").append(year).append('\n');
+        sb.append("성명,").append(csvEscape(user.getName())).append('\n');
+        sb.append("사업자등록번호,-\n");
+        sb.append("종합소득세 결정세액,").append(incomeTax).append('\n');
+        sb.append("개인지방소득세(결정세액×10%),").append(localTax).append('\n');
+        sb.append("신고기한,").append(year + 1).append("년 5월 31일\n");
+        sb.append("납부처,납세지 관할 지방자치단체 (위택스)\n");
 
         return sb.toString();
     }
