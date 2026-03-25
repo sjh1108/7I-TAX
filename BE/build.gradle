@@ -8,6 +8,11 @@ group = 'com.ssafy'
 version = '0.0.1-SNAPSHOT'
 description = 'SSAFY 14th, 7I-Tax'
 
+// Redirect build output to ASCII-safe path to avoid ClassNotFoundException on Korean paths (local Windows only)
+if (System.getProperty('os.name')?.toLowerCase()?.contains('windows')) {
+	layout.buildDirectory = file("C:/tmp/tax7i-build")
+}
+
 java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(17)
@@ -30,14 +35,34 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation 'com.openhtmltopdf:openhtmltopdf-pdfbox:1.0.10'
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+	implementation 'io.hypersistence:hypersistence-tsid:2.1.4'
+	implementation 'com.solapi:sdk:1.1.0'
+	implementation 'io.jsonwebtoken:jjwt-api:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.12.6'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.12.6'
 	compileOnly 'org.projectlombok:lombok'
-	runtimeOnly 'com.mysql:mysql-connector-j'
+	runtimeOnly 'org.postgresql:postgresql'
 	annotationProcessor 'org.projectlombok:lombok'
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testRuntimeOnly 'com.h2database:h2'
 }
 
 tasks.named('test') {
-	useJUnitPlatform()
+	useJUnitPlatform {
+		excludeTags 'integration'
+	}
+	jvmArgs '-Dfile.encoding=UTF-8', '-Dsun.jnu.encoding=UTF-8'
+}
+
+tasks.register('integrationTest', Test) {
+	description = 'Runs integration tests against real external APIs'
+	group = 'verification'
+	shouldRunAfter tasks.named('test')
+	useJUnitPlatform {
+		includeTags 'integration'
+	}
 }
