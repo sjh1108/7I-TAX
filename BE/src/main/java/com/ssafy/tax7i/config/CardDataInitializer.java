@@ -50,7 +50,7 @@ public class CardDataInitializer implements CommandLineRunner {
 
             if (user.getSsafyUserKey() == null) {
                 try {
-                    String memberId = "tax7i-user-" + user.getId();
+                    String memberId = "tax7i-user-" + user.getId() + "@tax7i.dev";
                     String userKey = ssafyFinanceClient.getOrRegisterMember(memberId);
                     user.assignSsafyUserKey(userKey);
                     userRepository.save(user);

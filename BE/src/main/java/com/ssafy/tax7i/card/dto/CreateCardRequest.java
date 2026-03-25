@@ -18,5 +18,8 @@ public record CreateCardRequest(
         String withdrawalAccountNo,
 
         @NotBlank(message = "결제일은 필수입니다.")
-        String withdrawalDate
+        String withdrawalDate,
+
+        @NotBlank(message = "OTP 인증 토큰은 필수입니다.")
+        String otpToken
 ) {}
