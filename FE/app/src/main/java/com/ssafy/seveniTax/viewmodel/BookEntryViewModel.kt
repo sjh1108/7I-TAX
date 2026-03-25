@@ -43,8 +43,8 @@ class BookEntryViewModel @Inject constructor(
     val selectedTab: StateFlow<BookTab> = _selectedTab.asStateFlow()
 
     // 필터 설정
-    private val _filterCategory = MutableStateFlow("전체")
-    val filterCategory: StateFlow<String> = _filterCategory.asStateFlow()
+    private val _filterCategories = MutableStateFlow(setOf("전체"))
+    val filterCategories: StateFlow<Set<String>> = _filterCategories.asStateFlow()
 
     private val _filterMerchant = MutableStateFlow("")
     val filterMerchant: StateFlow<String> = _filterMerchant.asStateFlow()
@@ -198,8 +198,8 @@ class BookEntryViewModel @Inject constructor(
         _selectedTab.value = tab
     }
 
-    fun applyFilter(category: String, merchant: String, onlyReceipt: Boolean, onlyUnclassified: Boolean) {
-        _filterCategory.value = category
+    fun applyFilter(categories: Set<String>, merchant: String, onlyReceipt: Boolean, onlyUnclassified: Boolean) {
+        _filterCategories.value = categories
         _filterMerchant.value = merchant
         _filterOnlyWithReceipt.value = onlyReceipt
         _filterOnlyUnclassified.value = onlyUnclassified
@@ -213,7 +213,7 @@ class BookEntryViewModel @Inject constructor(
     }
 
     fun resetFilter() {
-        _filterCategory.value = "전체"
+        _filterCategories.value = setOf("전체")
         _filterMerchant.value = ""
         _filterOnlyWithReceipt.value = false
         _filterOnlyUnclassified.value = false
@@ -242,9 +242,9 @@ class BookEntryViewModel @Inject constructor(
         }
 
         // 계정과목 필터
-        val cat = _filterCategory.value
-        if (cat != "전체") {
-            result = result.filter { it.categoryName == cat }
+        val cats = _filterCategories.value
+        if (!cats.contains("전체")) {
+            result = result.filter { it.categoryName in cats }
         }
 
         // 거래처 검색
