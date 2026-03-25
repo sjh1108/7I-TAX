@@ -93,6 +93,36 @@ class TestLegalParserSplitIntoArticles:
         articles = self.parser._split_into_articles("")
         assert articles == []
 
+    def test_article_alt_splits_article_and_sub(self):
+        """'제14조의2' 파싱 시 article=14, article_sub=2로 분리된다."""
+        text = "제14조의2(세액공제의 특례)\n특례 내용."
+        articles = self.parser._split_into_articles(text)
+        assert len(articles) == 1
+        assert articles[0]["article"] == 14
+        assert articles[0]["article_sub"] == 2
+        assert articles[0]["article_title"] == "세액공제의 특례"
+
+    def test_article_alt_does_not_collide_with_regular_article(self):
+        """'제14조의2'와 '제142조'가 서로 다른 article로 분리된다."""
+        text = (
+            "제14조의2(세액공제의 특례)\n특례 내용.\n"
+            "제142조(가산세)\n가산세 내용."
+        )
+        articles = self.parser._split_into_articles(text)
+        assert len(articles) == 2
+        # 제14조의2
+        assert articles[0]["article"] == 14
+        assert articles[0]["article_sub"] == 2
+        # 제142조
+        assert articles[1]["article"] == 142
+        assert articles[1]["article_sub"] is None
+
+    def test_regular_article_has_no_sub(self):
+        """일반 조문은 article_sub가 None이다."""
+        text = "제14조(과세표준의 계산)\n내용."
+        articles = self.parser._split_into_articles(text)
+        assert articles[0]["article_sub"] is None
+
 
 class TestLegalParserSplitByParagraph:
     def setup_method(self):
@@ -152,6 +182,41 @@ class TestLegalParserParse:
         # 항 번호가 메타데이터에 있어야 함
         paragraphs_with_num = [c for c in result if c.metadata.get("paragraph") is not None]
         assert len(paragraphs_with_num) >= 2
+
+    def test_article_alt_chunk_id_format(self):
+        """article_alt chunk_id는 '{law_name}_{article}_sub{article_sub}' 형식이다."""
+        text = "제14조의2(세액공제의 특례)\n특례 내용."
+        result = self.parser.parse(text, "소득세법", "법률", "소득세")
+        assert result[0].metadata["chunk_id"] == "소득세법_14_sub2"
+        assert result[0].metadata["article"] == 14
+        assert result[0].metadata["article_sub"] == 2
+
+    def test_article_alt_chunk_id_no_collision(self):
+        """'제14조의2'와 '제142조'의 chunk_id가 충돌하지 않는다."""
+        text = (
+            "제14조의2(세액공제의 특례)\n특례 내용.\n"
+            "제142조(가산세)\n가산세 내용."
+        )
+        result = self.parser.parse(text, "소득세법", "법률", "소득세")
+        chunk_ids = [c.metadata["chunk_id"] for c in result]
+        assert "소득세법_14_sub2" in chunk_ids
+        assert "소득세법_142" in chunk_ids
+        assert len(chunk_ids) == len(set(chunk_ids)), "chunk_id가 중복됩니다"
+
+    def test_article_alt_long_splits_with_sub_in_chunk_id(self):
+        """article_alt 조문이 항 단위 분할될 때도 chunk_id에 sub가 포함된다."""
+        long_content = "① " + "가" * 800 + "\n② " + "나" * 800
+        text = f"제14조의2(세액공제의 특례)\n{long_content}"
+        result = self.parser.parse(text, "소득세법", "법률", "소득세")
+        assert len(result) >= 2
+        for chunk in result:
+            assert chunk.metadata["chunk_id"].startswith("소득세법_14_sub2_")
+
+    def test_regular_article_has_article_sub_none(self):
+        """일반 조문의 metadata에서 article_sub는 None이다."""
+        text = "제14조(과세표준의 계산)\n내용."
+        result = self.parser.parse(text, "소득세법", "법률", "소득세")
+        assert result[0].metadata["article_sub"] is None
 
     def test_empty_text_returns_empty_list(self):
         """빈 텍스트는 빈 리스트를 반환한다."""

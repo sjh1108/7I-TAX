@@ -60,15 +60,25 @@ class LegalParser:
 
         for art in articles:
             content = art["content"]
+            article_sub = art.get("article_sub")
+            article_id = (
+                f"{art['article']}_sub{article_sub}"
+                if article_sub is not None
+                else str(art["article"])
+            )
             base_metadata = {
                 "law_name": law_name,
                 "law_type": law_type,
                 "tax_type": tax_type,
                 "article": art["article"],
+                "article_sub": article_sub,
                 "article_title": art["article_title"],
                 "part": art.get("part"),
+                "part_title": art.get("part_title", ""),
                 "chapter": art.get("chapter"),
+                "chapter_title": art.get("chapter_title", ""),
                 "section": art.get("section"),
+                "section_title": art.get("section_title", ""),
                 "paragraph": None,
                 "topics": self._extract_topics(art["article_title"], content),
             }
@@ -78,13 +88,13 @@ class LegalParser:
                     for para_text, para_num in paragraphs:
                         meta = dict(base_metadata)
                         meta["paragraph"] = para_num
-                        meta["chunk_id"] = f"{law_name}_{art['article']}_{para_num}"
+                        meta["chunk_id"] = f"{law_name}_{article_id}_{para_num}"
                         chunks.append(LegalChunk(content=para_text, metadata=meta))
                 else:
-                    base_metadata["chunk_id"] = f"{law_name}_{art['article']}"
+                    base_metadata["chunk_id"] = f"{law_name}_{article_id}"
                     chunks.append(LegalChunk(content=content, metadata=base_metadata))
             else:
-                base_metadata["chunk_id"] = f"{law_name}_{art['article']}"
+                base_metadata["chunk_id"] = f"{law_name}_{article_id}"
                 chunks.append(LegalChunk(content=content, metadata=base_metadata))
 
         return chunks
@@ -94,9 +104,13 @@ class LegalParser:
         lines = text.split("\n")
 
         current_part: int | None = None
+        current_part_title: str = ""
         current_chapter: int | None = None
+        current_chapter_title: str = ""
         current_section: int | None = None
+        current_section_title: str = ""
         current_article: int | None = None
+        current_article_sub: int | None = None
         current_article_title: str = ""
         current_lines: list[str] = []
         articles: list[dict] = []
@@ -105,10 +119,14 @@ class LegalParser:
             if current_article is not None and current_lines:
                 articles.append({
                     "article": current_article,
+                    "article_sub": current_article_sub,
                     "article_title": current_article_title,
                     "part": current_part,
+                    "part_title": current_part_title,
                     "chapter": current_chapter,
+                    "chapter_title": current_chapter_title,
                     "section": current_section,
+                    "section_title": current_section_title,
                     "content": "\n".join(current_lines).strip(),
                 })
 
@@ -123,28 +141,35 @@ class LegalParser:
             m = LEGAL_PATTERNS["part"].match(stripped)
             if m:
                 current_part = int(m.group(1))
+                current_part_title = m.group(2).strip()
                 current_chapter = None
+                current_chapter_title = ""
                 current_section = None
+                current_section_title = ""
                 continue
 
             # 장
             m = LEGAL_PATTERNS["chapter"].match(stripped)
             if m:
                 current_chapter = int(m.group(1))
+                current_chapter_title = m.group(2).strip()
                 current_section = None
+                current_section_title = ""
                 continue
 
             # 절
             m = LEGAL_PATTERNS["section"].match(stripped)
             if m:
                 current_section = int(m.group(1))
+                current_section_title = m.group(2).strip()
                 continue
 
             # 조의N (article_alt 먼저)
             m = LEGAL_PATTERNS["article_alt"].match(stripped)
             if m:
                 flush()
-                current_article = int(f"{m.group(1)}{m.group(2)}")  # 예: 14의2 -> 142 (단순 처리)
+                current_article = int(m.group(1))
+                current_article_sub = int(m.group(2))
                 current_article_title = m.group(3)
                 current_lines = [stripped]
                 continue
@@ -154,6 +179,7 @@ class LegalParser:
             if m:
                 flush()
                 current_article = int(m.group(1))
+                current_article_sub = None
                 current_article_title = m.group(2)
                 current_lines = [stripped]
                 continue
