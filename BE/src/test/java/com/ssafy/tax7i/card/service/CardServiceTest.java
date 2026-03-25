@@ -2,16 +2,16 @@ package com.ssafy.tax7i.card.service;
 
 import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
+import com.ssafy.tax7i.banking.client.SsafyCreditCardClient;
 import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.*;
 import com.ssafy.tax7i.card.dto.*;
 import com.ssafy.tax7i.card.entity.Card;
-import com.ssafy.tax7i.card.entity.CardTransactionType;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
-import com.ssafy.tax7i.card.repository.CardTransactionRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.sms.service.SmsOtpService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -31,9 +32,10 @@ import static org.mockito.Mockito.verify;
 class CardServiceTest {
 
     @Mock private CardRepository cardRepository;
-    @Mock private CardTransactionRepository cardTransactionRepository;
     @Mock private UserRepository userRepository;
+    @Mock private SsafyCreditCardClient ssafyCreditCardClient;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
+    @Mock private SmsOtpService smsOtpService;
 
     @InjectMocks
     private CardService cardService;
@@ -44,20 +46,20 @@ class CardServiceTest {
     void createCard_성공() {
         User user = createUser(1L, "user-key");
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(ssafyFinanceClient.createAccount("user-key", "001-1-xxx"))
-                .willReturn(createAccountResponse("9876543210"));
+        given(ssafyCreditCardClient.createCreditCard("user-key", "1003-xxx", "0123456789012345", "4"))
+                .willReturn(createCreditCardResponse());
         given(cardRepository.save(any(Card.class))).willAnswer(invocation -> {
             Card c = invocation.getArgument(0);
             setField(c, "id", 1L);
             return c;
         });
 
-        CreateCardRequest request = new CreateCardRequest("사업용 카드", CardType.BUSINESS, "001-1-xxx");
+        CreateCardRequest request = new CreateCardRequest("사업용 카드", CardType.BUSINESS, "1003-xxx", "0123456789012345", "4", "test-otp-token");
         CardResponse response = cardService.createCard(1L, request);
 
         assertThat(response.cardName()).isEqualTo("사업용 카드");
         assertThat(response.cardType()).isEqualTo(CardType.BUSINESS);
-        assertThat(response.last4Digits()).isEqualTo("3210");
+        assertThat(response.last4Digits()).isEqualTo("6479");
     }
 
     // ───────────── setDefaultCard ─────────────
@@ -65,12 +67,12 @@ class CardServiceTest {
     @Test
     void setDefaultCard_성공() {
         User user = createUser(1L, "user-key");
-        Card oldDefault = createCard(2L, user, "1111111111");
+        Card oldDefault = createCard(2L, user);
         setField(oldDefault, "isDefault", true);
-        Card newDefault = createCard(1L, user, "2222222222");
+        Card newDefault = createCard(1L, user);
 
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(newDefault));
-        given(cardRepository.findByUser_IdAndIsDefaultTrue(1L)).willReturn(Optional.of(oldDefault));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(newDefault));
+        given(cardRepository.findByUser_IdAndIsDefaultTrueAndDeletedFalse(1L)).willReturn(Optional.of(oldDefault));
 
         CardResponse response = cardService.setDefaultCard(1L, 1L);
 
@@ -78,51 +80,48 @@ class CardServiceTest {
         assertThat(oldDefault.isDefault()).isFalse();
     }
 
-    // ───────────── deposit ─────────────
+    // ───────────── payment ─────────────
 
     @Test
-    void deposit_성공() {
+    void payment_성공() {
         User user = createUser(1L, "user-key");
-        Card card = createCard(1L, user, "1234567890");
+        Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
-        given(ssafyFinanceClient.withdraw("user-key", "9999999999", 50000L, "카드 충전"))
-                .willReturn(withdrawResponse("450000"));
-        given(ssafyFinanceClient.deposit("user-key", "1234567890", 50000L, "카드 충전"))
-                .willReturn(depositResponse("150000"));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
+        given(ssafyCreditCardClient.createTransaction("user-key", "1005518816096479", "725", 1L, 50000L))
+                .willReturn(createTransactionResponse());
 
-        CardDepositRequest request = new CardDepositRequest(50000L, "9999999999");
-        CardDepositResponse response = cardService.deposit(1L, 1L, request);
+        CardPaymentRequest request = new CardPaymentRequest(1L, 50000L);
+        CardPaymentResponse response = cardService.payment(1L, 1L, request);
 
-        assertThat(response.depositAmount()).isEqualTo(50000L);
-        assertThat(response.balance()).isEqualTo(150000L);
-        verify(cardTransactionRepository).save(any());
+        assertThat(response.paymentBalance()).isEqualTo(50000L);
+        assertThat(response.cardId()).isEqualTo(1L);
     }
 
-    // ───────────── getBalance ─────────────
+    // ───────────── getTransactions ─────────────
 
     @Test
-    void getBalance_성공() {
+    void getTransactions_성공() {
         User user = createUser(1L, "user-key");
-        Card card = createCard(1L, user, "1234567890");
+        Card card = createCard(1L, user);
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
-        given(ssafyFinanceClient.getBalance("user-key", "1234567890"))
-                .willReturn(balanceResponse("500000"));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
+        given(ssafyCreditCardClient.getTransactionHistory("user-key", "1005518816096479", "725", "20260301", "20260331"))
+                .willReturn(createTransactionListResponse());
 
-        CardBalanceResponse response = cardService.getBalance(1L, 1L);
+        List<CardTransactionResponse> response = cardService.getTransactions(1L, 1L, "20260301", "20260331");
 
-        assertThat(response.balance()).isEqualTo(500000L);
-        assertThat(response.cardName()).isEqualTo("테스트 카드");
+        assertThat(response).hasSize(1);
+        assertThat(response.get(0).paymentBalance()).isEqualTo(50000L);
     }
 
     // ───────────── getCardWithOwnership ─────────────
 
     @Test
     void getCard_소유권불일치_예외() {
-        given(cardRepository.findByIdAndUser_Id(99L, 1L)).willReturn(Optional.empty());
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(99L, 1L)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> cardService.getCard(1L, 99L))
                 .isInstanceOf(BusinessException.class)
@@ -135,13 +134,13 @@ class CardServiceTest {
     @Test
     void deleteCard_성공() {
         User user = createUser(1L, "user-key");
-        Card card = createCard(1L, user, "1234567890");
+        Card card = createCard(1L, user);
 
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
 
         cardService.deleteCard(1L, 1L);
 
-        verify(cardRepository).delete(card);
+        assertThat(card.isDeleted()).isTrue();
     }
 
     // ───────────── helpers ─────────────
@@ -155,49 +154,57 @@ class CardServiceTest {
                 .gender("M")
                 .phoneNumber("01012345678")
                 .phoneLast4("5678")
+                .ssafyUserKey(userKey)
                 .build();
         setField(user, "id", id);
-        user.registerFinanceKey(userKey);
         return user;
     }
 
-    private Card createCard(Long id, User user, String accountNo) {
+    private Card createCard(Long id, User user) {
         Card card = Card.builder()
                 .user(user)
                 .cardName("테스트 카드")
                 .cardType(CardType.BUSINESS)
-                .last4Digits("7890")
-                .ssafyAccountNo(accountNo)
+                .last4Digits("6479")
+                .cardNo("1005518816096479")
+                .cvc("725")
+                .cardUniqueNo("1003-xxx")
+                .withdrawalAccountNo("0123456789012345")
+                .withdrawalDate("4")
+                .cardExpiryDate("20290401")
                 .build();
         setField(card, "id", id);
         return card;
     }
 
-    private SsafyCreateAccountResponse createAccountResponse(String accountNo) {
-        return new SsafyCreateAccountResponse(
+    private SsafyCreateCreditCardResponse createCreditCardResponse() {
+        return new SsafyCreateCreditCardResponse(
                 successHeader(),
-                new SsafyCreateAccountResponse.AccountRec("001", accountNo)
+                new SsafyCreateCreditCardResponse.CreditCardRec(
+                        "1005518816096479", "725", "1003-xxx", "1003", "삼성카드",
+                        "테스트 카드", "700000", "130000", "테스트 카드 설명",
+                        "20290401", "0123456789012345", "4"
+                )
         );
     }
 
-    private SsafyBalanceResponse balanceResponse(String balance) {
-        return new SsafyBalanceResponse(
+    private SsafyCreditCardTransactionResponse createTransactionResponse() {
+        return new SsafyCreditCardTransactionResponse(
                 successHeader(),
-                new SsafyBalanceResponse.BalanceRec("001", "1234567890", balance, "20260320")
+                new SsafyCreditCardTransactionResponse.TransactionRec(
+                        1L, "1005518816096479", 1L, "스타벅스", "CG-001", "카페",
+                        50000L, "20260320", "120000", "COMPLETED"
+                )
         );
     }
 
-    private SsafyWithdrawResponse withdrawResponse(String remainingBalance) {
-        return new SsafyWithdrawResponse(
+    private SsafyCreditCardTransactionListResponse createTransactionListResponse() {
+        return new SsafyCreditCardTransactionListResponse(
                 successHeader(),
-                new SsafyWithdrawResponse.WithdrawRec("TX001", "9999999999", "20260320", "50000", remainingBalance)
-        );
-    }
-
-    private SsafyDepositResponse depositResponse(String balance) {
-        return new SsafyDepositResponse(
-                successHeader(),
-                new SsafyDepositResponse.DepositRec("TX002", "1234567890", "20260320", "50000", balance)
+                List.of(new SsafyCreditCardTransactionListResponse.TransactionRec(
+                        1L, "20260320", "120000", "1005518816096479", 1L, "스타벅스",
+                        "CG-001", "카페", 50000L, "COMPLETED"
+                ))
         );
     }
 

@@ -66,6 +66,58 @@ public class SsafyFinanceClient {
         }
     }
 
+    public String searchMember(String userId) {
+        SsafyMemberRequest request = new SsafyMemberRequest(properties.apiKey(), userId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Object> entity = new HttpEntity<>(request, headers);
+
+        try {
+            SsafyMemberResponse response = restTemplate.postForObject(
+                    getMemberBaseUrl() + "search", entity, SsafyMemberResponse.class);
+            if (response == null) {
+                return null;
+            }
+            return response.userKey();
+        } catch (RestClientException e) {
+            log.warn("SSAFY 멤버 조회 실패 (미등록일 수 있음): {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public String registerMember(String userId) {
+        SsafyMemberRequest request = new SsafyMemberRequest(properties.apiKey(), userId);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<Object> entity = new HttpEntity<>(request, headers);
+
+        try {
+            SsafyMemberResponse response = restTemplate.postForObject(
+                    getMemberBaseUrl(), entity, SsafyMemberResponse.class);
+            if (response == null || response.userKey() == null) {
+                throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE, "SSAFY 멤버 등록 응답이 비어있습니다.");
+            }
+            return response.userKey();
+        } catch (BusinessException e) {
+            throw e;
+        } catch (RestClientException e) {
+            log.error("SSAFY 멤버 등록 API 호출 실패: {}", e.getMessage());
+            throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE);
+        }
+    }
+
+    public String getOrRegisterMember(String userId) {
+        String userKey = searchMember(userId);
+        if (userKey != null) {
+            return userKey;
+        }
+        return registerMember(userId);
+    }
+
+    private String getMemberBaseUrl() {
+        return properties.baseUrl().replace("/edu", "") + "/member/";
+    }
+
     public SsafyTransactionHistoryResponse getTransactionHistory(String userKey, String accountNo,
                                                                   String startDate, String endDate) {
         SsafyCommonHeader header = headerBuilder.build("inquireTransactionHistoryList", userKey);

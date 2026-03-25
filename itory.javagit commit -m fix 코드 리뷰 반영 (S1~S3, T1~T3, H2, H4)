@@ -1,0 +1,7 @@
+warning: in the working copy of 'BE/src/main/java/com/ssafy/tax7i/card/entity/Card.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'BE/src/main/java/com/ssafy/tax7i/payment/service/PaymentService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'BE/src/main/java/com/ssafy/tax7i/tax/service/TaxCalculationEngine.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'BE/src/main/java/com/ssafy/tax7i/tax/service/TaxSavingService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'BE/src/main/java/com/ssafy/tax7i/tax/service/VatReturnService.java', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'api-tester.html', LF will be replaced by CRLF the next time Git touches it
+warning: in the working copy of 'ev.md', LF will be replaced by CRLF the next time Git touches it

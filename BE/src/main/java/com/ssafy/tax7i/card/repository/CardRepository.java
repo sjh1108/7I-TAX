@@ -8,9 +8,9 @@ import java.util.Optional;
 
 public interface CardRepository extends JpaRepository<Card, Long> {
 
-    Optional<Card> findByIdAndUser_Id(Long id, Long userId);
+    Optional<Card> findByIdAndUser_IdAndDeletedFalse(Long id, Long userId);
 
-    List<Card> findByUser_Id(Long userId);
+    List<Card> findByUser_IdAndDeletedFalse(Long userId);
 
-    Optional<Card> findByUser_IdAndIsDefaultTrue(Long userId);
+    Optional<Card> findByUser_IdAndIsDefaultTrueAndDeletedFalse(Long userId);
 }

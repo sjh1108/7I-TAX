@@ -13,10 +13,9 @@ public record QrPaymentResponse(
         Long amount,
         PaymentStatus status,
         PaymentPurpose purpose,
-        Long remainingBalance,
         LocalDateTime capturedAt
 ) {
-    public static QrPaymentResponse of(Payment payment, long remainingBalance) {
+    public static QrPaymentResponse of(Payment payment) {
         return new QrPaymentResponse(
                 payment.getId(),
                 payment.getAuthorizationCode(),
@@ -24,7 +23,6 @@ public record QrPaymentResponse(
                 payment.getAmount(),
                 payment.getStatus(),
                 payment.getPurpose(),
-                remainingBalance,
                 payment.getCapturedAt()
         );
     }

@@ -3,6 +3,8 @@ package com.ssafy.tax7i.bookentry.service;
 import com.ssafy.tax7i.bookentry.dto.BookEntryCategoryUpdateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryCreateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryResponse;
+import com.ssafy.tax7i.bookentry.dto.BookEntrySummaryResponse;
+import com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest;
 import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
@@ -15,6 +17,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDate;
+import java.util.List;
 
 @Slf4j
 @Service
@@ -137,6 +142,71 @@ public class BookEntryService {
         entry.markAsBusiness();
         log.info("사업경비 복원: id={}, userId={}", entryId, userId);
         return BookEntryResponse.from(entry);
+    }
+
+    @CacheEvict(value = "entertainmentUsed", key = "#userId")
+    @Transactional
+    public BookEntryResponse createIncome(Long userId, IncomeCreateRequest request) {
+        long amount = request.amount();
+        long withholdingTax = 0L;
+
+        if (request.withholdingRate() != null && request.withholdingRate() > 0) {
+            withholdingTax = Math.round(amount * request.withholdingRate() / 100.0);
+        }
+
+        long supplyPrice = amount;
+        long vatAmount = 0L;
+
+        BookEntry entry = BookEntry.builder()
+                .userId(userId)
+                .entryDate(request.transactionDate())
+                .description(request.description())
+                .entryType(EntryType.INCOME)
+                .incomeAmount(supplyPrice)
+                .expenseAmount(0L)
+                .fixedAssetAmount(0L)
+                .vatAmount(vatAmount)
+                .supplyPrice(supplyPrice)
+                .isVatDeductible(false)
+                .note(request.note())
+                .build();
+
+        BookEntry saved = bookEntryRepository.save(entry);
+        log.info("수입 등록: id={}, userId={}, amount={}, withholdingTax={}",
+                saved.getId(), userId, amount, withholdingTax);
+        return BookEntryResponse.from(saved);
+    }
+
+    public BookEntrySummaryResponse getSummary(Long userId, int year) {
+        LocalDate start = LocalDate.of(year, 1, 1);
+        LocalDate end = LocalDate.of(year, 12, 31);
+
+        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
+        Object[] aggregate = rawAgg;
+        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) aggregate = (Object[]) rawAgg[0];
+        long totalIncome = aggregate != null && aggregate.length > 0 && aggregate[0] != null ? ((Number) aggregate[0]).longValue() : 0L;
+        long totalExpense = aggregate != null && aggregate.length > 1 && aggregate[1] != null ? ((Number) aggregate[1]).longValue() : 0L;
+
+        List<Object[]> monthlyData = bookEntryRepository.sumByMonthAndYear(userId, year);
+        List<BookEntrySummaryResponse.MonthSummary> byMonth = monthlyData.stream()
+                .map(row -> new BookEntrySummaryResponse.MonthSummary(
+                        ((Number) row[0]).intValue(),
+                        ((Number) row[1]).longValue(),
+                        ((Number) row[2]).longValue()
+                ))
+                .toList();
+
+        List<Object[]> categoryData = bookEntryRepository.sumExpenseByCategoryAndYear(userId, year);
+        List<BookEntrySummaryResponse.CategorySummary> byCategory = categoryData.stream()
+                .map(row -> new BookEntrySummaryResponse.CategorySummary(
+                        (String) row[0],
+                        (String) row[1],
+                        ((Number) row[2]).longValue(),
+                        ((Number) row[3]).longValue()
+                ))
+                .toList();
+
+        return new BookEntrySummaryResponse(year, totalIncome, totalExpense, byMonth, byCategory);
     }
 
     private BookEntry findByIdAndUserId(Long entryId, Long userId) {

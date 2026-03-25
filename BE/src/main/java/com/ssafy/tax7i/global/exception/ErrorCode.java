@@ -46,9 +46,16 @@ public enum ErrorCode {
     CONFLICT(HttpStatus.CONFLICT, "리소스 충돌이 발생했습니다."),
     DUPLICATE_BOOK_ENTRY(HttpStatus.CONFLICT, "이미 장부가 생성된 결제입니다."), // 동일 paymentId 중복 장부 방지
     ALREADY_CONFIRMED(HttpStatus.CONFLICT, "이미 확인된 전표입니다."), // 확인 완료된 전표 재확인 방지
+    TAX_ALREADY_SUBMITTED(HttpStatus.CONFLICT, "이미 제출된 신고서입니다."),
+    TAX_ALREADY_PAID(HttpStatus.CONFLICT, "이미 납부 완료된 세금입니다."),
+    TAX_NATIONAL_FIRST(HttpStatus.BAD_REQUEST, "국세 납부를 먼저 완료해주세요."),
+    TAX_RETURN_NOT_FOUND(HttpStatus.NOT_FOUND, "신고서를 찾을 수 없습니다."),
 
     // 402 Payment Required
     PAYMENT_DECLINED(HttpStatus.valueOf(402), "결제가 거절되었습니다."),
+
+    // 410 Gone
+    QR_TOKEN_EXPIRED(HttpStatus.valueOf(410), "QR 결제 토큰이 만료되었습니다."),
 
     // 404 Not Found
     PAYMENT_NOT_FOUND(HttpStatus.NOT_FOUND, "결제를 찾을 수 없습니다."),
@@ -58,6 +65,17 @@ public enum ErrorCode {
 
     // 500 Internal Server Error
     INTERNAL_SERVER_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 내부 오류가 발생했습니다."),
+
+    // 400 Bad Request (OTP)
+    OTP_EXPIRED(HttpStatus.BAD_REQUEST, "인증번호가 만료되었습니다."),
+    OTP_INVALID(HttpStatus.BAD_REQUEST, "인증번호가 올바르지 않습니다."),
+    OTP_ATTEMPTS_EXCEEDED(HttpStatus.BAD_REQUEST, "인증번호 입력 횟수를 초과했습니다."),
+
+    // 401 Unauthorized (OTP Token)
+    OTP_TOKEN_INVALID(HttpStatus.UNAUTHORIZED, "OTP 인증 토큰이 유효하지 않습니다."),
+
+    // 429 Too Many Requests
+    OTP_SEND_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 발송 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
 
     // 503 Service Unavailable
     BANK_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "은행 연동 서비스가 일시적으로 불가합니다.");

@@ -57,9 +57,9 @@ class TransferServiceTest {
         Card receiverCard = createCard(2L, receiver, "2222222222");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(sender));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(senderCard));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(senderCard));
         given(userRepository.findById(2L)).willReturn(Optional.of(receiver));
-        given(cardRepository.findByUser_IdAndIsDefaultTrue(2L)).willReturn(Optional.of(receiverCard));
+        given(cardRepository.findByUser_IdAndIsDefaultTrueAndDeletedFalse(2L)).willReturn(Optional.of(receiverCard));
 
         SsafyTransferResult transferResult = new SsafyTransferResult(
                 new SsafyWithdrawResponse(successHeader(),
@@ -106,7 +106,7 @@ class TransferServiceTest {
         User sender = createUser(1L, "sender-key");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(sender));
-        given(cardRepository.findByIdAndUser_Id(99L, 1L)).willReturn(Optional.empty());
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(99L, 1L)).willReturn(Optional.empty());
 
         P2pTransferRequest request = new P2pTransferRequest(99L, 2L, 10000L, "송금");
 
@@ -124,7 +124,7 @@ class TransferServiceTest {
         Card card = createCard(1L, user, "1234567890");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(1L, 1L)).willReturn(Optional.of(card));
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
 
         SsafyWithdrawResponse withdrawResponse = new SsafyWithdrawResponse(
                 successHeader(),
@@ -154,7 +154,7 @@ class TransferServiceTest {
         User user = createUser(1L, "user-key");
 
         given(userRepository.findById(1L)).willReturn(Optional.of(user));
-        given(cardRepository.findByIdAndUser_Id(99L, 1L)).willReturn(Optional.empty());
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(99L, 1L)).willReturn(Optional.empty());
 
         WithdrawRequest request = new WithdrawRequest(99L, "9876543210", 50000L, "출금");
 
@@ -212,19 +212,24 @@ class TransferServiceTest {
                 .gender("M")
                 .phoneNumber("01012345678")
                 .phoneLast4("5678")
+                .ssafyUserKey(userKey)
                 .build();
         setField(user, "id", id);
-        user.registerFinanceKey(userKey);
         return user;
     }
 
-    private Card createCard(Long id, User user, String accountNo) {
+    private Card createCard(Long id, User user, String withdrawalAccountNo) {
         Card card = Card.builder()
                 .user(user)
                 .cardName("테스트 카드")
                 .cardType(CardType.BUSINESS)
                 .last4Digits("7890")
-                .ssafyAccountNo(accountNo)
+                .cardNo("1005518816097890")
+                .cvc("725")
+                .cardUniqueNo("1003-xxx")
+                .withdrawalAccountNo(withdrawalAccountNo)
+                .withdrawalDate("4")
+                .cardExpiryDate("20290401")
                 .build();
         setField(card, "id", id);
         return card;

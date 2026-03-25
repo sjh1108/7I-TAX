@@ -3,6 +3,8 @@ package com.ssafy.tax7i.bookentry.controller;
 import com.ssafy.tax7i.bookentry.dto.BookEntryCategoryUpdateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryCreateRequest;
 import com.ssafy.tax7i.bookentry.dto.BookEntryResponse;
+import com.ssafy.tax7i.bookentry.dto.BookEntrySummaryResponse;
+import com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest;
 import com.ssafy.tax7i.bookentry.service.BookEntryService;
 import com.ssafy.tax7i.global.response.SuccessResponse;
 import jakarta.validation.Valid;
@@ -29,6 +31,22 @@ public class BookEntryController {
             @Valid @RequestBody BookEntryCreateRequest request) {
         BookEntryResponse response = bookEntryService.create(userId, request);
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.of(response));
+    }
+
+    @PostMapping("/income")
+    public ResponseEntity<SuccessResponse<BookEntryResponse>> createIncome(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody IncomeCreateRequest request) {
+        BookEntryResponse response = bookEntryService.createIncome(userId, request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.of(response));
+    }
+
+    @GetMapping("/summary")
+    public ResponseEntity<SuccessResponse<BookEntrySummaryResponse>> getSummary(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam int year) {
+        BookEntrySummaryResponse response = bookEntryService.getSummary(userId, year);
+        return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
     @GetMapping

@@ -39,15 +39,22 @@ public class TaxEstimationService {
         LocalDate end = LocalDate.of(year, 12, 31);
 
         // DB 집계 쿼리로 전체 데이터 로드 없이 합산
-        Object[] agg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        long totalIncome = ((Number) agg[0]).longValue();
-        long totalExpense = ((Number) agg[1]).longValue();
-        long totalAssetPurchase = ((Number) agg[2]).longValue();
-        long deductibleExpenses = ((Number) agg[3]).longValue();
+        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
+        // JPA may return Object[] directly or wrap in Object[][] depending on result
+        Object[] agg = rawAgg;
+        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) {
+            agg = (Object[]) rawAgg[0];
+        }
+        long totalIncome = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
+        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
+        long totalAssetPurchase = agg != null && agg.length > 2 && agg[2] != null ? ((Number) agg[2]).longValue() : 0L;
+        long deductibleExpenses = agg != null && agg.length > 3 && agg[3] != null ? ((Number) agg[3]).longValue() : 0L;
 
         // 부가세: 매출세액 - 매입세액
-        long salesVat = bookEntryRepository.sumSalesVat(userId, start, end);
-        long purchaseVat = bookEntryRepository.sumDeductiblePurchaseVat(userId, start, end);
+        Long salesVatRaw = bookEntryRepository.sumSalesVat(userId, start, end);
+        Long purchaseVatRaw = bookEntryRepository.sumDeductiblePurchaseVat(userId, start, end);
+        long salesVat = salesVatRaw != null ? salesVatRaw : 0L;
+        long purchaseVat = purchaseVatRaw != null ? purchaseVatRaw : 0L;
         long estimatedVat = Math.max(0, salesVat - purchaseVat);
 
         // 종합소득세: 과세표준 = 수입 - 필요경비
