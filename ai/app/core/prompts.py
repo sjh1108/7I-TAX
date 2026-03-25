@@ -85,6 +85,38 @@ INTENT_PROMPTS = {
 }
 
 
+# 세목 분류 설명 생성 프롬프트 (temperature=0.3 권장)
+CLASSIFY_EXPLANATION_PROMPT = """당신은 한국 세금 전문가입니다.
+아래 거래 내역이 '{category}' 세목으로 분류되었습니다.
+
+세목 설명: {description}
+
+참고 법률 자료:
+{context}
+
+위 정보를 바탕으로, 이 거래가 해당 세목으로 분류된 이유와 관련 법률 근거를 JSON 형식으로 답변하세요.
+
+응답 형식 (JSON만 출력):
+{{"reason": "분류 이유를 1~2문장으로 설명", "legal_basis": "법률명 제N조 제N항"}}"""
+
+
+CONTEXT_INSTRUCTIONS = {
+    "with_context": (
+        "\n\n답변 규칙:\n"
+        "1. 반드시 위 참고 자료에 근거하여 답변하세요.\n"
+        "2. 참고 자료의 법률 조항(법률명, 조, 항)을 인용하세요.\n"
+        "3. 참고 자료에 없는 내용은 추측하지 마세요."
+    ),
+    "without_context": (
+        "\n\n답변 규칙:\n"
+        "1. 검색된 참고 자료가 질문과 관련이 없거나 부족합니다.\n"
+        "2. 일반적인 세법 지식을 기반으로 답변하되, "
+        "'참고 자료에 직접적인 근거가 없어 일반 지식으로 답변합니다'라고 명시하세요.\n"
+        "3. 정확한 조문이나 수치는 세무사 상담을 권고하세요."
+    ),
+}
+
+
 def build_intent_prompt(
     intent_name: str,
     context: str = "",
@@ -102,8 +134,15 @@ def build_intent_prompt(
     출력: str (최종 시스템 프롬프트)
     """
     template = INTENT_PROMPTS.get(intent_name, INTENT_PROMPTS["GENERAL"])
-    return template.format(
+    prompt = template.format(
         context=context or "(관련 자료 없음)",
         user_transactions=user_transactions,
         user_data=user_data,
     )
+
+    if context and context != "(관련 자료 없음)":
+        prompt += CONTEXT_INSTRUCTIONS["with_context"]
+    else:
+        prompt += CONTEXT_INSTRUCTIONS["without_context"]
+
+    return prompt

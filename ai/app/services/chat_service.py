@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 from app.core.prompts import build_intent_prompt
 from app.services.intent_classifier import IntentClassifier, IntentResult
 from app.services.retrieval_service import RetrievalService
+from app.utils.query_rewriter import QueryRewriter
 from app.utils.text_utils import format_search_results
 
 MAX_HISTORY_LENGTH = 20
@@ -48,6 +49,7 @@ class ChatService:
         self.backend_client = backend_client
         self.cache_service = cache_service
         self._histories: TTLCache = TTLCache(maxsize=1000, ttl=3600)
+        self.query_rewriter = QueryRewriter(llm=self.llm_mini)
 
     async def get_response(
         self,
@@ -74,12 +76,13 @@ class ChatService:
             except Exception as e:
                 logger.warning("캐시 조회 실패 (무시): %s", e)
 
-        # 3. 인텐트별 검색
+        # 3. 인텐트별 검색 (rag_enabled=False 시 건너뜀)
         context_text = ""
-        if intent_result.rag_required:
+        if self.settings.rag_enabled and intent_result.rag_required:
             try:
+                search_query = await self.query_rewriter.rewrite(message)
                 results = await self.retrieval_service.retrieve(
-                    query=message,
+                    query=search_query,
                     metadata_filter=intent_result.metadata_filter or None,
                     search_strategy=intent_result.search_strategy,
                 )

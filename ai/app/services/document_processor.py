@@ -225,6 +225,37 @@ class DocumentProcessor:
         logger.info("재귀적 청크 분할 완료: %s -> %d개 청크", law_name, len(chunks))
         return chunks
 
+    def _build_chunk_header(self, metadata: dict) -> str:
+        """청크에 prepend할 구조 경로 헤더를 생성한다.
+
+        예시 출력:
+        [소득세법 (법률)] > 제3편 소득금액의 계산 > 제1장 총칙 > 제19조(사업소득)
+        """
+        parts = []
+
+        law_name = metadata.get("law_name", "")
+        law_type = metadata.get("law_type", "")
+        if law_name:
+            parts.append(f"[{law_name} ({law_type})]")
+
+        if metadata.get("part"):
+            title = metadata.get("part_title", "")
+            parts.append(f"제{metadata['part']}편 {title}".strip())
+
+        if metadata.get("chapter"):
+            title = metadata.get("chapter_title", "")
+            parts.append(f"제{metadata['chapter']}장 {title}".strip())
+
+        if metadata.get("section"):
+            title = metadata.get("section_title", "")
+            parts.append(f"제{metadata['section']}절 {title}".strip())
+
+        if metadata.get("article"):
+            title = metadata.get("article_title", "")
+            parts.append(f"제{metadata['article']}조({title})")
+
+        return " > ".join(parts)
+
     def _hierarchical_chunk(self, raw_doc: RawDocument) -> list[TextChunk]:
         """계층적 청킹 (법률 문서용, LegalParser 사용)."""
         law_name = raw_doc.metadata.get("law_name", "unknown")
@@ -242,13 +273,13 @@ class DocumentProcessor:
             logger.warning("계층적 청킹 결과 없음, 재귀적 청킹으로 폴백: %s", law_name)
             return self._recursive_chunk(raw_doc)
 
-        chunks = [
-            TextChunk(
-                content=lc.content,
-                metadata={**raw_doc.metadata, **lc.metadata, "source_path": raw_doc.source_path},
-            )
-            for lc in legal_chunks
-        ]
+        chunks = []
+        for lc in legal_chunks:
+            merged_meta = {**raw_doc.metadata, **lc.metadata, "source_path": raw_doc.source_path}
+            header = self._build_chunk_header(merged_meta)
+            content_with_header = f"{header}\n{lc.content}" if header else lc.content
+            chunks.append(TextChunk(content=content_with_header, metadata=merged_meta))
+
         logger.info("계층적 청크 분할 완료: %s -> %d개 청크", law_name, len(chunks))
         return chunks
 
@@ -267,9 +298,12 @@ class DocumentProcessor:
             else:
                 oversized += 1
                 sub_texts = self.splitter.split_text(chunk.content)
+                header = self._build_chunk_header(chunk.metadata)
                 for i, text in enumerate(sub_texts):
                     meta = dict(chunk.metadata)
                     meta["chunk_id"] = f"{meta['chunk_id']}_s{i:02d}"
+                    if header and not text.startswith(header):
+                        text = f"{header}\n{text}"
                     result.append(TextChunk(content=text, metadata=meta))
 
         if oversized:
