@@ -6,4 +6,4 @@ name: no_rag
 use_rag: false
 
 # LLM 파라미터
-temperature: 0.7
+temperature: 0.0            # Batch 7: 평가 재현성을 위해 0.0 사용

@@ -9,7 +9,7 @@ search_strategy: hybrid     # hybrid 유지 (BM25 키워드 매칭이 법률 용
 rrf_k: 60                   # 유지
 
 # LLM 파라미터
-temperature: 0.3            # plain(0.7) 대비 낮춤: 세법 답변 일관성 향상 (Faithfulness 향상 목적)
+temperature: 0.0            # Batch 7: 평가 재현성을 위해 0.0 사용
 
 # 참고 (재인덱싱 필요, 이번 실험에서는 변경 안 함)
 # chunk_size: 1000
