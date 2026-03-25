@@ -30,9 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
-import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
+import kotlinx.coroutines.launch
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -144,6 +144,8 @@ fun TaxCalendarDetailScreen(
     val d3 by viewModel.reminderD3.collectAsState()
     val d1 by viewModel.reminderD1.collectAsState()
     val dDayReminder by viewModel.reminderDDay.collectAsState()
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val detailInfo = remember(taxName, deadline, description) {
         buildTaxDetailInfo(taxName, deadline, description)
     }
@@ -163,9 +165,14 @@ fun TaxCalendarDetailScreen(
         else -> DdayNormal
     }
 
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.White
+    ) { innerPadding ->
     Column(
         modifier = Modifier
             .fillMaxSize()
+            .padding(innerPadding)
             .background(Color.White)
     ) {
         // 헤더
@@ -197,7 +204,9 @@ fun TaxCalendarDetailScreen(
                 d3 = d3,
                 d1 = d1,
                 dDay = dDayReminder,
-                onChangeReminder = { navController.navigate(Route.NotificationSettings.path) }
+                onChangeReminder = {
+                    scope.launch { snackbarHostState.showSnackbar("알림 기능 준비 중입니다") }
+                }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -227,6 +236,7 @@ fun TaxCalendarDetailScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
         }
+    }
     }
 }
 
