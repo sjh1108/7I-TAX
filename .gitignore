@@ -954,3 +954,6 @@ ai/scripts/data/synthetic_data*.json
 
 # RAG 평가 결과
 ai/tests/evaluation/*_results.csv
+
+# 개발 전용 의존성 (프로덕션 배포 대상 아님)
+ai/requirements-dev.txt
