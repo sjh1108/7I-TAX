@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
+import org.springframework.format.annotation.DateTimeFormat;
+
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 
@@ -21,7 +23,15 @@ public class ExportController {
     @GetMapping("/book-entries")
     public ResponseEntity<byte[]> exportBookEntries(
             @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Integer year) {
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+
+        if (startDate != null && endDate != null) {
+            String csv = exportService.exportBookEntriesToCsv(userId, startDate, endDate);
+            return csvResponse(csv, "간편장부_" + startDate + "_" + endDate + ".csv");
+        }
+
         int targetYear = year != null ? year : LocalDate.now().getYear();
         String csv = exportService.exportBookEntriesToCsv(userId, targetYear);
         return csvResponse(csv, "간편장부_" + targetYear + ".csv");
@@ -44,6 +54,15 @@ public class ExportController {
         int targetYear = year != null ? year : LocalDate.now().getYear();
         String csv = exportService.exportIncomeTaxSummaryCsv(userId, targetYear);
         return csvResponse(csv, "종합소득세_" + targetYear + ".csv");
+    }
+
+    @GetMapping("/local-tax")
+    public ResponseEntity<byte[]> exportLocalTax(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        String csv = exportService.exportLocalTaxSummaryCsv(userId, targetYear);
+        return csvResponse(csv, "지방소득세_" + targetYear + ".csv");
     }
 
     private ResponseEntity<byte[]> csvResponse(String csv, String filename) {

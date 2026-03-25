@@ -4,6 +4,7 @@ import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -11,7 +12,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-public interface BookEntryRepository extends JpaRepository<BookEntry, Long> {
+public interface BookEntryRepository extends JpaRepository<BookEntry, Long>, JpaSpecificationExecutor<BookEntry> {
 
     Optional<BookEntry> findByIdAndUserId(Long id, Long userId);
 
@@ -67,8 +68,18 @@ public interface BookEntryRepository extends JpaRepository<BookEntry, Long> {
 
     @Query("SELECT EXTRACT(MONTH FROM b.entryDate), " +
             "COALESCE(SUM(CASE WHEN b.entryType = 'INCOME' THEN b.incomeAmount ELSE 0 END), 0), " +
-            "COALESCE(SUM(CASE WHEN b.entryType = 'EXPENSE' THEN b.expenseAmount ELSE 0 END), 0) " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'EXPENSE' THEN b.expenseAmount ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN b.entryType = 'ASSET' THEN b.fixedAssetAmount ELSE 0 END), 0) " +
             "FROM BookEntry b WHERE b.userId = :userId AND b.confirmed = true " +
             "AND EXTRACT(YEAR FROM b.entryDate) = :year GROUP BY EXTRACT(MONTH FROM b.entryDate) ORDER BY EXTRACT(MONTH FROM b.entryDate)")
     List<Object[]> sumByMonthAndYear(@Param("userId") Long userId, @Param("year") int year);
+
+    @Query("SELECT b.merchantName, SUM(b.incomeAmount), COUNT(b) " +
+            "FROM BookEntry b WHERE b.userId = :userId AND b.confirmed = true " +
+            "AND b.entryType = 'INCOME' AND b.merchantName IS NOT NULL " +
+            "AND b.entryDate BETWEEN :start AND :end " +
+            "GROUP BY b.merchantName ORDER BY SUM(b.incomeAmount) DESC")
+    List<Object[]> sumIncomeByMerchant(@Param("userId") Long userId,
+                                       @Param("start") LocalDate start,
+                                       @Param("end") LocalDate end);
 }

@@ -45,6 +45,13 @@ public class MccTaxRule {
 
     private Long annualLimit;
 
+    /** 분류 신뢰도 (0~100). seed.xlsx MCC_매핑룰_v3 기준 */
+    private Integer confidence;
+
+    /** 사용자 확인 필요 여부. true면 UI에서 확인 필수 */
+    @Column(nullable = false)
+    private Boolean requiresUserConfirm = false;
+
     @Column(nullable = false, updatable = false)
     private OffsetDateTime createdAt = OffsetDateTime.now();
 

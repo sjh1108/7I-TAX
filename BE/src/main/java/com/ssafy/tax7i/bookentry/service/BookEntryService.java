@@ -8,6 +8,7 @@ import com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest;
 import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
+import com.ssafy.tax7i.bookentry.repository.BookEntrySpecification;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -96,13 +98,30 @@ public class BookEntryService {
     }
 
     public Page<BookEntryResponse> getEntries(Long userId, Boolean confirmed, Pageable pageable) {
-        Page<BookEntry> page;
-        if (confirmed != null) {
-            page = bookEntryRepository.findByUserIdAndConfirmed(userId, confirmed, pageable);
-        } else {
-            page = bookEntryRepository.findByUserId(userId, pageable);
-        }
-        return page.map(BookEntryResponse::from);
+        return getEntries(userId, confirmed, null, null, null, null, null, null, null, pageable);
+    }
+
+    /**
+     * 간편장부 목록 조회 — 동적 필터 지원
+     * 모든 필터는 optional, null이면 무시됨 (AND 조합)
+     */
+    public Page<BookEntryResponse> getEntries(Long userId, Boolean confirmed,
+                                               EntryType entryType,
+                                               LocalDate startDate, LocalDate endDate,
+                                               String categoryCode, String keyword,
+                                               Boolean hasEvidence, Boolean unclassified,
+                                               Pageable pageable) {
+        Specification<BookEntry> spec = Specification.where(BookEntrySpecification.withUserId(userId))
+                .and(BookEntrySpecification.withConfirmed(confirmed))
+                .and(BookEntrySpecification.withEntryType(entryType))
+                .and(BookEntrySpecification.withStartDate(startDate))
+                .and(BookEntrySpecification.withEndDate(endDate))
+                .and(BookEntrySpecification.withCategoryCode(categoryCode))
+                .and(BookEntrySpecification.withKeyword(keyword))
+                .and(BookEntrySpecification.withHasEvidence(hasEvidence))
+                .and(BookEntrySpecification.withUnclassified(unclassified));
+
+        return bookEntryRepository.findAll(spec, pageable).map(BookEntryResponse::from);
     }
 
     public long getUnconfirmedCount(Long userId) {
@@ -141,6 +160,14 @@ public class BookEntryService {
         BookEntry entry = findByIdAndUserId(entryId, userId);
         entry.markAsBusiness();
         log.info("사업경비 복원: id={}, userId={}", entryId, userId);
+        return BookEntryResponse.from(entry);
+    }
+
+    @Transactional
+    public BookEntryResponse updateNote(Long userId, Long entryId, String note) {
+        BookEntry entry = findByIdAndUserId(entryId, userId);
+        entry.updateNote(note);
+        log.info("메모 수정: id={}, userId={}", entryId, userId);
         return BookEntryResponse.from(entry);
     }
 
@@ -192,21 +219,86 @@ public class BookEntryService {
                 .map(row -> new BookEntrySummaryResponse.MonthSummary(
                         ((Number) row[0]).intValue(),
                         ((Number) row[1]).longValue(),
-                        ((Number) row[2]).longValue()
-                ))
-                .toList();
-
-        List<Object[]> categoryData = bookEntryRepository.sumExpenseByCategoryAndYear(userId, year);
-        List<BookEntrySummaryResponse.CategorySummary> byCategory = categoryData.stream()
-                .map(row -> new BookEntrySummaryResponse.CategorySummary(
-                        (String) row[0],
-                        (String) row[1],
                         ((Number) row[2]).longValue(),
                         ((Number) row[3]).longValue()
                 ))
                 .toList();
 
-        return new BookEntrySummaryResponse(year, totalIncome, totalExpense, byMonth, byCategory);
+        List<Object[]> categoryData = bookEntryRepository.sumExpenseByCategoryAndYear(userId, year);
+        long categoryTotal = categoryData.stream()
+                .mapToLong(row -> ((Number) row[2]).longValue())
+                .sum();
+        List<BookEntrySummaryResponse.CategorySummary> byCategory = categoryData.stream()
+                .map(row -> {
+                    long amount = ((Number) row[2]).longValue();
+                    double percentage = categoryTotal == 0 ? 0.0
+                            : Math.round(amount * 1000.0 / categoryTotal) / 10.0;
+                    return new BookEntrySummaryResponse.CategorySummary(
+                            (String) row[0],
+                            (String) row[1],
+                            amount,
+                            ((Number) row[3]).longValue(),
+                            percentage
+                    );
+                })
+                .toList();
+
+        // 거래처별 수입 집계
+        List<Object[]> merchantData = bookEntryRepository.sumIncomeByMerchant(userId, start, end);
+        long merchantTotal = merchantData.stream()
+                .mapToLong(row -> ((Number) row[1]).longValue())
+                .sum();
+        List<BookEntrySummaryResponse.MerchantSummary> byMerchant = merchantData.stream()
+                .map(row -> {
+                    long amount = ((Number) row[1]).longValue();
+                    double pct = merchantTotal == 0 ? 0.0
+                            : Math.round(amount * 1000.0 / merchantTotal) / 10.0;
+                    return new BookEntrySummaryResponse.MerchantSummary(
+                            (String) row[0],
+                            amount,
+                            ((Number) row[2]).longValue(),
+                            pct
+                    );
+                })
+                .toList();
+
+        // 전년 대비 비교
+        BookEntrySummaryResponse.YearOverYearComparison comparison = buildComparison(
+                userId, year - 1, totalIncome, totalExpense);
+
+        return new BookEntrySummaryResponse(year, totalIncome, totalExpense, byMonth, byCategory, byMerchant, comparison);
+    }
+
+    private BookEntrySummaryResponse.YearOverYearComparison buildComparison(
+            Long userId, int prevYear, long currentIncome, long currentExpense) {
+        LocalDate prevStart = LocalDate.of(prevYear, 1, 1);
+        LocalDate prevEnd = LocalDate.of(prevYear, 12, 31);
+
+        Object[] rawPrev = bookEntryRepository.aggregateByUserIdAndDateRange(userId, prevStart, prevEnd);
+        Object[] prev = rawPrev;
+        if (rawPrev != null && rawPrev.length > 0 && rawPrev[0] instanceof Object[]) prev = (Object[]) rawPrev[0];
+        long prevIncome = prev != null && prev.length > 0 && prev[0] != null ? ((Number) prev[0]).longValue() : 0L;
+        long prevExpense = prev != null && prev.length > 1 && prev[1] != null ? ((Number) prev[1]).longValue() : 0L;
+
+        // 전년 데이터가 아예 없으면 비교 불가
+        if (prevIncome == 0 && prevExpense == 0) {
+            return null;
+        }
+
+        long prevProfit = prevIncome - prevExpense;
+        long currentProfit = currentIncome - currentExpense;
+
+        return new BookEntrySummaryResponse.YearOverYearComparison(
+                prevIncome, prevExpense, prevProfit,
+                changeRate(currentIncome, prevIncome),
+                changeRate(currentExpense, prevExpense),
+                changeRate(currentProfit, prevProfit)
+        );
+    }
+
+    private Double changeRate(long current, long previous) {
+        if (previous == 0) return null;
+        return Math.round((current - previous) * 1000.0 / previous) / 10.0;
     }
 
     private BookEntry findByIdAndUserId(Long entryId, Long userId) {

@@ -1,0 +1,216 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="375" height="812" viewBox="0 0 375 812">
+<defs>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&amp;display=swap');
+    text, tspan { font-family: 'Poppins', 'Apple SD Gothic Neo', sans-serif; }
+  </style>
+  <filter id="cs" x="-15%" y="-8%" width="130%" height="130%">
+    <feGaussianBlur in="SourceAlpha" stdDeviation="12" result="blur"/>
+    <feOffset in="blur" dx="0" dy="4" result="off"/>
+    <feFlood flood-color="#3629B7" flood-opacity="0.07" result="color"/>
+    <feComposite in="color" in2="off" operator="in" result="shadow"/>
+    <feMerge><feMergeNode in="shadow"/><feMergeNode in="SourceGraphic"/></feMerge>
+  </filter>
+</defs>
+
+<rect width="375" height="1220" fill="#FFFFFF"/>
+
+<!-- ══════ Status Bar ══════ -->
+<text x="24" y="28" font-size="15" font-weight="600" fill="#343434">9:09</text>
+<g transform="translate(284,16)">
+  <rect x="0" y="6" width="3" height="5" rx="0.5" fill="#343434"/>
+  <rect x="4" y="4" width="3" height="7" rx="0.5" fill="#343434"/>
+  <rect x="8" y="2" width="3" height="9" rx="0.5" fill="#343434"/>
+  <rect x="12" y="0" width="3" height="11" rx="0.5" fill="#343434"/>
+</g>
+<g transform="translate(308,16)">
+  <path d="M7.5 1.5C5 1.5 2.8 2.5 1.2 4l1 1c1.3-1.2 3-2 5.3-2s4 .8 5.3 2l1-1C12.2 2.5 10 1.5 7.5 1.5zm0 3.5c-1.8 0-3.3.7-4.5 1.8l1 1c.9-.9 2.1-1.4 3.5-1.4s2.6.5 3.5 1.4l1-1C10.8 5.7 9.3 5 7.5 5zm0 3.5c-1 0-1.9.4-2.5 1l2.5 2.5 2.5-2.5c-.6-.6-1.5-1-2.5-1z" fill="#343434"/>
+</g>
+<g transform="translate(332,17)">
+  <rect x="0" y="0" width="22" height="11" rx="3" fill="none" stroke="#343434" stroke-opacity="0.4"/>
+  <rect x="23" y="3" width="2" height="5" rx="1" fill="#343434" fill-opacity="0.4"/>
+  <rect x="2" y="2" width="17" height="7" rx="1.5" fill="#343434"/>
+</g>
+
+<!-- ══════ Top Nav ══════ -->
+<g transform="translate(0,38)">
+  <g transform="translate(20,14)">
+    <path d="M21 6L9 18L21 30" transform="scale(0.67)" stroke="#343434" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+  <text x="187.5" y="38" text-anchor="middle" font-size="16" font-weight="600" fill="#343434">간편장부</text>
+  <!-- Export icon -->
+  <g transform="translate(333,14)">
+    <path d="M4 12L4 20H20V12" stroke="#343434" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="scale(0.92)"/>
+    <path d="M16 6L12 2L8 6" stroke="#343434" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" fill="none" transform="scale(0.92)"/>
+    <path d="M12 2V14" stroke="#343434" stroke-width="2" stroke-linecap="round" fill="none" transform="scale(0.92)"/>
+  </g>
+</g>
+
+<!-- ══════ Summary Card ══════ -->
+<g transform="translate(0,102)">
+  <rect x="20" y="0" width="335" height="230" rx="15" fill="#FFFFFF" filter="url(#cs)"/>
+  <text x="40" y="32" font-size="14" font-weight="500" fill="#898989">이번 달 순이익</text>
+  <text x="40" y="66" font-size="28" font-weight="700" fill="#281C9D">+9,448,100</text>
+  <text x="270" y="66" font-size="16" font-weight="500" fill="#898989">원</text>
+  <rect x="40" y="86" width="145" height="60" rx="12" fill="#EDF8F6"/>
+  <text x="56" y="106" font-size="11" font-weight="600" fill="#7ABFB3" letter-spacing="0.3">수입</text>
+  <text x="56" y="128" font-size="16" font-weight="700" fill="#343434">+10,880,000</text>
+  <rect x="195" y="86" width="145" height="60" rx="12" fill="#FFF0F3"/>
+  <text x="211" y="106" font-size="11" font-weight="600" fill="#FF9DAE" letter-spacing="0.3">비용</text>
+  <text x="211" y="128" font-size="16" font-weight="700" fill="#343434">-981,900</text>
+  <rect x="40" y="158" width="295" height="48" rx="12" fill="#FFF8EE"/>
+  <text x="56" y="186" font-size="11" font-weight="600" fill="#E0A44A" letter-spacing="0.3">자산 증감</text>
+  <text x="319" y="186" text-anchor="end" font-size="16" font-weight="700" fill="#343434">+450,000</text>
+</g>
+
+<!-- ══════ Alert Banner ══════ -->
+<g transform="translate(0,356)">
+  <rect x="20" y="0" width="335" height="46" rx="12" fill="#F2F1F9"/>
+  <rect x="38" y="13" width="22" height="20" rx="10" fill="#5655B9"/>
+  <text x="49" y="27" text-anchor="middle" font-size="11" font-weight="600" fill="#FFFFFF">4</text>
+  <text x="68" y="28" font-size="14" font-weight="600" fill="#281C9D">미확인 내역이 있어요</text>
+  <text x="335" y="28" text-anchor="end" font-size="13" font-weight="600" fill="#5655B9">확인하기 ›</text>
+</g>
+
+<!-- ══════ Month Dropdown + Filter ══════ -->
+<g transform="translate(0,418)">
+  <rect x="20" y="0" width="120" height="38" rx="12" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1.5"/>
+  <text x="36" y="24" font-size="14" font-weight="600" fill="#343434">2025년 3월</text>
+  <path d="M6 9L12 15L18 9" transform="translate(120,12) scale(0.6)" stroke="#343434" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  <rect x="315" y="0" width="40" height="40" rx="12" fill="#FFFFFF" stroke="#E0E0E0" stroke-width="1.5"/>
+  <g transform="translate(325,10)">
+    <path d="M4 6H20M8 12H20M6 18H20" stroke="#343434" stroke-width="2" stroke-linecap="round" transform="scale(0.83)"/>
+    <circle cx="3.3" cy="10" r="1.7" fill="#343434"/>
+    <circle cx="3.3" cy="15" r="1.7" fill="#343434"/>
+  </g>
+</g>
+
+<!-- ══════ Tabs (장부 목록 active) ══════ -->
+<g transform="translate(0,470)">
+  <rect x="20" y="0" width="335" height="43" rx="12" fill="#F0F0F0"/>
+  <rect x="23" y="3" width="162" height="37" rx="10" fill="#281C9D"/>
+  <text x="104" y="27" text-anchor="middle" font-size="14" font-weight="600" fill="#FFFFFF">장부 목록</text>
+  <text x="271" y="27" text-anchor="middle" font-size="14" font-weight="600" fill="#989898">세목별</text>
+</g>
+
+<!-- ══════ Filter Chips ══════ -->
+<g transform="translate(0,525)">
+  <rect x="20" y="0" width="50" height="30" rx="15" fill="#F2F1F9" stroke="#281C9D" stroke-width="1.5"/>
+  <text x="45" y="20" text-anchor="middle" font-size="12" font-weight="600" fill="#281C9D">전체</text>
+  <rect x="78" y="0" width="50" height="30" rx="15" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1.5"/>
+  <text x="103" y="20" text-anchor="middle" font-size="12" font-weight="500" fill="#989898">수입</text>
+  <rect x="136" y="0" width="50" height="30" rx="15" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1.5"/>
+  <text x="161" y="20" text-anchor="middle" font-size="12" font-weight="500" fill="#989898">비용</text>
+  <rect x="194" y="0" width="50" height="30" rx="15" fill="#F5F5F5" stroke="#E0E0E0" stroke-width="1.5"/>
+  <text x="219" y="20" text-anchor="middle" font-size="12" font-weight="500" fill="#989898">자산</text>
+</g>
+
+<!-- ══════ Transaction List ══════ -->
+
+<!-- Item 1: (주)스마트랩 — 수입 -->
+<g transform="translate(20,571)">
+  <rect x="0" y="0" width="42" height="42" rx="12" fill="#F2F1F9"/>
+  <path d="M18 3L15 0L12 3L9 0L6 3L2 0V23C2 23.553 2.448 24 3 24H21C21.552 24 22 23.553 22 23V0L18 3ZM13 19H6V17H13V19ZM13 15H6V13H13V15ZM13 11H6V9H13V11ZM18 19H15V17H18V19ZM18 15H15V13H18V15ZM18 11H15V9H18V11Z" transform="translate(11,9) scale(0.83)" fill="#5655B9"/>
+  <text x="56" y="18" font-size="14" font-weight="600" fill="#343434">(주)스마트랩</text>
+  <text x="56" y="36" font-size="12" fill="#CACACA">03.20 · </text>
+  <text x="98" y="36" font-size="12" font-weight="500" fill="#5655B9">매출</text>
+  <text x="120" y="36" font-size="12" fill="#989898"> · 앱 개발 외주비</text>
+  <text x="295" y="22" text-anchor="end" font-size="15" font-weight="700" fill="#281C9D">+5,500,000</text>
+  <path d="M7 23.414L17.707 12.707C18.098 12.316 18.098 11.684 17.707 11.293L7 0.586L5.586 2L15.586 12L5.586 22L7 23.414Z" transform="translate(304,12) scale(0.58)" fill="#CACACA"/>
+  <line x1="0" y1="58" x2="335" y2="58" stroke="#F2F1F9" stroke-width="1"/>
+</g>
+
+<!-- Item 2: AWS — 비용 -->
+<g transform="translate(20,645)">
+  <rect x="0" y="0" width="42" height="42" rx="12" fill="#F5F5F5"/>
+  <path d="M23 1H1C0.735 1 0.48 1.106 0.293 1.293C0.105 1.48 0 1.735 0 2V18C0 18.265 0.105 18.52 0.293 18.707C0.48 18.895 0.735 19 1 19H10V21H5V23H19V21H14V19H23C23.265 19 23.52 18.895 23.707 18.707C23.895 18.52 24 18.265 24 18V2C24 1.735 23.895 1.48 23.707 1.293C23.52 1.106 23.265 1 23 1ZM22 17H2V3H22V17Z" transform="translate(11,9) scale(0.83)" fill="#898989"/>
+  <text x="56" y="18" font-size="14" font-weight="600" fill="#343434">Amazon Web Services</text>
+  <text x="56" y="36" font-size="12" fill="#CACACA">03.18 · </text>
+  <text x="98" y="36" font-size="12" font-weight="500" fill="#5655B9">지급수수료</text>
+  <text x="159" y="36" font-size="12" fill="#989898"> · 클라우드 서버</text>
+  <text x="295" y="22" text-anchor="end" font-size="15" font-weight="700" fill="#343434">-132,000</text>
+  <path d="M7 23.414L17.707 12.707C18.098 12.316 18.098 11.684 17.707 11.293L7 0.586L5.586 2L15.586 12L5.586 22L7 23.414Z" transform="translate(304,12) scale(0.58)" fill="#CACACA"/>
+  <line x1="0" y1="58" x2="335" y2="58" stroke="#F2F1F9" stroke-width="1"/>
+</g>
+
+<!-- Item 3: 스타벅스 — 비용 (미확인) -->
+<g transform="translate(20,719)">
+  <rect x="0" y="0" width="42" height="42" rx="12" fill="#F5F5F5"/>
+  <path d="M20 0H4C2.895 0 2 0.895 2 2V14C2 16.414 3.721 18.434 6 18.899V23C6 23.552 6.448 24 7 24H17C17.552 24 18 23.552 18 23V18.899C20.279 18.434 22 16.415 22 14V2C22 0.895 21.105 0 20 0ZM8 14H10V22H8V14ZM16 22H13V14H16V22ZM18 8H6V4H18V8Z" transform="translate(11,9) scale(0.83)" fill="#898989"/>
+  <text x="56" y="18" font-size="14" font-weight="600" fill="#343434">스타벅스 역삼DT</text>
+  <circle cx="176" cy="14" r="3" fill="#FFAF2A"/>
+  <text x="56" y="36" font-size="12" fill="#CACACA">03.17 · </text>
+  <text x="98" y="36" font-size="12" font-weight="500" fill="#5655B9">접대비</text>
+  <text x="133" y="36" font-size="12" fill="#989898"> · 클라이언트 미팅</text>
+  <text x="295" y="22" text-anchor="end" font-size="15" font-weight="700" fill="#343434">-47,500</text>
+  <path d="M7 23.414L17.707 12.707C18.098 12.316 18.098 11.684 17.707 11.293L7 0.586L5.586 2L15.586 12L5.586 22L7 23.414Z" transform="translate(304,12) scale(0.58)" fill="#CACACA"/>
+  <line x1="0" y1="58" x2="335" y2="58" stroke="#F2F1F9" stroke-width="1"/>
+</g>
+
+<!-- Item 4: 쿠팡 — 비용 -->
+<g transform="translate(20,793)">
+  <rect x="0" y="0" width="42" height="42" rx="12" fill="#F5F5F5"/>
+  <path d="M22 0H2C1.447 0 1 0.448 1 1V23C1 23.552 1.447 24 2 24H22C22.553 24 23 23.552 23 23V1C23 0.448 22.553 0 22 0ZM20 21H4V3H7V6H10C10 4.895 10.895 4 12 4C13.105 4 14 4.895 14 6H17V3H20V21Z" transform="translate(11,9) scale(0.83)" fill="#898989"/>
+  <text x="56" y="18" font-size="14" font-weight="600" fill="#343434">쿠팡(주)</text>
+  <text x="56" y="36" font-size="12" fill="#CACACA">03.15 · </text>
+  <text x="98" y="36" font-size="12" font-weight="500" fill="#5655B9">소모품비</text>
+  <text x="147" y="36" font-size="12" fill="#989898"> · 모니터 거치대</text>
+  <text x="295" y="22" text-anchor="end" font-size="15" font-weight="700" fill="#343434">-89,000</text>
+  <path d="M7 23.414L17.707 12.707C18.098 12.316 18.098 11.684 17.707 11.293L7 0.586L5.586 2L15.586 12L5.586 22L7 23.414Z" transform="translate(304,12) scale(0.58)" fill="#CACACA"/>
+  <line x1="0" y1="58" x2="335" y2="58" stroke="#F2F1F9" stroke-width="1"/>
+</g>
+
+<!-- Item 5: 인프런 — 비용 -->
+<g transform="translate(20,867)">
+  <rect x="0" y="0" width="42" height="42" rx="12" fill="#F5F5F5"/>
+  <path d="M12 3L1 9L12 15L21 10.09V16H23V9L12 3Z" transform="translate(11,9) scale(0.83)" fill="#898989"/>
+  <path d="M5 13.18V17.18L12 21L19 17.18V13.18L12 17L5 13.18Z" transform="translate(11,9) scale(0.83)" fill="#898989" opacity="0.6"/>
+  <text x="56" y="18" font-size="14" font-weight="600" fill="#343434">인프런</text>
+  <text x="56" y="36" font-size="12" fill="#CACACA">03.12 · </text>
+  <text x="98" y="36" font-size="12" font-weight="500" fill="#5655B9">교육훈련비</text>
+  <text x="159" y="36" font-size="12" fill="#989898"> · Spring Boot 강의</text>
+  <text x="295" y="22" text-anchor="end" font-size="15" font-weight="700" fill="#343434">-66,000</text>
+  <path d="M7 23.414L17.707 12.707C18.098 12.316 18.098 11.684 17.707 11.293L7 0.586L5.586 2L15.586 12L5.586 22L7 23.414Z" transform="translate(304,12) scale(0.58)" fill="#CACACA"/>
+  <line x1="0" y1="58" x2="335" y2="58" stroke="#F2F1F9" stroke-width="1"/>
+</g>
+
+<!-- Item 6: KT — 비용 -->
+<g transform="translate(20,941)">
+  <rect x="0" y="0" width="42" height="42" rx="12" fill="#F5F5F5"/>
+  <path d="M18 3L15 0L12 3L9 0L6 3L2 0V23C2 23.553 2.448 24 3 24H21C21.552 24 22 23.553 22 23V0L18 3ZM13 19H6V17H13V19ZM13 15H6V13H13V15ZM13 11H6V9H13V11ZM18 19H15V17H18V19ZM18 15H15V13H18V15ZM18 11H15V9H18V11Z" transform="translate(11,9) scale(0.83)" fill="#898989"/>
+  <text x="56" y="18" font-size="14" font-weight="600" fill="#343434">KT</text>
+  <text x="56" y="36" font-size="12" fill="#CACACA">03.10 · </text>
+  <text x="98" y="36" font-size="12" font-weight="500" fill="#5655B9">통신비</text>
+  <text x="133" y="36" font-size="12" fill="#989898"> · 인터넷 + 휴대폰</text>
+  <text x="295" y="22" text-anchor="end" font-size="15" font-weight="700" fill="#343434">-55,000</text>
+  <path d="M7 23.414L17.707 12.707C18.098 12.316 18.098 11.684 17.707 11.293L7 0.586L5.586 2L15.586 12L5.586 22L7 23.414Z" transform="translate(304,12) scale(0.58)" fill="#CACACA"/>
+</g>
+
+<!-- ══════ Bottom Nav ══════ -->
+<g transform="translate(0,1130)">
+  <rect x="0" y="0" width="375" height="82" fill="#FFFFFF"/>
+  <line x1="0" y1="0" x2="375" y2="0" stroke="#F0F0F0" stroke-width="1"/>
+  <g transform="translate(37.5,14)">
+    <path d="M23.633 10.226L12.633 1.226C12.455 1.08 12.231 1 12 1C11.769 1 11.546 1.08 11.367 1.226L0.367 10.226C0.166 10.395 0.04 10.637 0.016 10.898C-0.008 11.16 0.072 11.42 0.238 11.623C0.404 11.827 0.644 11.956 0.905 11.985C1.166 12.013 1.427 11.937 1.633 11.774L3 10.656V22C3 22.265 3.106 22.52 3.293 22.707C3.48 22.895 3.735 23 4 23H10V17H14V23H20C20.265 23 20.52 22.895 20.707 22.707C20.895 22.52 21 22.265 21 22V10.656L22.367 11.774C22.573 11.937 22.834 12.013 23.095 11.985C23.356 11.956 23.596 11.827 23.762 11.623C23.928 11.42 24.008 11.16 23.984 10.898C23.96 10.637 23.834 10.395 23.633 10.226Z" fill="#CACACA"/>
+    <text x="12" y="38" text-anchor="middle" font-size="10" font-weight="500" fill="#CACACA">홈</text>
+  </g>
+  <g transform="translate(112.5,14)">
+    <path d="M18 3L15 0L12 3L9 0L6 3L2 0V23C2 23.553 2.448 24 3 24H21C21.552 24 22 23.553 22 23V0L18 3ZM13 19H6V17H13V19ZM13 15H6V13H13V15ZM13 11H6V9H13V11ZM18 19H15V17H18V19ZM18 15H15V13H18V15ZM18 11H15V9H18V11Z" fill="#281C9D"/>
+    <text x="12" y="38" text-anchor="middle" font-size="10" font-weight="700" fill="#281C9D">대시보드</text>
+  </g>
+  <g transform="translate(175.5,-6)">
+    <circle cx="12" cy="12" r="26" fill="#281C9D"/>
+    <text x="12" y="17" text-anchor="middle" font-size="13" font-weight="700" fill="#FFFFFF" letter-spacing="-0.3">7itax</text>
+  </g>
+  <g transform="translate(262.5,14)">
+    <path d="M24 14V10L20.662 9.583C20.469 8.885 20.191 8.214 19.836 7.583L21.9 4.929L19.071 2.1L16.418 4.164C15.787 3.809 15.116 3.531 14.418 3.338L14 0H10L9.583 3.338C8.885 3.531 8.214 3.809 7.583 4.164L4.929 2.1L2.1 4.929L4.164 7.582C3.809 8.213 3.531 8.884 3.338 9.582L0 10V14L3.338 14.417C3.531 15.115 3.809 15.786 4.164 16.417L2.1 19.071L4.929 21.9L7.582 19.837C8.213 20.191 8.884 20.469 9.582 20.663L10 24H14L14.417 20.662C15.115 20.469 15.786 20.191 16.417 19.836L19.071 21.9L21.9 19.071L19.837 16.418C20.191 15.787 20.469 15.116 20.663 14.418L24 14ZM12 16C11.209 16 10.436 15.765 9.778 15.326C9.12 14.886 8.607 14.262 8.304 13.531C8.002 12.8 7.922 11.996 8.077 11.22C8.231 10.444 8.612 9.731 9.172 9.172C9.731 8.612 10.444 8.231 11.22 8.077C11.996 7.923 12.8 8.002 13.531 8.304C14.262 8.607 14.886 9.12 15.326 9.778C15.765 10.436 16 11.209 16 12C16 13.061 15.579 14.078 14.828 14.828C14.078 15.579 13.061 16 12 16Z" fill="#CACACA"/>
+    <text x="12" y="38" text-anchor="middle" font-size="10" font-weight="500" fill="#CACACA">설정</text>
+  </g>
+  <g transform="translate(337.5,14)">
+    <circle cx="12" cy="12" r="10" fill="none" stroke="#CACACA" stroke-width="2"/>
+    <text x="12" y="16" text-anchor="middle" font-size="12" font-weight="700" fill="#CACACA">i</text>
+    <text x="12" y="38" text-anchor="middle" font-size="10" font-weight="500" fill="#CACACA">AI</text>
+  </g>
+</g>
+
+</svg>
