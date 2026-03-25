@@ -19,18 +19,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 
 @Composable
 fun NotificationSettingsScreen(
-    navController: NavController
+    navController: NavController,
+    viewModel: TaxCalendarViewModel
 ) {
     var calendarAlarmEnabled by remember { mutableStateOf(true) }
 
-    // 리마인드 타이밍
-    var d7 by remember { mutableStateOf(true) }
-    var d3 by remember { mutableStateOf(true) }
-    var d1 by remember { mutableStateOf(true) }
-    var dDay by remember { mutableStateOf(true) }
+    // 리마인드 타이밍 (ViewModel과 연동)
+    var d7 by remember { mutableStateOf(viewModel.reminderD7.value) }
+    var d3 by remember { mutableStateOf(viewModel.reminderD3.value) }
+    var d1 by remember { mutableStateOf(viewModel.reminderD1.value) }
+    var dDay by remember { mutableStateOf(viewModel.reminderDDay.value) }
 
     // 알림 받을 세금
     var vatEnabled by remember { mutableStateOf(true) }
@@ -90,7 +92,14 @@ fun NotificationSettingsScreen(
         }
 
         // 저장 버튼
-        SaveButton(onClick = { navController.popBackStack() })
+        SaveButton(onClick = {
+            viewModel.setReminderD7(d7)
+            viewModel.setReminderD3(d3)
+            viewModel.setReminderD1(d1)
+            viewModel.setReminderDDay(dDay)
+            viewModel.applyReminderSettings()
+            navController.popBackStack()
+        })
     }
 }
 

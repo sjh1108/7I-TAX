@@ -10,6 +10,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -23,9 +25,14 @@ import com.ssafy.seveniTax.ui.components.ButtonVariant
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.CardViewModel
 
 @Composable
-fun CardCompleteScreen(navController: NavController) {
+fun CardCompleteScreen(navController: NavController, viewModel: CardViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
+    val registeredCard = uiState.lastRegisteredCard
+    val cardColor = if (registeredCard?.type == "business") CardBlue else CardGold
+    val cardTypeName = if (registeredCard?.type == "business") "사업자 카드" else "일반 카드"
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -64,10 +71,9 @@ fun CardCompleteScreen(navController: NavController) {
                     .fillMaxWidth()
                     .height(170.dp)
                     .clip(RoundedCornerShape(16.dp))
-                    .background(CardGold)
+                    .background(cardColor)
                     .padding(20.dp)
             ) {
-                // 원형 장식
                 Box(
                     modifier = Modifier
                         .size(70.dp)
@@ -88,26 +94,20 @@ fun CardCompleteScreen(navController: NavController) {
                     verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "일반 카드",
+                        text = cardTypeName,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color.White
                     )
                     Column {
                         Text(
-                            text = "신한 카드",
-                            fontSize = 13.sp,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "5876  ••••  ••••  2342",
+                            text = registeredCard?.cardNumber ?: "",
                             fontSize = 15.sp,
                             color = Color.White.copy(alpha = 0.9f)
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "12/27",
+                            text = registeredCard?.expiry ?: "",
                             fontSize = 13.sp,
                             color = Color.White.copy(alpha = 0.7f)
                         )
@@ -143,6 +143,7 @@ fun CardCompleteScreen(navController: NavController) {
             TaxButton(
                 text = "카드 관리 보기",
                 onClick = {
+                    viewModel.resetRegistration()
                     navController.navigate(Route.CardList.path) {
                         popUpTo(Route.CardList.path) { inclusive = true }
                     }
@@ -151,6 +152,7 @@ fun CardCompleteScreen(navController: NavController) {
             TaxButton(
                 text = "홈으로 이동",
                 onClick = {
+                    viewModel.resetRegistration()
                     navController.navigate(Route.Main.path) {
                         popUpTo(0) { inclusive = true }
                     }

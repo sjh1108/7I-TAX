@@ -1,5 +1,7 @@
 package com.ssafy.seveniTax.ui.calendar
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,10 +27,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -132,8 +136,13 @@ fun TaxCalendarDetailScreen(
     taxName: String,
     deadline: String,
     dDay: Int,
-    description: String
+    description: String,
+    viewModel: TaxCalendarViewModel
 ) {
+    val d7 by viewModel.reminderD7.collectAsState()
+    val d3 by viewModel.reminderD3.collectAsState()
+    val d1 by viewModel.reminderD1.collectAsState()
+    val dDayReminder by viewModel.reminderDDay.collectAsState()
     val detailInfo = remember(taxName, deadline, description) {
         buildTaxDetailInfo(taxName, deadline, description)
     }
@@ -231,6 +240,10 @@ fun TaxCalendarDetailScreen(
 
             // 리마인드 알림
             ReminderCard(
+                d7 = d7,
+                d3 = d3,
+                d1 = d1,
+                dDay = dDayReminder,
                 onChangeReminder = { navController.navigate(Route.NotificationSettings.path) }
             )
 
@@ -554,8 +567,20 @@ private fun ChecklistItemRow(item: ChecklistItem, onToggle: () -> Unit = {}) {
 // ─── 리마인드 알림 카드 ─────────────────────────────────
 
 @Composable
-private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
-    var reminderEnabled by remember { mutableStateOf(true) }
+private fun ReminderCard(
+    d7: Boolean = true,
+    d3: Boolean = true,
+    d1: Boolean = true,
+    dDay: Boolean = true,
+    onChangeReminder: () -> Unit = {}
+) {
+    val enabledChips = buildList {
+        if (d7) add("D-7")
+        if (d3) add("D-3")
+        if (d1) add("D-1")
+        if (dDay) add("당일")
+    }
+    val reminderEnabled = enabledChips.isNotEmpty()
 
     Card(
         modifier = Modifier
@@ -584,7 +609,7 @@ private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
                 }
                 Switch(
                     checked = reminderEnabled,
-                    onCheckedChange = { reminderEnabled = it },
+                    onCheckedChange = { },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = Accent,
@@ -596,22 +621,30 @@ private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // D-day 칩들
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("D-7", "D-3", "D-1").forEach { label ->
-                    Box(
-                        modifier = Modifier
-                            .border(1.dp, Disabled, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextPrimary
-                        )
+            // D-day 칩들 (활성화된 것만 표시)
+            if (enabledChips.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    enabledChips.forEach { label ->
+                        Box(
+                            modifier = Modifier
+                                .border(1.dp, Disabled, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary
+                            )
+                        }
                     }
                 }
+            } else {
+                Text(
+                    text = "설정된 알림이 없습니다",
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
@@ -643,35 +676,19 @@ private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
 
 @Composable
 private fun BottomButtons(allCompleted: Boolean = false) {
+    val context = LocalContext.current
+    val hometaxUrl = "https://hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&menuCd=index3"
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // AI 신고 가이드 받기
-        Button(
-            onClick = { },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(15.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
-        ) {
-            Text("Ⓐ", fontSize = 16.sp) // AI 아이콘 대체
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "AI 신고 가이드 받기",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-        }
-
         // 홈택스에서 신고하기 (체크리스트 완료 시 강조)
         if (allCompleted) {
             Button(
-                onClick = { },
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(hometaxUrl))) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
@@ -687,7 +704,7 @@ private fun BottomButtons(allCompleted: Boolean = false) {
             }
         } else {
             OutlinedButton(
-                onClick = { },
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(hometaxUrl))) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
