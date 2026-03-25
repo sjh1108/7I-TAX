@@ -241,17 +241,19 @@ fun NavGraph(navController: NavHostController) {
 
         composable(
             route = Route.CategorySelect.path,
-            arguments = listOf(navArgument("returnTo") {
-                type = NavType.StringType
-                defaultValue = ""
-            })
+            arguments = listOf(
+                navArgument("returnTo") { type = NavType.StringType; defaultValue = "" },
+                navArgument("entryId") { type = NavType.LongType; defaultValue = -1L }
+            )
         ) { backStackEntry ->
             val returnTo = backStackEntry.arguments?.getString("returnTo") ?: ""
+            val entryId = backStackEntry.arguments?.getLong("entryId") ?: -1L
             CategorySelectScreen(
                 navController = navController,
-                onCategorySelected = {
-                    if (returnTo == "book") {
-                        navController.navigate(Route.BookEntryList.path) {
+                onCategorySelected = { category ->
+                    if (returnTo == "book" && entryId > 0) {
+                        bookEntryViewModel.updateEntryCategory(entryId, category)
+                        navController.navigate(Route.ClassificationComplete.create("book")) {
                             popUpTo(Route.BookEntryList.path) { inclusive = false }
                         }
                     } else {
@@ -271,12 +273,24 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Route.ClassificationComplete.path) {
+        composable(
+            route = Route.ClassificationComplete.path,
+            arguments = listOf(navArgument("returnTo") {
+                type = NavType.StringType; defaultValue = ""
+            })
+        ) { backStackEntry ->
+            val returnTo = backStackEntry.arguments?.getString("returnTo") ?: ""
             ClassificationCompleteScreen(
                 navController = navController,
                 onConfirm = {
-                    navController.navigate(Route.Main.path) {
-                        popUpTo(Route.Main.path) { inclusive = true }
+                    if (returnTo == "book") {
+                        navController.navigate(Route.BookEntryList.path) {
+                            popUpTo(Route.BookEntryList.path) { inclusive = false }
+                        }
+                    } else {
+                        navController.navigate(Route.Main.path) {
+                            popUpTo(Route.Main.path) { inclusive = true }
+                        }
                     }
                 }
             )

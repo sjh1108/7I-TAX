@@ -202,7 +202,7 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
         ) {
             // 분류 변경
             OutlinedButton(
-                onClick = { navController.navigate(Route.CategorySelect.create("book")) },
+                onClick = { navController.navigate(Route.CategorySelect.create("book", entry.id)) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(15.dp),
                 border = BorderStroke(1.dp, Disabled)

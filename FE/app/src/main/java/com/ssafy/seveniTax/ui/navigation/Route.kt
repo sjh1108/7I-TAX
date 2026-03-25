@@ -66,11 +66,13 @@ sealed class Route(val path: String) {
 
     object ClassificationLoading : Route("classification_loading")
     object ClassificationResult : Route("classification_result")
-    object CategorySelect : Route("category_select?returnTo={returnTo}") {
-        fun create(returnTo: String = "") = "category_select?returnTo=$returnTo"
+    object CategorySelect : Route("category_select?returnTo={returnTo}&entryId={entryId}") {
+        fun create(returnTo: String = "", entryId: Long = -1) = "category_select?returnTo=$returnTo&entryId=$entryId"
     }
     object MemoAdd : Route("memo_add")
-    object ClassificationComplete : Route("classification_complete")
+    object ClassificationComplete : Route("classification_complete?returnTo={returnTo}") {
+        fun create(returnTo: String = "") = "classification_complete?returnTo=$returnTo"
+    }
     object UnclassifiedList : Route("unclassified_list")
     object BulkClassificationLoading : Route("bulk_classification_loading")
     object AutoClassification : Route("auto_classification")
