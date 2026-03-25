@@ -211,7 +211,7 @@ fun TaxCalendarDetailScreen(
                             .fillMaxWidth()
                             .padding(horizontal = 20.dp),
                         shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF8F6))
+                        colors = CardDefaults.cardColors(containerColor = BrandPurple.copy(alpha = 0.08f))
                     ) {
                         Row(
                             modifier = Modifier.padding(16.dp),
@@ -224,7 +224,7 @@ fun TaxCalendarDetailScreen(
                                     "준비 완료!",
                                     fontSize = 14.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1D9E75)
+                                    color = BrandPurple
                                 )
                                 Text(
                                     "홈택스에서 신고를 진행하세요",
@@ -701,7 +701,7 @@ private fun BottomButtons(allCompleted: Boolean = false) {
                     .fillMaxWidth()
                     .height(54.dp),
                 shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D9E75))
+                colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
             ) {
                 Text(
                     text = "홈택스에서 신고하기",
