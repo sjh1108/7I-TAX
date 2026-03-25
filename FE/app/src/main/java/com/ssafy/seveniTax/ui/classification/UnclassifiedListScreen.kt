@@ -57,7 +57,7 @@ fun UnclassifiedListScreen(
                 .statusBarsPadding()
                 .background(Background)
         ) {
-            TaxHeader(title = "미분류 내역")
+            TaxHeader(title = "미분류 내역", onBack = { navController.popBackStack() })
 
             Column(
                 modifier = Modifier
