@@ -10,7 +10,8 @@ class MainViewModel @Inject constructor(
     private val secureStorage: SecureStorage
 ) : ViewModel() {
 
-    // TODO: 백엔드 연동 시 GET /api/cards로 판단하도록 변경
+    fun getUserName(): String = secureStorage.getUserName().orEmpty()
+
     fun isPayEnrolled(): Boolean = secureStorage.isPayEnrolled()
 
     fun setPayEnrolled(enrolled: Boolean) {

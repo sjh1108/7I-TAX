@@ -21,6 +21,7 @@ object Constants {
     const val KEY_REFRESH_TOKEN = "refresh_token"
     const val KEY_USER_ID = "user_id"
     const val KEY_PHONE_NUMBER = "phone_number"
+    const val KEY_USER_NAME = "user_name"
     const val KEY_PAY_ENROLLED = "pay_enrolled"
 
     // PIN
