@@ -162,3 +162,49 @@ class TestFullCategoryCoverage:
                 f"'{text}' -> '{result['category']}' 가 유효한 세목이 아닙니다"
             )
             assert 0.0 <= result["confidence"] <= 1.0
+
+
+class TestClassifyResponseWithExplanation:
+    """T21: TransactionClassifyResponse에 reason, legal_basis 필드 검증."""
+
+    def test_response_has_reason_field(self):
+        """reason 필드 존재 및 기본값."""
+        from app.models.transaction import TransactionClassifyResponse
+
+        resp = TransactionClassifyResponse(
+            category="소모품비", confidence=0.92, method="local_model"
+        )
+        assert hasattr(resp, "reason")
+        assert resp.reason == ""
+
+    def test_response_has_legal_basis_field(self):
+        """legal_basis 필드 존재 및 기본값."""
+        from app.models.transaction import TransactionClassifyResponse
+
+        resp = TransactionClassifyResponse(
+            category="접대비", confidence=0.85, method="local_model"
+        )
+        assert hasattr(resp, "legal_basis")
+        assert resp.legal_basis == ""
+
+    def test_response_with_explanation_values(self):
+        """reason, legal_basis에 값이 있는 경우."""
+        from app.models.transaction import TransactionClassifyResponse
+
+        resp = TransactionClassifyResponse(
+            category="소모품비",
+            confidence=0.92,
+            method="local_model",
+            reason="사무용품 구입에 해당",
+            legal_basis="소득세법 제33조",
+        )
+        assert resp.reason == "사무용품 구입에 해당"
+        assert resp.legal_basis == "소득세법 제33조"
+
+    def test_response_missing_required_field_raises(self):
+        """필수 필드 누락 시 ValidationError."""
+        from pydantic import ValidationError
+        from app.models.transaction import TransactionClassifyResponse
+
+        with pytest.raises(ValidationError):
+            TransactionClassifyResponse(confidence=0.5, method="local_model")
