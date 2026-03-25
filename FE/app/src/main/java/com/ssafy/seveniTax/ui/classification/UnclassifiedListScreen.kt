@@ -48,6 +48,7 @@ fun UnclassifiedListScreen(
     onTransactionClick: (String) -> Unit = {}
 ) {
     var showToast by remember { mutableStateOf(showFirstVisitToast) }
+    var aiRecommended by remember { mutableStateOf(false) }
     val totalAmount = "총 27,100원" // 실제로는 계산
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -131,6 +132,7 @@ fun UnclassifiedListScreen(
                     transactions.forEach { transaction ->
                         TransactionCard(
                             transaction = transaction,
+                            showAiCategory = aiRecommended,
                             onClick = { onTransactionClick(transaction.id) }
                         )
                     }
@@ -158,7 +160,7 @@ fun UnclassifiedListScreen(
             ) {
                 // AI로 경비 추천 받기
                 OutlinedButton(
-                    onClick = onAiRecommend,
+                    onClick = { aiRecommended = true; onAiRecommend() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -176,21 +178,22 @@ fun UnclassifiedListScreen(
                 }
 
                 // AI 추천대로 일괄 확정
-                OutlinedButton(
+                Button(
                     onClick = onBulkConfirm,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.5.dp, Color(0xFFE0E0E0)),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = Color(0xFF343434)
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFF1B1F3B),
+                        contentColor = Color.White
                     )
                 ) {
                     Text(
                         text = "AI 추천대로 일괄 확정",
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
                     )
                 }
             }
@@ -208,6 +211,7 @@ fun UnclassifiedListScreen(
 @Composable
 private fun TransactionCard(
     transaction: UnclassifiedTransaction,
+    showAiCategory: Boolean = false,
     onClick: () -> Unit
 ) {
     Row(
@@ -250,14 +254,16 @@ private fun TransactionCard(
                 color = Color(0xFFCACACA)
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            if (showAiCategory) {
+                Spacer(modifier = Modifier.height(4.dp))
 
-            Text(
-                text = "AI 추천: ${transaction.aiCategory}",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Medium,
-                color = LogoPurple
-            )
+                Text(
+                    text = "AI 추천: ${transaction.aiCategory}",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = LogoPurple
+                )
+            }
         }
 
         Spacer(modifier = Modifier.width(8.dp))
