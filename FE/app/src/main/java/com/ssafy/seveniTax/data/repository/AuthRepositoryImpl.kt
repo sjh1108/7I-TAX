@@ -57,9 +57,10 @@ class AuthRepositoryImpl @Inject constructor(
         secureStorage.saveRefreshToken(refreshToken)
     }
 
-    override fun saveUserInfo(userId: Long, phoneNumber: String) {
+    override fun saveUserInfo(userId: Long, phoneNumber: String, name: String) {
         secureStorage.saveUserId(userId.toString())
         secureStorage.savePhoneNumber(phoneNumber)
+        secureStorage.saveUserName(name)
     }
 
     override fun getStoredPhoneNumber(): String? = secureStorage.getPhoneNumber()

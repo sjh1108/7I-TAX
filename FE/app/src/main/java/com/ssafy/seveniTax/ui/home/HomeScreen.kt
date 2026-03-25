@@ -2,107 +2,192 @@ package com.ssafy.seveniTax.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CalendarMonth
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Assessment
-import androidx.compose.material.icons.outlined.CreditCard
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.svg.SvgDecoder
 import com.ssafy.seveniTax.R
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.ui.theme.BrandPurple
+import com.ssafy.seveniTax.ui.theme.Error
+import com.ssafy.seveniTax.ui.theme.LogoPurple
+import com.ssafy.seveniTax.ui.theme.Surface
+import com.ssafy.seveniTax.ui.theme.TextPrimary
+import com.ssafy.seveniTax.ui.theme.TextSecondary
+import com.ssafy.seveniTax.viewmodel.MainViewModel
+
+private data class HomeActionItem(
+    val title: String,
+    val iconAsset: String,
+    val onClick: (NavController) -> Unit
+)
+
+private data class SummaryMetric(
+    val label: String,
+    val value: String
+)
+
+private data class ScheduleItem(
+    val title: String,
+    val dueText: String,
+    val dDayText: String
+)
+
+private data class TransactionItem(
+    val merchant: String,
+    val amount: String,
+    val status: String
+)
+
+private data class InsightItem(
+    val title: String,
+    val description: String
+)
 
 @Composable
-fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
-    var showNotificationDialog by remember { mutableStateOf(false) }
+fun HomeScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier,
+    viewModel: MainViewModel = hiltViewModel()
+) {
+    val userName = viewModel.getUserName().ifBlank { "이름" }
+    val actions = listOf(
+        HomeActionItem("세금 일정", "home/icon_tax_calendar.svg") {
+            it.navigate(Route.TaxCalendar.path)
+        },
+        HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
+            it.navigate(Route.QrPayment.path)
+        },
+        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
+            it.navigate(Route.CardList.path)
+        },
+        HomeActionItem("리포트 보기", "home/icon_report.svg") {
+            it.navigate(Route.TaxReport.path)
+        },
+        HomeActionItem("장부 보기", "home/icon_book_entries.svg") {
+            it.navigate(Route.BookEntryList.path)
+        },
+        HomeActionItem("송금", "home/icon_transfer.svg") {
+            it.navigate(Route.ServerTest.path)
+        }
+    )
 
-    if (showNotificationDialog) {
-        NotificationDialog(onDismiss = { showNotificationDialog = false })
-    }
+    val schedules = listOf(
+        ScheduleItem("부가세 예정신고", "3월 31일", "D-6"),
+        ScheduleItem("원천세 신고", "4월 10일", "D-16")
+    )
+    val recentTransactions = listOf(
+        TransactionItem("스타벅스 강남점", "12,000원", "미분류"),
+        TransactionItem("쿠팡", "48,000원", "사업용"),
+        TransactionItem("강남주유소", "70,000원", "확인 필요")
+    )
+    val insights = listOf(
+        InsightItem("경비 처리 누락 가능 거래 4건", "정리하면 약 32만원 수준의 절세 여지를 확인할 수 있어요."),
+        InsightItem("신고 전 검토 추천", "미확인 장부를 먼저 처리하면 신고 누락 위험을 줄일 수 있어요.")
+    )
 
-    Box(modifier = modifier.fillMaxSize().background(BrandPurple)) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(
+                brush = Brush.verticalGradient(
+                    colors = listOf(BrandPurple, BrandPurple, Color.White),
+                    startY = 0f,
+                    endY = 420f
+                )
+            )
+    ) {
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp),
+            verticalArrangement = Arrangement.spacedBy(0.dp)
         ) {
-            HomeHeader(onNotificationClick = { showNotificationDialog = true })
-
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 600.dp)
-                    .background(
-                        Color.White,
-                        RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp)
-                    )
-                    .padding(horizontal = 24.dp, vertical = 28.dp)
-            ) {
-                CardStack()
-                Spacer(modifier = Modifier.height(28.dp))
-
-                // 바로가기 버튼 1줄
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
                 ) {
-                    ShortcutButton(
-                        icon = Icons.Outlined.Assessment,
-                        label = "레포트",
-                        onClick = { navController.navigate(Route.TaxReport.path) }
-                    )
-                    ShortcutButton(
-                        icon = Icons.Outlined.CalendarMonth,
-                        label = "캘린더",
-                        onClick = { navController.navigate(Route.TaxCalendar.path) }
-                    )
-                    ShortcutButton(
-                        icon = Icons.Outlined.CreditCard,
-                        label = "카드등록",
-                        onClick = { navController.navigate(Route.CardTypeSelect.path) }
-                    )
-                    ShortcutButton(
-                        icon = Icons.Outlined.Settings,
-                        label = "카드관리",
-                        onClick = { navController.navigate(Route.CardList.path) }
-                    )
+                    HomeHeader(userName = userName)
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
-                Spacer(modifier = Modifier.height(12.dp))
-                // 바로가기 버튼 2줄
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+            }
+
+            item {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
+                        .background(Color.White)
+                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                    verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    ShortcutButton(
-                        icon = Icons.Outlined.MenuBook,
-                        label = "간편장부",
+                    SummaryOverviewCard(
+                        metrics = listOf(
+                            SummaryMetric("최근 7일 거래", "26건"),
+                            SummaryMetric("다음 신고", "D-6"),
+                            SummaryMetric("미확인 장부", "12건")
+                        )
+                    )
+                    UnconfirmedLedgerCard(
                         onClick = { navController.navigate(Route.BookEntryList.path) }
                     )
+                    ActionGrid(
+                        navController = navController,
+                        items = actions
+                    )
+                    ScheduleSection(
+                        schedules = schedules,
+                        onClick = { navController.navigate(Route.TaxCalendar.path) }
+                    )
+                    LedgerSection(
+                        transactions = recentTransactions,
+                        onClick = { navController.navigate(Route.BookEntryList.path) }
+                    )
+                    InsightSection(
+                        insights = insights,
+                        onClick = { navController.navigate(Route.TaxReport.path) }
+                    )
+                    PaymentSection(
+                        isPayEnrolled = viewModel.isPayEnrolled(),
+                        onCardClick = { navController.navigate(Route.CardList.path) },
+                        onQrClick = { navController.navigate(Route.QrPayment.path) }
+                    )
+                    NoticeBanner()
                 }
             }
         }
@@ -110,218 +195,566 @@ fun HomeScreen(navController: NavController, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun HomeHeader(onNotificationClick: () -> Unit = {}) {
+private fun HomeHeader(userName: String) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 16.dp),
+        modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .size(50.dp)
-                .clip(CircleShape)
-                .background(LogoPurple),
-            contentAlignment = Alignment.Center
-        ) {
-            Text("U", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        }
+        Text(
+            text = "안녕하세요, ${userName}님",
+            fontSize = 20.sp,
+            lineHeight = 24.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = Color.White,
+            modifier = Modifier.weight(1f)
+        )
 
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "안녕하세요,",
-                fontSize = 14.sp,
-                color = Color.White.copy(alpha = 0.7f)
-            )
-            Text(
-                text = "홍길동님",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White
-            )
-        }
-
-        Box(
-            modifier = Modifier.clickable(onClick = onNotificationClick)
-        ) {
+        Box {
             Icon(
                 painter = painterResource(R.drawable.ic_34),
                 contentDescription = "알림",
                 tint = Color.White,
-                modifier = Modifier.size(24.dp)
+                modifier = Modifier
+                    .padding(top = 6.dp)
+                    .size(24.dp)
             )
             Box(
                 modifier = Modifier
                     .size(16.dp)
                     .clip(CircleShape)
                     .background(Error)
-                    .align(Alignment.TopEnd)
-                    .offset(x = 4.dp, y = (-4).dp),
+                    .align(Alignment.TopEnd),
                 contentAlignment = Alignment.Center
             ) {
-                Text("3", fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                Text(
+                    text = "3",
+                    fontSize = 9.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
 }
 
 @Composable
-private fun CardStack() {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(220.dp),
-        contentAlignment = Alignment.TopCenter
+private fun SummaryOverviewCard(metrics: List<SummaryMetric>) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Surface),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .fillMaxWidth(0.82f)
-                .height(180.dp)
-                .offset(y = 32.dp)
-                .shadow(8.dp, RoundedCornerShape(10.dp))
-                .background(LogoPurple, RoundedCornerShape(10.dp))
-        )
-        Box(
-            modifier = Modifier
-                .fillMaxWidth(0.9f)
-                .height(185.dp)
-                .offset(y = 18.dp)
-                .shadow(8.dp, RoundedCornerShape(10.dp))
-                .background(Error, RoundedCornerShape(10.dp))
-        )
-        BankCard(modifier = Modifier.fillMaxWidth())
-    }
-}
-
-@Composable
-private fun BankCard(modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .height(204.dp)
-            .shadow(12.dp, RoundedCornerShape(10.dp))
-            .background(
-                color = CardBlue,
-                shape = RoundedCornerShape(10.dp)
-            )
-            .padding(24.dp)
-    ) {
-        Column(modifier = Modifier.fillMaxSize()) {
-            Text(
-                text = "홍길동",
-                fontSize = 24.sp,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "7iTAX 사업자 카드",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = Color.White.copy(alpha = 0.8f)
-            )
-            Spacer(modifier = Modifier.weight(1f))
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("4756", fontSize = 16.sp, color = Color.White)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("••••", fontSize = 16.sp, color = Color.White)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("••••", fontSize = 16.sp, color = Color.White)
-                Spacer(modifier = Modifier.width(12.dp))
-                Text("9018", fontSize = 16.sp, color = Color.White)
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "₩3,469,520",
-                fontSize = 20.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-        }
-    }
-}
-
-@Composable
-private fun ShortcutButton(
-    icon: ImageVector,
-    label: String,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(52.dp)
-                .clip(CircleShape)
-                .background(BrandPurple.copy(alpha = 0.1f)),
-            contentAlignment = Alignment.Center
+                .fillMaxWidth()
+                .padding(20.dp)
         ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = BrandPurple,
-                modifier = Modifier.size(26.dp)
+            Text(
+                text = "이번 달 핵심 요약",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
             )
+            Spacer(modifier = Modifier.height(16.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                metrics.forEach { metric ->
+                    SummaryStat(
+                        label = metric.label,
+                        value = metric.value,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
         }
-        Spacer(modifier = Modifier.height(8.dp))
+    }
+}
+
+@Composable
+private fun SummaryStat(label: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .heightIn(min = 78.dp)
+            .clip(RoundedCornerShape(18.dp))
+            .background(Color.White)
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalArrangement = Arrangement.Top
+    ) {
         Text(
             text = label,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.weight(1f))
+        Text(
+            text = value,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
     }
 }
 
 @Composable
-private fun NotificationDialog(onDismiss: () -> Unit) {
-    val notifications = listOf(
-        "부가가치세 신고 마감 D-7",
-        "3월 카드 매출 자동 분류 완료",
-        "간편장부 미분류 거래 2건"
-    )
+private fun UnconfirmedLedgerCard(onClick: () -> Unit) {
+    Card(
+        modifier = Modifier.clickable { onClick() },
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F3FF)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = "미확인 장부",
+                    fontSize = 14.sp,
+                    color = TextSecondary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "12건",
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandPurple
+                )
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = "신고 전에 분류와 확인이 필요한 내역이 있어요",
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
 
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = {
-            Text(
-                text = "알림",
-                fontWeight = FontWeight.Bold,
-                fontSize = 18.sp
-            )
-        },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                notifications.forEach { message ->
-                    Row(verticalAlignment = Alignment.Top) {
-                        Box(
-                            modifier = Modifier
-                                .padding(top = 7.dp)
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(BrandPurple)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = message,
-                            fontSize = 14.sp,
-                            color = TextPrimary
-                        )
-                    }
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(999.dp))
+                    .background(LogoPurple)
+                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "지금 확인",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ActionGrid(navController: NavController, items: List<HomeActionItem>) {
+    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+        items.chunked(3).forEach { rowItems ->
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                rowItems.forEach { item ->
+                    ActionCard(
+                        item = item,
+                        navController = navController,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                repeat(3 - rowItems.size) {
+                    Spacer(modifier = Modifier.weight(1f))
                 }
             }
-        },
-        confirmButton = {
-            TextButton(onClick = onDismiss) {
-                Text("확인", color = BrandPurple)
+        }
+    }
+}
+
+@Composable
+private fun ActionCard(
+    item: HomeActionItem,
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier
+            .aspectRatio(1f)
+            .clickable { item.onClick(navController) },
+        shape = RoundedCornerShape(15.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp, vertical = 14.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            HomeSvgIcon(
+                assetPath = item.iconAsset,
+                modifier = Modifier.size(34.dp)
+            )
+            Spacer(modifier = Modifier.height(14.dp))
+            Text(
+                text = item.title,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextPrimary
+            )
+        }
+    }
+}
+
+@Composable
+private fun ScheduleSection(schedules: List<ScheduleItem>, onClick: () -> Unit) {
+    HomeSectionCard(
+        title = "다가오는 신고 일정",
+        actionText = "전체 보기",
+        onClick = onClick
+    ) {
+        schedules.forEachIndexed { index, item ->
+            ScheduleRow(item = item)
+            if (index != schedules.lastIndex) {
+                Spacer(modifier = Modifier.height(12.dp))
             }
-        },
-        containerColor = Color.White,
-        shape = RoundedCornerShape(16.dp)
+        }
+    }
+}
+
+@Composable
+private fun ScheduleRow(item: ScheduleItem) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFF8F8FB))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.title,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = item.dueText,
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
+        }
+        Text(
+            text = item.dDayText,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = BrandPurple
+        )
+    }
+}
+
+@Composable
+private fun LedgerSection(transactions: List<TransactionItem>, onClick: () -> Unit) {
+    HomeSectionCard(
+        title = "이번 달 장부 현황",
+        actionText = "장부 보기",
+        onClick = onClick
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LedgerMetricCard("수입", "4,820,000원", Modifier.weight(1f))
+            LedgerMetricCard("지출", "1,430,000원", Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            LedgerMetricCard("고정자산", "320,000원", Modifier.weight(1f))
+            LedgerMetricCard("미분류", "5건", Modifier.weight(1f))
+        }
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "최근 거래",
+            fontSize = 13.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        transactions.forEachIndexed { index, transaction ->
+            TransactionRow(transaction)
+            if (index != transactions.lastIndex) {
+                Spacer(modifier = Modifier.height(10.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun LedgerMetricCard(title: String, value: String, modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFF8F8FB))
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun TransactionRow(item: TransactionItem) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFF8F8FB))
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = item.merchant,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Medium,
+                color = TextPrimary
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = item.status,
+                fontSize = 12.sp,
+                color = TextSecondary
+            )
+        }
+        Text(
+            text = item.amount,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun InsightSection(insights: List<InsightItem>, onClick: () -> Unit) {
+    HomeSectionCard(
+        title = "이번 달 절세 포인트",
+        actionText = "리포트 보기",
+        onClick = onClick
+    ) {
+        insights.forEachIndexed { index, item ->
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Color(0xFFFFF8ED))
+                    .padding(horizontal = 16.dp, vertical = 14.dp)
+            ) {
+                Text(
+                    text = item.title,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = item.description,
+                    fontSize = 12.sp,
+                    color = TextSecondary
+                )
+            }
+            if (index != insights.lastIndex) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun PaymentSection(
+    isPayEnrolled: Boolean,
+    onCardClick: () -> Unit,
+    onQrClick: () -> Unit
+) {
+    HomeSectionCard(
+        title = "결제 수단 상태",
+        actionText = null,
+        onClick = null
+    ) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PaymentStatusCard(
+                title = "기본 카드",
+                value = "삼성 Business",
+                modifier = Modifier.weight(1f),
+                onClick = onCardClick
+            )
+            PaymentStatusCard(
+                title = "Tax Pay",
+                value = if (isPayEnrolled) "가입 완료" else "미가입",
+                modifier = Modifier.weight(1f),
+                onClick = onQrClick
+            )
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+        PaymentStatusWideCard(
+            title = "최근 결제",
+            value = "오늘 14:32 · 18,000원",
+            onClick = onQrClick
+        )
+    }
+}
+
+@Composable
+private fun PaymentStatusCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFF8F8FB))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Text(
+            text = title,
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(
+            text = value,
+            fontSize = 15.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun PaymentStatusWideCard(
+    title: String,
+    value: String,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(Color(0xFFF8F8FB))
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = title,
+            fontSize = 13.sp,
+            color = TextSecondary,
+            modifier = Modifier.weight(1f)
+        )
+        Text(
+            text = value,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary
+        )
+    }
+}
+
+@Composable
+private fun NoticeBanner() {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2430)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 18.dp)
+        ) {
+            Text(
+                text = "지금 해야 할 것",
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = Color.White
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "사업용으로 확정되지 않은 거래가 있어요. 신고 전에 검토를 마치면 누락 위험을 줄일 수 있어요.",
+                fontSize = 12.sp,
+                color = Color.White.copy(alpha = 0.82f),
+                lineHeight = 18.sp
+            )
+        }
+    }
+}
+
+@Composable
+private fun HomeSectionCard(
+    title: String,
+    actionText: String?,
+    onClick: (() -> Unit)?,
+    content: @Composable () -> Unit
+) {
+    Card(
+        shape = RoundedCornerShape(22.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary,
+                    modifier = Modifier.weight(1f)
+                )
+                if (actionText != null && onClick != null) {
+                    Text(
+                        text = actionText,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = BrandPurple,
+                        modifier = Modifier.clickable { onClick() }
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            content()
+        }
+    }
+}
+
+@Composable
+private fun HomeSvgIcon(assetPath: String, modifier: Modifier = Modifier) {
+    val context = LocalContext.current
+    val request = ImageRequest.Builder(context)
+        .data("file:///android_asset/$assetPath")
+        .decoderFactory(SvgDecoder.Factory())
+        .build()
+
+    AsyncImage(
+        model = request,
+        contentDescription = null,
+        modifier = modifier,
+        contentScale = ContentScale.Fit
     )
 }
