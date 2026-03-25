@@ -43,6 +43,7 @@ fun UnclassifiedListScreen(
     transactions: List<UnclassifiedTransaction> = sampleTransactions(),
     showFirstVisitToast: Boolean = false,
     onBulkConfirm: () -> Unit = {},
+    onAiRecommend: () -> Unit = {},
     onReviewAll: () -> Unit = {},
     onTransactionClick: (String) -> Unit = {}
 ) {
@@ -155,28 +156,28 @@ fun UnclassifiedListScreen(
                     .padding(horizontal = 28.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // AI 추천대로 일괄 확정
-                Button(
-                    onClick = onBulkConfirm,
+                // AI로 경비 추천 받기
+                OutlinedButton(
+                    onClick = onAiRecommend,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BrandPurple,
-                        contentColor = Color.White
+                    border = BorderStroke(1.5.dp, LogoPurple),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = LogoPurple
                     )
                 ) {
                     Text(
-                        text = "AI 추천대로 일괄 확정",
+                        text = "AI로 경비 추천 받기",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )
                 }
 
-                // 전체 확인하기
+                // AI 추천대로 일괄 확정
                 OutlinedButton(
-                    onClick = onReviewAll,
+                    onClick = onBulkConfirm,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
@@ -187,7 +188,7 @@ fun UnclassifiedListScreen(
                     )
                 ) {
                     Text(
-                        text = "전체 확인하기",
+                        text = "AI 추천대로 일괄 확정",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold
                     )

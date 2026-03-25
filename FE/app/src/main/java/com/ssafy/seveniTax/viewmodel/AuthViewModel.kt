@@ -100,6 +100,10 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun goToStep(step: AuthStep) {
+        _uiState.update { it.copy(currentStep = step, errorMessage = "") }
+    }
+
     fun previousStep() {
         _uiState.update { state ->
             val prev = when (state.currentStep) {

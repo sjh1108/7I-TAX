@@ -84,13 +84,18 @@ fun BookEntryListScreen(
 
             // 미확인 배너
             if (unconfirmedCount > 0) {
-                UnconfirmedBanner(count = unconfirmedCount)
+                UnconfirmedBanner(
+                    count = unconfirmedCount,
+                    onClick = { navController.navigate(Route.UnclassifiedList.path) }
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
 
             // 월 드롭다운 + 필터
-            MonthFilterRow()
+            MonthFilterRow(
+                onFilterClick = { navController.navigate(Route.BookFilter.path) }
+            )
 
             // 탭
             BookTabs(
@@ -265,13 +270,13 @@ private fun SummaryBox(
 // ─── 미확인 배너 ────────────────────────────────────────
 
 @Composable
-private fun UnconfirmedBanner(count: Int) {
+private fun UnconfirmedBanner(count: Int, onClick: () -> Unit = {}) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp, vertical = 8.dp)
             .background(Surface, RoundedCornerShape(12.dp))
-            .clickable { }
+            .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -308,7 +313,12 @@ private fun UnconfirmedBanner(count: Int) {
 // ─── 월 드롭다운 + 필터 ────────────────────────────────
 
 @Composable
-private fun MonthFilterRow() {
+private fun MonthFilterRow(onFilterClick: () -> Unit = {}) {
+    var yearExpanded by remember { mutableStateOf(false) }
+    var monthExpanded by remember { mutableStateOf(false) }
+    var selectedYear by remember { mutableIntStateOf(2025) }
+    var selectedMonth by remember { mutableIntStateOf(3) }
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -316,25 +326,91 @@ private fun MonthFilterRow() {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 월 드롭다운
-        OutlinedButton(
-            onClick = { },
-            shape = RoundedCornerShape(12.dp),
-            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
-        ) {
-            Text(
-                "2025년 3월",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.width(4.dp))
-            Text("▾", fontSize = 10.sp, color = TextPrimary)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // 연도 드롭다운
+            Box {
+                OutlinedButton(
+                    onClick = { yearExpanded = true },
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        "${selectedYear}년",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("▾", fontSize = 10.sp, color = TextPrimary)
+                }
+
+                DropdownMenu(
+                    expanded = yearExpanded,
+                    onDismissRequest = { yearExpanded = false },
+                    containerColor = Color.White
+                ) {
+                    (2026 downTo 2020).forEach { year ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "${year}년",
+                                    fontWeight = if (year == selectedYear) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (year == selectedYear) BrandPurple else TextPrimary
+                                )
+                            },
+                            onClick = {
+                                selectedYear = year
+                                yearExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
+
+            // 월 드롭다운
+            Box {
+                OutlinedButton(
+                    onClick = { monthExpanded = true },
+                    shape = RoundedCornerShape(12.dp),
+                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp)
+                ) {
+                    Text(
+                        "${selectedMonth}월",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("▾", fontSize = 10.sp, color = TextPrimary)
+                }
+
+                DropdownMenu(
+                    expanded = monthExpanded,
+                    onDismissRequest = { monthExpanded = false },
+                    containerColor = Color.White
+                ) {
+                    (1..12).forEach { month ->
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    "${month}월",
+                                    fontWeight = if (month == selectedMonth) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (month == selectedMonth) BrandPurple else TextPrimary
+                                )
+                            },
+                            onClick = {
+                                selectedMonth = month
+                                monthExpanded = false
+                            }
+                        )
+                    }
+                }
+            }
         }
 
         // 필터 아이콘
         OutlinedIconButton(
-            onClick = { },
+            onClick = onFilterClick,
             shape = RoundedCornerShape(12.dp),
             modifier = Modifier.size(40.dp)
         ) {

@@ -71,25 +71,19 @@ fun BottomTabBar(
             }
         }
 
-        // 가운데 플로팅 QR 버튼
-        Box(
+        // 가운데 플로팅 로고 버튼
+        Icon(
+            painter = painterResource(R.drawable.logo_symbol),
+            contentDescription = "71TAX",
+            tint = Color.Unspecified,
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .offset(y = (-20).dp)
                 .size(56.dp)
                 .shadow(8.dp, CircleShape)
                 .clip(CircleShape)
-                .background(BrandPurple)
-                .clickable { onPayClick() },
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                painter = painterResource(R.drawable.ic_qr_scan),
-                contentDescription = "결제",
-                tint = Color.White,
-                modifier = Modifier.size(28.dp)
-            )
-        }
+                .clickable { onPayClick() }
+        )
     }
 }
 

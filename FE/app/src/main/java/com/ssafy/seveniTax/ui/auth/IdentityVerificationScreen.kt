@@ -19,7 +19,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
@@ -103,15 +105,6 @@ fun IdentityVerificationScreen(
         }
     }
 
-    LaunchedEffect(uiState.currentStep, uiState.name) {
-        if (uiState.currentStep == AuthStep.NAME && uiState.name.trim().length >= 2) {
-            delay(300)
-            if (viewModel.uiState.value.currentStep == AuthStep.NAME) {
-                viewModel.nextStep()
-            }
-        }
-    }
-
     if (showTelecomSheet) {
         TelecomPickerSheet(
             sheetState = telecomSheetState,
@@ -189,7 +182,9 @@ fun IdentityVerificationScreen(
                     NameSection(
                         name = uiState.name,
                         isActive = uiState.currentStep == AuthStep.NAME,
-                        onNameChange = viewModel::updateName
+                        onNameChange = viewModel::updateName,
+                        onNext = { viewModel.nextStep() },
+                        onEditClick = { viewModel.goToStep(AuthStep.NAME) }
                     )
                 }
             }
@@ -199,7 +194,11 @@ fun IdentityVerificationScreen(
                     TelecomSection(
                         telecom = uiState.telecom,
                         isActive = uiState.currentStep == AuthStep.TELECOM,
-                        onClick = { showTelecomSheet = true }
+                        onClick = { showTelecomSheet = true },
+                        onEditClick = {
+                            viewModel.goToStep(AuthStep.TELECOM)
+                            showTelecomSheet = true
+                        }
                     )
                 }
             }
@@ -211,7 +210,11 @@ fun IdentityVerificationScreen(
                         back = uiState.residentBack,
                         isActive = uiState.currentStep == AuthStep.SSN,
                         onFrontChange = viewModel::updateResidentFront,
-                        onBackChange = viewModel::updateResidentBack
+                        onBackChange = viewModel::updateResidentBack,
+                        onEditClick = {
+                            viewModel.updateResidentBack("")
+                            viewModel.goToStep(AuthStep.SSN)
+                        }
                     )
                 }
             }
@@ -220,7 +223,11 @@ fun IdentityVerificationScreen(
                 PhoneSection(
                     phone = uiState.phone,
                     isActive = uiState.currentStep == AuthStep.PHONE,
-                    onPhoneChange = viewModel::updatePhone
+                    onPhoneChange = viewModel::updatePhone,
+                    onEditClick = {
+                        viewModel.updatePhone("")
+                        viewModel.goToStep(AuthStep.PHONE)
+                    }
                 )
             }
         }
@@ -264,11 +271,14 @@ private fun TelecomPickerSheet(
 private fun PhoneSection(
     phone: String,
     isActive: Boolean,
-    onPhoneChange: (String) -> Unit
+    onPhoneChange: (String) -> Unit,
+    onEditClick: () -> Unit = {}
 ) {
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
         if (!isActive) {
-            FormFieldReadOnly("휴대폰 번호", formatPhoneForm(phone))
+            Column(modifier = Modifier.clickable(onClick = onEditClick)) {
+                FormFieldReadOnly("휴대폰 번호", formatPhoneForm(phone))
+            }
         } else {
             val focusRequester = remember { FocusRequester() }
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -298,11 +308,14 @@ private fun SsnSection(
     back: String,
     isActive: Boolean,
     onFrontChange: (String) -> Unit,
-    onBackChange: (String) -> Unit
+    onBackChange: (String) -> Unit,
+    onEditClick: () -> Unit = {}
 ) {
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
         if (!isActive) {
-            FormFieldReadOnly("주민등록번호", buildSsnDisplay(front, back))
+            Column(modifier = Modifier.clickable(onClick = onEditClick)) {
+                FormFieldReadOnly("주민등록번호", buildSsnDisplay(front, back))
+            }
         } else {
             val frontFocusRequester = remember { FocusRequester() }
             val backFocusRequester = remember { FocusRequester() }
@@ -374,11 +387,14 @@ private fun SsnSection(
 private fun TelecomSection(
     telecom: String,
     isActive: Boolean,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onEditClick: () -> Unit = {}
 ) {
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
         if (!isActive) {
-            FormFieldReadOnly("통신사", telecom)
+            Column(modifier = Modifier.clickable(onClick = onEditClick)) {
+                FormFieldReadOnly("통신사", telecom)
+            }
         } else {
             Text("통신사", style = MaterialTheme.typography.bodySmall, color = TextSecondary)
             Spacer(modifier = Modifier.height(8.dp))
@@ -400,11 +416,15 @@ private fun TelecomSection(
 private fun NameSection(
     name: String,
     isActive: Boolean,
-    onNameChange: (String) -> Unit
+    onNameChange: (String) -> Unit,
+    onNext: () -> Unit = {},
+    onEditClick: () -> Unit = {}
 ) {
     Column(modifier = Modifier.padding(vertical = 12.dp)) {
         if (!isActive) {
-            FormFieldReadOnly("이름", name)
+            Column(modifier = Modifier.clickable(onClick = onEditClick)) {
+                FormFieldReadOnly("이름", name)
+            }
         } else {
             val focusRequester = remember { FocusRequester() }
             LaunchedEffect(Unit) { focusRequester.requestFocus() }
@@ -416,6 +436,10 @@ private fun NameSection(
                 onValueChange = onNameChange,
                 textStyle = MaterialTheme.typography.titleLarge.copy(color = TextPrimary),
                 singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = {
+                    if (name.trim().length >= 2) onNext()
+                }),
                 modifier = Modifier
                     .fillMaxWidth()
                     .focusRequester(focusRequester),
@@ -471,6 +495,7 @@ private fun TermsSheetContent(
     }
     var expandedConsentType by remember { mutableStateOf<String?>(groupedTerms.first().id) }
     var selectedGroupIds by remember { mutableStateOf(setOf<String>()) }
+    val allChecked = groupedTerms.all { selectedGroupIds.contains(it.id) }
     val allRequiredChecked = groupedTerms
         .filter { it.required }
         .all { selectedGroupIds.contains(it.id) }
@@ -491,6 +516,37 @@ private fun TermsSheetContent(
                 color = TextPrimary
             )
             Spacer(modifier = Modifier.height(24.dp))
+
+            // 전체 동의
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(1.dp, Divider, RoundedCornerShape(16.dp))
+                    .clickable {
+                        selectedGroupIds = if (allChecked) {
+                            emptySet()
+                        } else {
+                            groupedTerms.map { it.id }.toSet()
+                        }
+                    }
+                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.CheckCircle,
+                    contentDescription = null,
+                    tint = if (allChecked) BrandPurple else Disabled
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Text(
+                    text = "아래 약관에 모두 동의합니다",
+                    style = MaterialTheme.typography.bodyMedium.copy(
+                        fontWeight = FontWeight.SemiBold
+                    ),
+                    color = TextPrimary
+                )
+            }
+            Spacer(modifier = Modifier.height(12.dp))
 
             groupedTerms.forEach { group ->
                 val isExpanded = expandedConsentType == group.id

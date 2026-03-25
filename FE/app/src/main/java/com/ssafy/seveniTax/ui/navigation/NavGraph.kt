@@ -31,6 +31,7 @@ import com.ssafy.seveniTax.ui.classification.ClassificationCompleteScreen
 import com.ssafy.seveniTax.ui.classification.ClassificationLoadingScreen
 import com.ssafy.seveniTax.ui.classification.ClassificationResultScreen
 import com.ssafy.seveniTax.ui.classification.MemoAddScreen
+import com.ssafy.seveniTax.ui.classification.BulkClassificationLoadingScreen
 import com.ssafy.seveniTax.ui.classification.UnclassifiedListScreen
 import com.ssafy.seveniTax.ui.main.MainScreen
 import com.ssafy.seveniTax.ui.pay.PayBusinessInfoScreen
@@ -44,6 +45,7 @@ import com.ssafy.seveniTax.ui.payment.PaymentProcessingScreen
 import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
 import com.ssafy.seveniTax.ui.book.BookEntryDetailScreen
 import com.ssafy.seveniTax.ui.book.BookEntryListScreen
+import com.ssafy.seveniTax.ui.book.BookFilterScreen
 import com.ssafy.seveniTax.ui.book.ExportDateRangeScreen
 import com.ssafy.seveniTax.ui.book.ExportFormatScreen
 import com.ssafy.seveniTax.ui.book.ExportPurposeScreen
@@ -218,15 +220,26 @@ fun NavGraph(navController: NavHostController) {
         composable(Route.ClassificationResult.path) {
             ClassificationResultScreen(
                 navController = navController,
-                onConfirm = { navController.navigate(Route.MemoAdd.path) },
-                onChangeCategory = { navController.navigate(Route.CategorySelect.path) }
+                onConfirm = {
+                    // 확인 → 바로 세목 저장 완료
+                    navController.navigate(Route.ClassificationComplete.path)
+                },
+                onChangeCategory = {
+                    // 세목 변경 → 카테고리 선택 페이지
+                    navController.navigate(Route.CategorySelect.path)
+                }
             )
         }
 
         composable(Route.CategorySelect.path) {
             CategorySelectScreen(
                 navController = navController,
-                onCategorySelected = { navController.popBackStack() }
+                onCategorySelected = {
+                    // 선택 완료 → 메모 추가 페이지
+                    navController.navigate(Route.MemoAdd.path) {
+                        popUpTo(Route.CategorySelect.path) { inclusive = true }
+                    }
+                }
             )
         }
 
@@ -255,7 +268,12 @@ fun NavGraph(navController: NavHostController) {
                 onBulkConfirm = {
                     navController.navigate(Route.ClassificationComplete.path)
                 },
+                onAiRecommend = {
+                    // AI로 경비 추천 받기 → 일괄 분석 로딩
+                    navController.navigate(Route.BulkClassificationLoading.path)
+                },
                 onReviewAll = {
+                    // 항목 한개씩 개별 분류 → 세목 변경 플로우
                     navController.navigate(Route.ClassificationResult.path)
                 },
                 onTransactionClick = {
@@ -264,8 +282,25 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
+        composable(Route.BulkClassificationLoading.path) {
+            BulkClassificationLoadingScreen(
+                navController = navController,
+                onComplete = {
+                    // 일괄 분석 완료 → 미분류 내역으로 복귀 (AI 추천 표시됨)
+                    // AI 추천대로 일괄 확정 또는 개별 선택 가능
+                    navController.navigate(Route.UnclassifiedList.path) {
+                        popUpTo(Route.BulkClassificationLoading.path) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Route.BookEntryList.path) {
             BookEntryListScreen(navController)
+        }
+
+        composable(Route.BookFilter.path) {
+            BookFilterScreen(navController)
         }
 
         composable(Route.TaxReport.path) {

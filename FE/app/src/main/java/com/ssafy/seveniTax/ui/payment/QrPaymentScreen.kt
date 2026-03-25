@@ -22,10 +22,13 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
@@ -240,17 +243,30 @@ fun QrPaymentScreen(navController: NavController) {
         ) {
             items(mockCards.size) { index ->
                 val card = mockCards[index]
+                val isSelected = index == selectedCard
+                val animatedWidth by animateDpAsState(
+                    targetValue = if (isSelected) 116.dp else 100.dp,
+                    animationSpec = tween(200), label = "cardWidth"
+                )
+                val animatedHeight by animateDpAsState(
+                    targetValue = if (isSelected) 160.dp else 140.dp,
+                    animationSpec = tween(200), label = "cardHeight"
+                )
+                val animatedElevation by animateDpAsState(
+                    targetValue = if (isSelected) 12.dp else 0.dp,
+                    animationSpec = tween(200), label = "cardElevation"
+                )
                 Box(
                     modifier = Modifier
-                        .width(100.dp)
-                        .height(140.dp)
+                        .width(animatedWidth)
+                        .height(animatedHeight)
+                        .shadow(
+                            elevation = animatedElevation,
+                            shape = RoundedCornerShape(12.dp),
+                            clip = false
+                        )
                         .clip(RoundedCornerShape(12.dp))
                         .background(card.color)
-                        .border(
-                            width = if (index == selectedCard) 3.dp else 0.dp,
-                            color = if (index == selectedCard) BrandPurple else Color.Transparent,
-                            shape = RoundedCornerShape(12.dp)
-                        )
                         .clickable { selectedCard = index }
                         .padding(12.dp),
                     contentAlignment = Alignment.BottomStart
