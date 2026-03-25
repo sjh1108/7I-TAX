@@ -64,13 +64,38 @@ class TaxCalendarViewModel @Inject constructor(
     fun setReminderD1(enabled: Boolean) { _reminderD1.value = enabled }
     fun setReminderDDay(enabled: Boolean) { _reminderDDay.value = enabled }
 
+    // 알림 받을 세금 유형
+    private val _vatAlarmEnabled = MutableStateFlow(true)
+    val vatAlarmEnabled: StateFlow<Boolean> = _vatAlarmEnabled.asStateFlow()
+
+    private val _incomeAlarmEnabled = MutableStateFlow(true)
+    val incomeAlarmEnabled: StateFlow<Boolean> = _incomeAlarmEnabled.asStateFlow()
+
+    private val _localAlarmEnabled = MutableStateFlow(true)
+    val localAlarmEnabled: StateFlow<Boolean> = _localAlarmEnabled.asStateFlow()
+
+    fun setVatAlarmEnabled(enabled: Boolean) { _vatAlarmEnabled.value = enabled }
+    fun setIncomeAlarmEnabled(enabled: Boolean) { _incomeAlarmEnabled.value = enabled }
+    fun setLocalAlarmEnabled(enabled: Boolean) { _localAlarmEnabled.value = enabled }
+
     fun applyReminderSettings() {
         if (!_reminderEnabled.value) {
             reminderScheduler.cancelAllReminders(_deadlines.value)
             return
         }
+        val filteredDeadlines = _deadlines.value.filter { deadline ->
+            when (classifyTax(deadline)) {
+                TaxType.VAT -> _vatAlarmEnabled.value
+                TaxType.INCOME -> _incomeAlarmEnabled.value
+                TaxType.LOCAL -> _localAlarmEnabled.value
+            }
+        }
+        // 비활성화된 세금 유형의 알림은 취소
+        val disabledDeadlines = _deadlines.value - filteredDeadlines.toSet()
+        reminderScheduler.cancelAllReminders(disabledDeadlines)
+
         reminderScheduler.scheduleReminders(
-            deadlines = _deadlines.value,
+            deadlines = filteredDeadlines,
             d7 = _reminderD7.value,
             d3 = _reminderD3.value,
             d1 = _reminderD1.value,

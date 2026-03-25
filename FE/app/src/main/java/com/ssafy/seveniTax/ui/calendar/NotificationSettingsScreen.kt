@@ -26,7 +26,7 @@ fun NotificationSettingsScreen(
     navController: NavController,
     viewModel: TaxCalendarViewModel
 ) {
-    var calendarAlarmEnabled by remember { mutableStateOf(true) }
+    var calendarAlarmEnabled by remember { mutableStateOf(viewModel.reminderEnabled.value) }
 
     // 리마인드 타이밍 (ViewModel과 연동)
     var d7 by remember { mutableStateOf(viewModel.reminderD7.value) }
@@ -35,9 +35,9 @@ fun NotificationSettingsScreen(
     var dDay by remember { mutableStateOf(viewModel.reminderDDay.value) }
 
     // 알림 받을 세금
-    var vatEnabled by remember { mutableStateOf(true) }
-    var incomeEnabled by remember { mutableStateOf(true) }
-    var localEnabled by remember { mutableStateOf(true) }
+    var vatEnabled by remember { mutableStateOf(viewModel.vatAlarmEnabled.value) }
+    var incomeEnabled by remember { mutableStateOf(viewModel.incomeAlarmEnabled.value) }
+    var localEnabled by remember { mutableStateOf(viewModel.localAlarmEnabled.value) }
 
     // 알림 방식
     var pushEnabled by remember { mutableStateOf(true) }
@@ -93,10 +93,14 @@ fun NotificationSettingsScreen(
 
         // 저장 버튼
         SaveButton(onClick = {
+            viewModel.setReminderEnabled(calendarAlarmEnabled)
             viewModel.setReminderD7(d7)
             viewModel.setReminderD3(d3)
             viewModel.setReminderD1(d1)
             viewModel.setReminderDDay(dDay)
+            viewModel.setVatAlarmEnabled(vatEnabled)
+            viewModel.setIncomeAlarmEnabled(incomeEnabled)
+            viewModel.setLocalAlarmEnabled(localEnabled)
             viewModel.applyReminderSettings()
             navController.popBackStack()
         })
