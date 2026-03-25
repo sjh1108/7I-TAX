@@ -2,6 +2,7 @@ package com.ssafy.seveniTax.ui.book
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.data.model.book.BookEntryResponse
+import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.BookEntryDetailViewModel
 import java.text.NumberFormat
@@ -148,30 +150,29 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
                 Spacer(modifier = Modifier.height(16.dp))
 
                 // 태그
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     if (entry.categoryName != null) {
                         Box(
                             modifier = Modifier
+                                .height(32.dp)
                                 .background(BrandPurple, RoundedCornerShape(20.dp))
-                                .padding(horizontal = 16.dp, vertical = 6.dp)
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
                         ) {
                             Text(entry.categoryName!!, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
                         }
                     }
                     Box(
                         modifier = Modifier
-                            .background(Color.White, RoundedCornerShape(20.dp))
-                            .then(Modifier.background(Color.Transparent))
-                            .padding(horizontal = 16.dp, vertical = 6.dp)
+                            .height(32.dp)
+                            .border(BorderStroke(1.dp, Disabled), RoundedCornerShape(20.dp))
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        OutlinedButton(
-                            onClick = { },
-                            shape = RoundedCornerShape(20.dp),
-                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 4.dp),
-                            border = BorderStroke(1.dp, Disabled)
-                        ) {
-                            Text("카드전표", fontSize = 13.sp, color = TextSecondary)
-                        }
+                        Text("카드전표", fontSize = 13.sp, color = TextSecondary)
                     }
                 }
 
@@ -201,7 +202,7 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
         ) {
             // 분류 변경
             OutlinedButton(
-                onClick = { },
+                onClick = { navController.navigate(Route.CategorySelect.create("book")) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(15.dp),
                 border = BorderStroke(1.dp, Disabled)
@@ -211,7 +212,7 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
 
             // 메모 추가
             OutlinedButton(
-                onClick = { },
+                onClick = { navController.navigate(Route.BookMemoAdd.path) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(15.dp),
                 border = BorderStroke(1.dp, Disabled)
@@ -219,14 +220,14 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
                 Text("메모 추가", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             }
 
-            // 증빙 확인
+            // 확인
             Button(
-                onClick = { },
+                onClick = { navController.popBackStack() },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(15.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
             ) {
-                Text("증빙 확인", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                Text("확인", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
             }
         }
 

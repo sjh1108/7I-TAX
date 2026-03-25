@@ -239,13 +239,25 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Route.CategorySelect.path) {
+        composable(
+            route = Route.CategorySelect.path,
+            arguments = listOf(navArgument("returnTo") {
+                type = NavType.StringType
+                defaultValue = ""
+            })
+        ) { backStackEntry ->
+            val returnTo = backStackEntry.arguments?.getString("returnTo") ?: ""
             CategorySelectScreen(
                 navController = navController,
                 onCategorySelected = {
-                    // 선택 완료 → 메모 추가 페이지
-                    navController.navigate(Route.MemoAdd.path) {
-                        popUpTo(Route.CategorySelect.path) { inclusive = true }
+                    if (returnTo == "book") {
+                        navController.navigate(Route.BookEntryList.path) {
+                            popUpTo(Route.BookEntryList.path) { inclusive = false }
+                        }
+                    } else {
+                        navController.navigate(Route.MemoAdd.path) {
+                            popUpTo(Route.CategorySelect.path) { inclusive = true }
+                        }
                     }
                 }
             )
