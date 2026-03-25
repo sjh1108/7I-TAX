@@ -156,13 +156,6 @@ fun HomeScreen(
                         .padding(horizontal = 24.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    SummaryOverviewCard(
-                        metrics = listOf(
-                            SummaryMetric("최근 7일 거래", "26건"),
-                            SummaryMetric("다음 신고", "D-6"),
-                            SummaryMetric("미확인 장부", "12건")
-                        )
-                    )
                     UnconfirmedLedgerCard(
                         onClick = { navController.navigate(Route.BookEntryList.path) }
                     )
