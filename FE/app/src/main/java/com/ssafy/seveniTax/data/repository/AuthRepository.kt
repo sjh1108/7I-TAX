@@ -1,8 +1,5 @@
 package com.ssafy.seveniTax.data.repository
 
-import com.ssafy.seveniTax.data.model.auth.LoginRequest
-import com.ssafy.seveniTax.data.model.auth.ReissueRequest
-import com.ssafy.seveniTax.data.model.auth.SetupPinRequest
 import com.ssafy.seveniTax.data.model.auth.TokenResponse
 import com.ssafy.seveniTax.data.model.auth.VerifyIdentityRequest
 import com.ssafy.seveniTax.data.model.auth.VerifyIdentityResponse
@@ -16,7 +13,7 @@ interface AuthRepository {
     suspend fun logout()
 
     fun saveTokens(accessToken: String, refreshToken: String)
-    fun saveUserInfo(userId: Long, phoneNumber: String)
+    fun saveUserInfo(userId: Long, phoneNumber: String, name: String)
     fun getStoredPhoneNumber(): String?
     fun hasStoredCredentials(): Boolean
     fun clearSession()
