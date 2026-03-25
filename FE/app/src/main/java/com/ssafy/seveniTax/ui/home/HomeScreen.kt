@@ -40,6 +40,7 @@ import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
+import android.widget.Toast
 import com.ssafy.seveniTax.R
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.BrandPurple
@@ -92,9 +93,7 @@ fun HomeScreen(
         HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
             it.navigate(Route.QrPayment.path)
         },
-        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
-            it.navigate(Route.CardList.path)
-        },
+        HomeActionItem("카드 관리", "home/icon_card_manage.svg") { /* 준비 중 */ },
         HomeActionItem("리포트 보기", "home/icon_report.svg") {
             it.navigate(Route.TaxReport.path)
         },
@@ -177,7 +176,7 @@ fun HomeScreen(
                     )
                     PaymentSection(
                         isPayEnrolled = viewModel.isPayEnrolled(),
-                        onCardClick = { navController.navigate(Route.CardList.path) },
+                        onCardClick = { /* 카드 관리 준비 중 */ },
                         onQrClick = { navController.navigate(Route.QrPayment.path) }
                     )
                     NoticeBanner()
