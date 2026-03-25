@@ -4,9 +4,11 @@ import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyCreditCardClient;
 import com.ssafy.tax7i.banking.client.dto.*;
+import com.ssafy.tax7i.bookentry.service.BookEntryService;
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
+import com.ssafy.tax7i.classification.service.TaxClassificationService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -45,8 +48,11 @@ class PaymentServiceTest {
     @Mock private CardRepository cardRepository;
     @Mock private UserRepository userRepository;
     @Mock private SsafyCreditCardClient ssafyCreditCardClient;
+    @Mock private BookEntryService bookEntryService;
+    @Mock private TaxClassificationService taxClassificationService;
     @Mock private RedisTemplate<String, String> redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private PaymentService paymentService;
@@ -372,8 +378,8 @@ class PaymentServiceTest {
         Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.AUTHORIZED);
 
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
-        given(valueOperations.get("qr-pay:test-token")).willReturn("1");
-        given(paymentRepository.findByIdWithFetch(1L)).willReturn(Optional.of(payment));
+        given(valueOperations.getAndDelete("qr-pay:test-token")).willReturn("1");
+        given(paymentRepository.findByIdWithFetchForUpdate(1L)).willReturn(Optional.of(payment));
         given(ssafyCreditCardClient.createTransaction("user-key", "1005518816096479", "725", 1L, 10000L))
                 .willReturn(createTransactionResponse(300L));
 
@@ -390,8 +396,8 @@ class PaymentServiceTest {
         Payment payment = createPayment(1L, user, card, 10000L, PaymentStatus.CAPTURED);
 
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
-        given(valueOperations.get("qr-pay:test-token")).willReturn("1");
-        given(paymentRepository.findByIdWithFetch(1L)).willReturn(Optional.of(payment));
+        given(valueOperations.getAndDelete("qr-pay:test-token")).willReturn("1");
+        given(paymentRepository.findByIdWithFetchForUpdate(1L)).willReturn(Optional.of(payment));
 
         assertThatThrownBy(() -> paymentService.confirmQrPayment("test-token"))
                 .isInstanceOf(BusinessException.class)
