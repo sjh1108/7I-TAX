@@ -26,7 +26,7 @@ data class RegisteredCard(
                 id = response.id.toString(),
                 cardNumber = "••••  ••••  ••••  ${response.last4Digits}",
                 expiry = response.cardExpiryDate ?: "",
-                type = if (response.cardType == "CREDIT") "business" else "personal",
+                type = if (response.cardType == "BUSINESS") "business" else "personal",
                 isDefault = response.isDefault
             )
         }
@@ -93,7 +93,7 @@ class CardViewModel @Inject constructor(
         try {
             val request = CardCreateRequest(
                 cardName = if (state.selectedCardType == "business") "사업자 카드" else "일반 카드",
-                cardType = if (state.selectedCardType == "business") "CREDIT" else "DEBIT",
+                cardType = if (state.selectedCardType == "business") "BUSINESS" else "PERSONAL",
                 cardUniqueNo = state.cardNumber,
                 withdrawalAccountNo = "",
                 withdrawalDate = state.expiry,
