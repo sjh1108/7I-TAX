@@ -92,7 +92,9 @@ fun HomeScreen(
         HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
             it.navigate(Route.QrPayment.path)
         },
-        HomeActionItem("카드 관리", "home/icon_card_manage.svg") { /* 준비 중 */ },
+        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
+            it.navigate(Route.CardList.path)
+        },
         HomeActionItem("리포트 보기", "home/icon_report.svg") {
             it.navigate(Route.TaxReport.path)
         },
@@ -175,7 +177,7 @@ fun HomeScreen(
                     )
                     PaymentSection(
                         isPayEnrolled = viewModel.isPayEnrolled(),
-                        onCardClick = { /* 카드 관리 준비 중 */ },
+                        onCardClick = { navController.navigate(Route.CardList.path) },
                         onQrClick = { navController.navigate(Route.QrPayment.path) }
                     )
                     NoticeBanner()
