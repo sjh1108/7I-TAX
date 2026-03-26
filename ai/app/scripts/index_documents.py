@@ -47,6 +47,7 @@ def main() -> None:
         logger.info("--force 옵션 감지: 기존 컬렉션을 삭제합니다.")
         vectorstore_service.delete_collection()
         logger.info("컬렉션 삭제 완료.")
+        vectorstore_service = VectorStoreService(settings)  # 컬렉션 재초기화
 
     logger.info("문서 처리를 시작합니다.")
     start_time = time.time()
@@ -58,12 +59,35 @@ def main() -> None:
         logger.warning("처리된 청크가 없습니다. 인덱싱을 중단합니다.")
         return
 
+    # 중복 chunk_id 제거 (첫 번째 우선)
+    seen_ids: set[str] = set()
+    deduped: list = []
+    for chunk in chunks:
+        cid = chunk.metadata["chunk_id"]
+        if cid not in seen_ids:
+            seen_ids.add(cid)
+            deduped.append(chunk)
+    if len(deduped) < len(chunks):
+        logger.warning("중복 chunk_id 제거: %d개 → %d개", len(chunks), len(deduped))
+    chunks = deduped
+
     texts = [chunk.content for chunk in chunks]
     metadatas = [chunk.metadata for chunk in chunks]
     ids = [chunk.metadata["chunk_id"] for chunk in chunks]
 
-    logger.info("벡터 저장소에 %d개 청크를 저장합니다.", len(chunks))
-    vectorstore_service.add_documents(texts=texts, metadatas=metadatas, ids=ids)
+    # 배치 단위로 저장 (GMS API 제한 대응)
+    batch_size = 500
+    total = len(chunks)
+    logger.info("벡터 저장소에 %d개 청크를 %d개씩 배치 저장합니다.", total, batch_size)
+
+    for i in range(0, total, batch_size):
+        batch_end = min(i + batch_size, total)
+        vectorstore_service.add_documents(
+            texts=texts[i:batch_end],
+            metadatas=metadatas[i:batch_end],
+            ids=ids[i:batch_end],
+        )
+        logger.info("  배치 저장 완료: %d / %d", batch_end, total)
 
     elapsed = time.time() - start_time
 

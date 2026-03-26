@@ -1,6 +1,5 @@
 package com.ssafy.tax7i.tax.controller;
 
-import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.response.SuccessResponse;
 import com.ssafy.tax7i.tax.dto.TaxCalculateRequest;
 import com.ssafy.tax7i.tax.dto.TaxCalculationResult;
@@ -32,10 +31,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.time.LocalDate;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/tax")
@@ -43,7 +39,6 @@ import java.util.Map;
 public class TaxController {
 
     private final TaxCalculationEngine taxCalculationEngine;
-    private final BookEntryRepository bookEntryRepository;
     private final TaxReturnService taxReturnService;
     private final TaxPaymentService taxPaymentService;
     private final TaxSavingService taxSavingService;
@@ -54,27 +49,8 @@ public class TaxController {
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody TaxCalculateRequest request) {
 
-        int taxYear = request.taxYear();
-        LocalDate start = LocalDate.of(taxYear, 1, 1);
-        LocalDate end = LocalDate.of(taxYear, 12, 31);
-
-        // BookEntry 집계 데이터 조회
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        Object[] agg = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
-        long totalRevenue = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
-
-        // 기납부세액 (null이면 0)
-        long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;
-
-        // 공제 항목 (null이면 빈 맵)
-        Map<String, Long> deductions = request.deductions() != null
-                ? request.deductions()
-                : Collections.emptyMap();
-
-        TaxCalculationResult result = taxCalculationEngine.calculate(
-                taxYear, totalRevenue, totalExpense, prepaidTax, deductions);
+        TaxCalculationResult result = taxCalculationEngine.calculateForUser(
+                userId, request.taxYear(), request.prepaidTax(), request.deductions());
 
         return ResponseEntity.ok(SuccessResponse.of(result));
     }

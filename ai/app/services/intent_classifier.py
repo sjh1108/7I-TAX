@@ -1,10 +1,13 @@
 import json
+import logging
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import numpy as np
 
 from app.services.embedding_service import EmbeddingService
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -74,8 +77,15 @@ class IntentClassifier:
         호출 시점: init_services()에서 앱 기동 시 1회
         """
         path = Path(self.intents_path)
-        with open(path, encoding="utf-8") as f:
-            data = json.load(f)
+        try:
+            with open(path, encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            logger.error("인텐트 파일을 찾을 수 없습니다: %s", path)
+            raise
+        except json.JSONDecodeError as e:
+            logger.error("인텐트 파일 JSON 파싱 실패: %s", e)
+            raise
 
         self.intents = data["intents"]
 

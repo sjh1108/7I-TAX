@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import httpx
 
 from app.core.config import Settings
+from app.core.exceptions import BackendClientError
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +59,8 @@ class BackendClient:
 
         에러 처리:
         - 404: 빈 리스트 반환
-        - 500/timeout: 로그 남기고 빈 리스트 반환 (파이프라인 중단 방지)
+        - timeout: BackendClientError 발생
+        - 기타 HTTP/연결 오류: BackendClientError 발생
         """
         try:
             resp = await self.client.get(
@@ -67,9 +69,17 @@ class BackendClient:
             )
             resp.raise_for_status()
             return [Transaction(**t) for t in resp.json()["transactions"]]
-        except (httpx.HTTPStatusError, httpx.TimeoutException, Exception) as e:
-            logger.warning("거래 내역 조회 실패: %s", e)
-            return []
+        except httpx.TimeoutException as e:
+            logger.warning("거래 내역 조회 타임아웃: %s", e)
+            raise BackendClientError("백엔드 서버 응답 시간 초과") from e
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return []
+            logger.warning("거래 내역 조회 HTTP 오류: %s", e)
+            raise BackendClientError(f"백엔드 서버 오류: {e.response.status_code}") from e
+        except httpx.RequestError as e:
+            logger.warning("거래 내역 조회 연결 오류: %s", e)
+            raise BackendClientError("백엔드 서버 연결 실패") from e
 
     async def get_business_info(self, user_id: str) -> BusinessInfo | None:
         """사업자 정보 조회.
@@ -77,15 +87,26 @@ class BackendClient:
         API: GET /api/v1/users/{user_id}/business-info
         반환: BusinessInfo | None
 
-        에러 처리: 실패 시 None 반환
+        에러 처리:
+        - 404: None 반환
+        - timeout: BackendClientError 발생
+        - 기타 HTTP/연결 오류: BackendClientError 발생
         """
         try:
             resp = await self.client.get(f"/api/v1/users/{user_id}/business-info")
             resp.raise_for_status()
             return BusinessInfo(**resp.json())
-        except Exception as e:
-            logger.warning("사업자 정보 조회 실패: %s", e)
-            return None
+        except httpx.TimeoutException as e:
+            logger.warning("사업자 정보 조회 타임아웃: %s", e)
+            raise BackendClientError("백엔드 서버 응답 시간 초과") from e
+        except httpx.HTTPStatusError as e:
+            if e.response.status_code == 404:
+                return None
+            logger.warning("사업자 정보 조회 HTTP 오류: %s", e)
+            raise BackendClientError(f"백엔드 서버 오류: {e.response.status_code}") from e
+        except httpx.RequestError as e:
+            logger.warning("사업자 정보 조회 연결 오류: %s", e)
+            raise BackendClientError("백엔드 서버 연결 실패") from e
 
     async def close(self) -> None:
         """HTTP 클라이언트 종료."""

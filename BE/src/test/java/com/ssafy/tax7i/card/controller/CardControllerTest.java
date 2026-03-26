@@ -16,6 +16,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -44,7 +45,7 @@ class CardControllerTest {
 
     @Test
     void createCard_201() throws Exception {
-        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", false, "20290401", "4");
+        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", false, "20290401", "4", LocalDateTime.now());
         given(cardService.createCard(any(), any())).willReturn(response);
 
         mockMvc.perform(post("/api/cards")
@@ -78,8 +79,8 @@ class CardControllerTest {
     @Test
     void getCards_200() throws Exception {
         List<CardResponse> responses = List.of(
-                new CardResponse(1L, "카드1", CardType.BUSINESS, "1234", true, "20290401", "4"),
-                new CardResponse(2L, "카드2", CardType.PERSONAL, "5678", false, "20290501", "1"));
+                new CardResponse(1L, "카드1", CardType.BUSINESS, "1234", true, "20290401", "4", LocalDateTime.now()),
+                new CardResponse(2L, "카드2", CardType.PERSONAL, "5678", false, "20290501", "1", LocalDateTime.now()));
         given(cardService.getCards(any())).willReturn(responses);
 
         mockMvc.perform(get("/api/cards"))
@@ -93,7 +94,7 @@ class CardControllerTest {
 
     @Test
     void getCard_200() throws Exception {
-        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4");
+        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4", LocalDateTime.now());
         given(cardService.getCard(any(), eq(1L))).willReturn(response);
 
         mockMvc.perform(get("/api/cards/1"))
@@ -116,7 +117,7 @@ class CardControllerTest {
 
     @Test
     void setDefault_200() throws Exception {
-        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4");
+        CardResponse response = new CardResponse(1L, "사업용 카드", CardType.BUSINESS, "7890", true, "20290401", "4", LocalDateTime.now());
         given(cardService.setDefaultCard(any(), eq(1L))).willReturn(response);
 
         mockMvc.perform(patch("/api/cards/1/default"))
@@ -168,5 +169,58 @@ class CardControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].paymentBalance").value(50000));
+    }
+
+    // ─────────── POST /api/cards/{id}/activate ───────────
+
+    @Test
+    void activateCard_200() throws Exception {
+        CardActivateResponse response = new CardActivateResponse(1L, "ACTIVE", LocalDateTime.now());
+        given(cardService.activateCard(any(), eq(1L), any())).willReturn(response);
+
+        mockMvc.perform(post("/api/cards/1/activate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("activationCode", "1234"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void activateCard_없는카드_404() throws Exception {
+        given(cardService.activateCard(any(), eq(99L), any()))
+                .willThrow(new BusinessException(ErrorCode.CARD_NOT_FOUND));
+
+        mockMvc.perform(post("/api/cards/99/activate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("activationCode", "1234"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("CARD_NOT_FOUND"));
+    }
+
+    // ─────────── PATCH /api/cards/{id}/purpose ───────────
+
+    @Test
+    void setCardPurpose_200() throws Exception {
+        CardPurposeResponse response = new CardPurposeResponse(1L, "BUSINESS", LocalDateTime.now());
+        given(cardService.setCardPurpose(any(), eq(1L), any())).willReturn(response);
+
+        mockMvc.perform(patch("/api/cards/1/purpose")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("defaultPurpose", "BUSINESS"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.defaultPurpose").value("BUSINESS"));
+    }
+
+    @Test
+    void setCardPurpose_필수값누락_400() throws Exception {
+        mockMvc.perform(patch("/api/cards/1/purpose")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_ARGUMENT"));
     }
 }

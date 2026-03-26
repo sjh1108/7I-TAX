@@ -58,6 +58,12 @@ public class Card extends BaseTimeEntity {
     @Column(nullable = false)
     private boolean deleted = false;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private CardStatus status = CardStatus.INACTIVE;
+
+    private String defaultPurpose;
+
     @Builder
     public Card(User user, String cardName, CardType cardType, String last4Digits,
                 String cardNo, String cvc, String cardUniqueNo,
@@ -73,6 +79,7 @@ public class Card extends BaseTimeEntity {
         this.withdrawalAccountNo = withdrawalAccountNo;
         this.withdrawalDate = withdrawalDate;
         this.cardExpiryDate = cardExpiryDate;
+        this.status = CardStatus.INACTIVE;
     }
 
     public void markDefault() {
@@ -81,6 +88,14 @@ public class Card extends BaseTimeEntity {
 
     public void unmarkDefault() {
         this.isDefault = false;
+    }
+
+    public void activate() {
+        this.status = CardStatus.ACTIVE;
+    }
+
+    public void updateDefaultPurpose(String purpose) {
+        this.defaultPurpose = purpose;
     }
 
     public void softDelete() {

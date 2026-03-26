@@ -4,7 +4,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 /**
- * 간편장부 세목 22개 (1인 IT개발자 기준)
+ * 간편장부 세목 (1인 IT개발자 기준)
  */
 @Getter
 @RequiredArgsConstructor
@@ -36,7 +36,18 @@ public enum TaxCategory {
 
     // D. 고정자산
     ASSET_PURCHASE("19", "고정자산 매입", "100만원 이상 사업용 자산 취득"),
-    ASSET_SALE("20", "고정자산 매도", "사업용 자산 처분");
+    ASSET_SALE("20", "고정자산 매도", "사업용 자산 처분"),
+
+    // E. 추가 세목 — 국세청고시 제2024-19호 간편장부 기준, 1인 IT개발자 필수 항목
+    COMMUNICATION("21", "통신비", "휴대폰·인터넷·서버 호스팅 요금"),
+    EDUCATION("22", "교육훈련비", "온라인 강의·컨퍼런스·자격증 (소득세법 §19 필요경비)"),
+    BOOKS("23", "도서인쇄비", "전문서적·기술서적·인쇄물"),
+
+    // F. seed data 연동 — mcc_tax_rule에서 반환하는 추가 세목
+    UTILITIES("24", "수도광열비", "전기·가스·수도 (별도 사무실 있는 경우만, 소득세법시행령 §55)"),
+    REPAIR("25", "수선비", "사업용 장비 수리·유지보수"),
+    NOT_DEDUCTIBLE("90", "경비불인정", "가사경비 — 1인 사업자 본인 식대·간식 등 (소득세법 §33①5)"),
+    UNCLASSIFIED("99", "미분류", "분류 대기 — 사용자 확인 필요");
 
     private final String code;
     private final String name;

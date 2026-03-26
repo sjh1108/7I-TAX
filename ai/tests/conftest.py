@@ -12,8 +12,11 @@ from app.services.retrieval_service import BM25Index, RetrievalService
 from app.services.vectorstore import VectorStoreService
 
 
-@pytest.fixture
-def mock_settings() -> Settings:
+# ---------------------------------------------------------------------------
+# 공통 헬퍼 함수
+# ---------------------------------------------------------------------------
+
+def make_settings() -> Settings:
     return Settings(
         gms_api_key="test-key",
         gms_base_url="http://fake-llm",
@@ -21,27 +24,78 @@ def mock_settings() -> Settings:
     )
 
 
-@pytest.fixture
-def mock_retrieval_service() -> RetrievalService:
-    """VectorStoreService와 BM25Index를 Mock 처리한 RetrievalService."""
+def make_retrieval_service() -> RetrievalService:
     mock_vs = MagicMock(spec=VectorStoreService)
     mock_vs.similarity_search.return_value = []
-    bm25 = BM25Index()
-    return RetrievalService(vectorstore_service=mock_vs, bm25_index=bm25)
+    return RetrievalService(vectorstore_service=mock_vs, bm25_index=BM25Index())
+
+
+def make_mock_classifier(
+    intent: str = IntentName.GENERAL,
+    rag_required: bool = False,
+) -> AsyncMock:
+    mock = AsyncMock()
+    mock.classify.return_value = IntentResult(
+        intent=intent,
+        confidence=0.9,
+        search_strategy="none",
+        model_tier="mini",
+        rag_required=rag_required,
+        metadata_filter={},
+    )
+    return mock
+
+
+def make_intent_result(
+    intent: str,
+    search_strategy: str,
+    rag_required: bool,
+    be_data_required: bool = False,
+    metadata_filter: dict | None = None,
+) -> IntentResult:
+    return IntentResult(
+        intent=intent,
+        confidence=0.9,
+        search_strategy=search_strategy,
+        model_tier="mini",
+        rag_required=rag_required,
+        metadata_filter=metadata_filter or {},
+        be_data_required=be_data_required,
+    )
+
+
+# ---------------------------------------------------------------------------
+# 공통 Fixture
+# ---------------------------------------------------------------------------
+
+@pytest.fixture
+def settings() -> Settings:
+    return make_settings()
+
+
+@pytest.fixture
+def mock_settings(settings: Settings) -> Settings:
+    return settings
+
+
+@pytest.fixture
+def retrieval_service() -> RetrievalService:
+    return make_retrieval_service()
+
+
+@pytest.fixture
+def mock_retrieval_service(retrieval_service: RetrievalService) -> RetrievalService:
+    return retrieval_service
+
+
+@pytest.fixture
+def mock_classifier() -> AsyncMock:
+    return AsyncMock()
 
 
 @pytest.fixture
 def mock_intent_classifier() -> AsyncMock:
-    mock = AsyncMock()
-    mock.classify.return_value = IntentResult(
-        intent=IntentName.GENERAL,
-        confidence=0.9,
-        search_strategy="none",
-        model_tier="mini",
-        rag_required=False,
-        metadata_filter={},
-    )
-    return mock
+    return make_mock_classifier()
 
 
 @pytest.fixture
@@ -51,7 +105,7 @@ def mock_chat_service(
     mock_intent_classifier: AsyncMock,
 ) -> ChatService:
     with patch.object(ChatService, "_call_llm", new_callable=AsyncMock) as mock_llm:
-        mock_llm.return_value = "테스트 응답입니다."
+        mock_llm.return_value = "test response"
         service = ChatService(
             settings=mock_settings,
             retrieval_service=mock_retrieval_service,

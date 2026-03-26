@@ -2,7 +2,9 @@ from dataclasses import dataclass
 
 from rank_bm25 import BM25Okapi
 
+from app.services.reranker_service import RerankerService
 from app.services.vectorstore import VectorStoreService
+from app.utils.korean_tokenizer import KoreanTokenizer
 
 
 @dataclass
@@ -27,6 +29,7 @@ class BM25Index:
     def __init__(self) -> None:
         self.bm25: BM25Okapi | None = None
         self.documents: list[dict] = []
+        self._tokenizer = KoreanTokenizer()
 
     def build(self, documents: list[dict]) -> None:
         """BM25 인덱스를 구축한다.
@@ -34,7 +37,7 @@ class BM25Index:
         documents: [{"content": str, "metadata": dict}, ...]
         """
         self.documents = documents
-        tokenized = [doc["content"].split() for doc in documents]
+        tokenized = [self._tokenizer.tokenize_for_bm25(doc["content"]) for doc in documents]
         self.bm25 = BM25Okapi(tokenized)
 
     def search(self, query: str, top_k: int = 20) -> list[tuple[dict, float]]:
@@ -45,7 +48,7 @@ class BM25Index:
         if self.bm25 is None:
             return []
 
-        tokenized_query = query.split()
+        tokenized_query = self._tokenizer.tokenize_for_bm25(query)
         scores = self.bm25.get_scores(tokenized_query)
         top_indices = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:top_k]
         return [(self.documents[i], float(scores[i])) for i in top_indices if scores[i] > 0]
@@ -68,9 +71,11 @@ class RetrievalService:
         self,
         vectorstore_service: VectorStoreService,
         bm25_index: BM25Index | None = None,
+        reranker: RerankerService | None = None,
     ) -> None:
         self.vectorstore = vectorstore_service
         self.bm25_index = bm25_index or BM25Index()
+        self.reranker = reranker
 
     async def retrieve(
         self,
@@ -145,10 +150,41 @@ class RetrievalService:
         top_k: int,
         metadata_filter: dict | None,
     ) -> list[SearchResult]:
-        """BM25 + 벡터 + RRF 하이브리드 검색."""
+        """BM25 + 벡터 + RRF 하이브리드 검색 (+ Reranker)."""
         bm25_results = self._bm25_search(query, top_k=20, metadata_filter=metadata_filter)
         vector_results = await self._vector_search(query, top_k=20, metadata_filter=metadata_filter)
-        return self._rrf_fusion(bm25_results, vector_results, top_k)
+        rrf_results = self._rrf_fusion(bm25_results, vector_results, top_k=top_k * 2)
+
+        if self.reranker is not None:
+            return self._rerank(query, rrf_results, top_k)
+
+        return rrf_results[:top_k]
+
+    def _rerank(
+        self,
+        query: str,
+        results: list[SearchResult],
+        top_k: int,
+    ) -> list[SearchResult]:
+        """Cross-Encoder로 검색 결과를 재정렬한다."""
+        if not results:
+            return []
+
+        docs = [
+            {"content": r.content, "metadata": r.metadata, "score": r.score}
+            for r in results
+        ]
+
+        reranked = self.reranker.rerank(query=query, documents=docs, top_k=top_k)
+
+        return [
+            SearchResult(
+                content=doc["content"],
+                metadata=doc["metadata"],
+                score=doc.get("rerank_score", doc["score"]),
+            )
+            for doc in reranked
+        ]
 
     async def _filtered_search(
         self,

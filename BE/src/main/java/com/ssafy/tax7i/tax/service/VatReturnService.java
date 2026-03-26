@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.tax.service;
 
+import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -61,11 +62,9 @@ public class VatReturnService {
         }
 
         // Aggregate BookEntry data for the period
-        Object[] rawAgg = bookEntryRepository.aggregateByUserIdAndDateRange(userId, start, end);
-        Object[] agg = rawAgg;
-        if (rawAgg != null && rawAgg.length > 0 && rawAgg[0] instanceof Object[]) agg = (Object[]) rawAgg[0];
-        long totalIncome = agg != null && agg.length > 0 && agg[0] != null ? ((Number) agg[0]).longValue() : 0L;
-        long totalExpense = agg != null && agg.length > 1 && agg[1] != null ? ((Number) agg[1]).longValue() : 0L;
+        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
+        long totalIncome = agg.totalIncome();
+        long totalExpense = agg.totalExpense();
 
         // Calculate VAT amounts
         Long salesVat = bookEntryRepository.sumSalesVat(userId, start, end);

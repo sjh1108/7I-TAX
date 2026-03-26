@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -20,7 +21,7 @@ public class SsafyFinanceHeaderBuilder {
     private final SsafyFinanceProperties properties;
 
     public SsafyCommonHeader build(String apiName, String userKey) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         String date = now.format(DATE_FMT);
         String time = now.format(TIME_FMT);
         String uniqueNo = date + time + generateSequence();
