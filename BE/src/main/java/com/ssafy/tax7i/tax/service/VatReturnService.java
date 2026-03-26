@@ -9,6 +9,7 @@ import com.ssafy.tax7i.tax.dto.VatReturnResponse;
 import com.ssafy.tax7i.tax.entity.TaxReturnStatus;
 import com.ssafy.tax7i.tax.entity.VatReturn;
 import com.ssafy.tax7i.tax.repository.VatReturnRepository;
+import com.ssafy.tax7i.config.TaxOfficeProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -28,6 +29,7 @@ public class VatReturnService {
     private final VatReturnRepository vatReturnRepository;
     private final BookEntryRepository bookEntryRepository;
     private final RedisTemplate<String, String> redisTemplate;
+    private final TaxOfficeProperties taxOfficeProperties;
 
     private static final String VAT_RECEIPT_SEQ_KEY_PREFIX = "vat-receipt:seq:";
 
@@ -139,8 +141,9 @@ public class VatReturnService {
     }
 
     private String generateReceiptNumber(int taxYear) {
-        String key = VAT_RECEIPT_SEQ_KEY_PREFIX + taxYear + ":0305";
+        String officeCode = taxOfficeProperties.getOfficeCode();
+        String key = VAT_RECEIPT_SEQ_KEY_PREFIX + taxYear + ":" + officeCode;
         Long seq = redisTemplate.opsForValue().increment(key);
-        return String.format("V%d-0305-%06d", taxYear, seq);
+        return String.format("V%d-%s-%06d", taxYear, officeCode, seq);
     }
 }

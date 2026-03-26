@@ -22,10 +22,37 @@ public class TaxCalculationEngine {
 
     private final TaxBracketRepository taxBracketRepository;
     private final BookEntryRepository bookEntryRepository;
+    private final TaxParameterService taxParameterService;
 
     @Cacheable(value = "taxBrackets", key = "#year")
     public List<TaxBracket> loadBrackets(int year) {
         return taxBracketRepository.findByYearOrderByBracketMinAsc(year);
+    }
+
+    /** 세율 구간 리스트로부터 산출세액 계산 (TaxEstimationService 등 재활용) */
+    public long calculateIncomeTaxFromBrackets(long taxableIncome, List<TaxBracket> brackets) {
+        if (taxableIncome <= 0) return 0;
+        for (TaxBracket bracket : brackets) {
+            if (taxableIncome >= bracket.getBracketMin() && taxableIncome <= bracket.getBracketMax()) {
+                return (long) Math.floor(taxableIncome * bracket.getRate() - bracket.getProgressiveDeduction());
+            }
+        }
+        return 0;
+    }
+
+    /** 과세표준에 해당하는 세율 구간 문자열 반환 */
+    public String findBracketLabel(long taxableIncome, List<TaxBracket> brackets) {
+        for (TaxBracket bracket : brackets) {
+            if (taxableIncome >= bracket.getBracketMin() && taxableIncome <= bracket.getBracketMax()) {
+                long ratePercent = Math.round(bracket.getRate() * 100);
+                return ratePercent + "%";
+            }
+        }
+        if (!brackets.isEmpty()) {
+            long lastRate = Math.round(brackets.get(brackets.size() - 1).getRate() * 100);
+            return lastRate + "%";
+        }
+        return "0%";
     }
 
     /** 장부 집계 + 세금 계산을 한 번에 수행 (Controller → Service 레이어 규칙 준수) */
@@ -90,8 +117,9 @@ public class TaxCalculationEngine {
         // 7. 최종 납부/환급 세액 = 결정세액 - 기납부세액
         long finalTax = determinedTax - prepaidTax;
 
-        // 8. 지방소득세 = floor(결정세액 × 0.10)
-        long localTax = (long) Math.floor(determinedTax * 0.10);
+        // 8. 지방소득세 = floor(결정세액 × 지방세율) (지방세법 §92)
+        double localTaxRate = taxParameterService.getLocalTaxRate(taxYear);
+        long localTax = (long) Math.floor(determinedTax * localTaxRate);
 
         // 9. 환급 여부
         boolean isRefund = finalTax < 0;

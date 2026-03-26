@@ -8,6 +8,8 @@ import com.ssafy.tax7i.classification.entity.TaxLimit;
 import com.ssafy.tax7i.classification.repository.MerchantKeywordMappingRepository;
 import com.ssafy.tax7i.classification.repository.MerchantRepository;
 import com.ssafy.tax7i.classification.repository.TaxLimitRepository;
+import com.ssafy.tax7i.ai.service.AiClassificationService;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -30,6 +32,8 @@ class ClassificationServiceTest {
     @Mock private MerchantKeywordMappingRepository keywordMappingRepository;
     @Mock private EntertainmentLimitService entertainmentLimitService;
     @Mock private TaxLimitRepository taxLimitRepository;
+    @Mock private AiClassificationService aiClassificationService;
+    @Mock private TaxParameterService taxParameterService;
 
     @InjectMocks
     private TaxClassificationService taxClassificationService;
@@ -424,6 +428,7 @@ class ClassificationServiceTest {
         given(classificationCacheService.getMccRules("5812")).willReturn(List.of(rule));
         given(taxLimitRepository.findByTaxCategoryAndLimitType("접대비", "연간기본한도"))
                 .willReturn(Optional.empty()); // DB에 데이터 없음
+        given(taxParameterService.getEntertainmentLimit(any(Integer.class))).willReturn(12_000_000L);
         given(entertainmentLimitService.getUsedEntertainmentAmount(1L)).willReturn(500_000L);
 
         ClassificationRequest request = new ClassificationRequest(

@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.classification.service;
 
+import com.ssafy.tax7i.ai.service.AiClassificationService;
 import com.ssafy.tax7i.classification.dto.ClassificationRequest;
 import com.ssafy.tax7i.classification.dto.ClassificationResult;
 import com.ssafy.tax7i.classification.dto.ClassificationResult.Confidence;
@@ -11,12 +12,15 @@ import com.ssafy.tax7i.classification.entity.TaxLimit;
 import com.ssafy.tax7i.classification.repository.MerchantKeywordMappingRepository;
 import com.ssafy.tax7i.classification.repository.MerchantRepository;
 import com.ssafy.tax7i.classification.repository.TaxLimitRepository;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 세목 자동분류 서비스
@@ -35,13 +39,14 @@ import java.util.List;
 public class TaxClassificationService {
 
     private static final String ENTERTAINMENT = "접대비";
-    private static final long DEFAULT_ENTERTAINMENT_ANNUAL_LIMIT = 12_000_000L;
 
     private final MerchantRepository merchantRepository;
     private final ClassificationCacheService classificationCacheService;
     private final MerchantKeywordMappingRepository keywordMappingRepository;
     private final EntertainmentLimitService entertainmentLimitService;
     private final TaxLimitRepository taxLimitRepository;
+    private final AiClassificationService aiClassificationService;
+    private final TaxParameterService taxParameterService;
 
     public ClassificationResult classify(ClassificationRequest request) {
         log.info("세목 분류 시작: merchant={}, mcc={}, amount={}",
@@ -50,7 +55,13 @@ public class TaxClassificationService {
         // 1. MCC 결정: 요청에 있으면 사용, 없으면 가맹점명으로 조회
         String mcc = resolveMcc(request);
         if (mcc == null) {
-            log.warn("MCC 결정 실패: merchant={}", request.merchantName());
+            log.warn("MCC 결정 실패: merchant={}, AI 분류 시도", request.merchantName());
+            Optional<ClassificationResult> aiResult = aiClassificationService.classify(request.merchantName());
+            if (aiResult.isPresent()) {
+                log.info("MCC 미결정 → AI 분류 성공: merchant={}, category={}",
+                        request.merchantName(), aiResult.get().taxCategory());
+                return attachEntertainmentLimitIfNeeded(aiResult.get(), request);
+            }
             return ClassificationResult.needsConfirmation(
                     "기타 경비", "확인필요", null,
                     "MCC를 결정할 수 없습니다. 가맹점명을 확인해주세요.");
@@ -59,7 +70,13 @@ public class TaxClassificationService {
         // 2. 해당 MCC의 룰 조회
         List<MccTaxRule> rules = classificationCacheService.getMccRules(mcc);
         if (rules.isEmpty()) {
-            log.warn("분류 룰 없음: mcc={}, merchant={}", mcc, request.merchantName());
+            log.warn("분류 룰 없음: mcc={}, merchant={}, AI 분류 시도", mcc, request.merchantName());
+            Optional<ClassificationResult> aiResult = aiClassificationService.classify(request.merchantName());
+            if (aiResult.isPresent()) {
+                log.info("룰 없음 → AI 분류 성공: mcc={}, merchant={}, category={}",
+                        mcc, request.merchantName(), aiResult.get().taxCategory());
+                return attachEntertainmentLimitIfNeeded(aiResult.get(), request);
+            }
             return ClassificationResult.needsConfirmation(
                     "기타 경비", "확인필요", null,
                     "MCC " + mcc + "에 대한 분류 룰이 없습니다.");
@@ -97,7 +114,15 @@ public class TaxClassificationService {
             return attachEntertainmentLimitIfNeeded(userChoiceResult, request);
         }
 
-        // 7. 미분류 — 첫 번째 Tier B 룰의 세목을 추천
+        // 7. AI 분류 시도 — 모든 규칙 매칭 실패 시
+        Optional<ClassificationResult> aiResult = aiClassificationService.classify(request.merchantName());
+        if (aiResult.isPresent()) {
+            log.info("전 단계 미분류 → AI 분류 성공: mcc={}, merchant={}, category={}",
+                    mcc, request.merchantName(), aiResult.get().taxCategory());
+            return attachEntertainmentLimitIfNeeded(aiResult.get(), request);
+        }
+
+        // 8. 최종 폴백 — 첫 번째 Tier B 룰의 세목을 추천
         MccTaxRule fallback = rules.stream()
                 .filter(r -> !r.isTierA())
                 .findFirst()
@@ -314,11 +339,12 @@ public class TaxClassificationService {
             return result;
         }
 
-        // tax_limit 테이블에서 접대비 연간기본한도 조회, 없으면 기본값
+        // tax_limit 테이블에서 접대비 연간기본한도 조회, 없으면 TaxParameter DB 조회
+        int currentYear = LocalDate.now().getYear();
         long annualLimit = taxLimitRepository
                 .findByTaxCategoryAndLimitType(ENTERTAINMENT, "연간기본한도")
                 .map(TaxLimit::getLimitAmount)
-                .orElse(DEFAULT_ENTERTAINMENT_ANNUAL_LIMIT);
+                .orElseGet(() -> taxParameterService.getEntertainmentLimit(currentYear));
 
         long usedAmount = entertainmentLimitService.getUsedEntertainmentAmount(
                 request.userId());

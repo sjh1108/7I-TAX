@@ -2,6 +2,11 @@ package com.ssafy.tax7i.taxestimation.service;
 
 import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
+import com.ssafy.tax7i.tax.entity.TaxBracket;
+import com.ssafy.tax7i.tax.service.TaxCalculationEngine;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
+import com.ssafy.tax7i.taxcalendar.entity.TaxDeadline;
+import com.ssafy.tax7i.taxcalendar.repository.TaxDeadlineRepository;
 import com.ssafy.tax7i.taxestimation.dto.MonthlyTaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
 import lombok.RequiredArgsConstructor;
@@ -9,6 +14,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -16,25 +22,9 @@ import java.time.LocalDate;
 public class TaxEstimationService {
 
     private final BookEntryRepository bookEntryRepository;
-
-    /**
-     * 종합소득세 세율 구간 (2024 기준)
-     */
-    private static final long[][] TAX_BRACKETS = {
-            {14_000_000L, 6},
-            {50_000_000L, 15},
-            {88_000_000L, 24},
-            {150_000_000L, 35},
-            {300_000_000L, 38},
-            {500_000_000L, 40},
-            {1_000_000_000L, 42},
-            {Long.MAX_VALUE, 45}
-    };
-
-    private static final long[] PROGRESSIVE_DEDUCTION = {
-            0L, 1_260_000L, 5_760_000L, 15_440_000L,
-            19_940_000L, 25_940_000L, 35_940_000L, 65_940_000L
-    };
+    private final TaxCalculationEngine taxCalculationEngine;
+    private final TaxParameterService taxParameterService;
+    private final TaxDeadlineRepository taxDeadlineRepository;
 
     public TaxEstimationResponse estimate(Long userId, int year) {
         LocalDate start = LocalDate.of(year, 1, 1);
@@ -56,14 +46,16 @@ public class TaxEstimationService {
 
         // 종합소득세: 과세표준 = 수입 - 필요경비
         long taxableIncome = Math.max(0, totalIncome - deductibleExpenses);
-        long incomeTax = calculateIncomeTax(taxableIncome);
-        String bracket = findBracket(taxableIncome);
+        List<TaxBracket> brackets = taxCalculationEngine.loadBrackets(year);
+        long incomeTax = taxCalculationEngine.calculateIncomeTaxFromBrackets(taxableIncome, brackets);
+        String bracket = taxCalculationEngine.findBracketLabel(taxableIncome, brackets);
 
-        // 지방소득세: 종합소득세의 10%
-        long localTax = incomeTax / 10;
+        // 지방소득세: 종합소득세의 지방세율 (DB)
+        double localTaxRate = taxParameterService.getLocalTaxRate(year);
+        long localTax = (long) Math.floor(incomeTax * localTaxRate);
 
         // 절세 효과: 경비 없었을 때 세금 - 현재 세금
-        long taxWithoutExpenses = calculateIncomeTax(totalIncome);
+        long taxWithoutExpenses = taxCalculationEngine.calculateIncomeTaxFromBrackets(totalIncome, brackets);
         long taxSaving = taxWithoutExpenses - incomeTax;
 
         // 부가세 반기별 (부가가치세법 §5, §49)
@@ -73,7 +65,7 @@ public class TaxEstimationService {
         long totalAnnualTax = vatByPeriod.totalVat() + incomeTax + localTax;
 
         // 세율 구간 상세 (소득세법 §55)
-        TaxEstimationResponse.BracketDetail bracketDetail = buildBracketDetail(taxableIncome);
+        TaxEstimationResponse.BracketDetail bracketDetail = buildBracketDetail(taxableIncome, brackets);
 
         return new TaxEstimationResponse(
                 year,
@@ -89,7 +81,7 @@ public class TaxEstimationService {
      * 월별 세금 추정
      * - 부가세: 해당 과세기간(1기/2기) 누적 매출세액-매입세액 (부가가치세법 §49)
      * - 종소세: 현재까지 수입/비용을 연환산 (소득세법 §70)
-     * - 지방세: 종소세 결정세액 × 10% (지방세법 §92, §95)
+     * - 지방세: 종소세 결정세액 × 지방세율 (지방세법 §92, §95)
      */
     public MonthlyTaxEstimationResponse estimateMonthly(Long userId, int year, int month) {
         // 부가세: 해당 과세기간 누적 (1기: 1~6월, 2기: 7~12월)
@@ -97,7 +89,7 @@ public class TaxEstimationService {
         LocalDate vatStart = isFirstHalf ? LocalDate.of(year, 1, 1) : LocalDate.of(year, 7, 1);
         LocalDate vatEnd = LocalDate.of(year, month, LocalDate.of(year, month, 1).lengthOfMonth());
         String vatPeriod = isFirstHalf ? "1기 (1~6월)" : "2기 (7~12월)";
-        String vatDueDate = isFirstHalf ? year + "-07-25" : (year + 1) + "-01-25";
+        String vatDueDate = resolveVatDueDate(year, isFirstHalf);
 
         Long salesVatRaw = bookEntryRepository.sumSalesVat(userId, vatStart, vatEnd);
         Long purchaseVatRaw = bookEntryRepository.sumDeductiblePurchaseVat(userId, vatStart, vatEnd);
@@ -114,22 +106,24 @@ public class TaxEstimationService {
 
         AggregateResult monthlyAgg = bookEntryRepository.safeAggregate(userId, yearStart, monthEnd);
         long currentIncome = monthlyAgg.totalIncome();
-        long currentBusinessExpense = monthlyAgg.businessExpense(); // agg[3]: 사업용 경비만 추출
+        long currentBusinessExpense = monthlyAgg.businessExpense();
 
         // 연환산 = 현재 누적 × (12 / 경과월수)
         long projectedIncome = month > 0 ? currentIncome * 12 / month : 0;
         long projectedBusinessExpense = month > 0 ? currentBusinessExpense * 12 / month : 0;
         long projectedTaxable = Math.max(0, projectedIncome - projectedBusinessExpense);
-        long incomeTax = calculateIncomeTax(projectedTaxable);
-        String incomeTaxDueDate = (year + 1) + "-05-31";
+        List<TaxBracket> brackets = taxCalculationEngine.loadBrackets(year);
+        long incomeTax = taxCalculationEngine.calculateIncomeTaxFromBrackets(projectedTaxable, brackets);
+        String incomeTaxDueDate = resolveIncomeTaxDueDate(year);
 
         // businessExpense → DTO의 currentExpense / projectedAnnualExpense 필드에 매핑
         var incomeTaxEstimation = new MonthlyTaxEstimationResponse.IncomeTaxEstimation(
                 currentIncome, currentBusinessExpense, projectedIncome, projectedBusinessExpense,
                 incomeTax, incomeTaxDueDate);
 
-        // 지방세: 종소세 결정세액 × 10% (지방세법 §92)
-        long localTax = (long) Math.floor(incomeTax * 0.1);
+        // 지방세: 종소세 결정세액 × 지방세율 (지방세법 §92)
+        double localTaxRate = taxParameterService.getLocalTaxRate(year);
+        long localTax = (long) Math.floor(incomeTax * localTaxRate);
         var localTaxEstimation = new MonthlyTaxEstimationResponse.LocalTaxEstimation(
                 localTax, incomeTaxDueDate);
 
@@ -139,23 +133,12 @@ public class TaxEstimationService {
                 year, month, vatEstimation, incomeTaxEstimation, localTaxEstimation, totalTax);
     }
 
-    public long calculateIncomeTax(long taxableIncome) {
-        if (taxableIncome <= 0) return 0;
-
-        for (int i = 0; i < TAX_BRACKETS.length; i++) {
-            if (taxableIncome <= TAX_BRACKETS[i][0]) {
-                return taxableIncome * TAX_BRACKETS[i][1] / 100 - PROGRESSIVE_DEDUCTION[i];
-            }
-        }
-        return 0;
-    }
-
     /** 부가세 반기별 계산 — 부가가치세법 §5(과세기간), §49(확정신고), §39①1(접대비 불공제) */
     private TaxEstimationResponse.VatByPeriod buildVatByPeriod(Long userId, int year) {
         var p1 = buildVatPeriodDetail(userId, year, 1, 6,
-                "1기 (1~6월)", year + "-07-25");
+                "1기 (1~6월)", resolveVatDueDate(year, true));
         var p2 = buildVatPeriodDetail(userId, year, 7, 12,
-                "2기 (7~12월)", (year + 1) + "-01-25");
+                "2기 (7~12월)", resolveVatDueDate(year, false));
         return new TaxEstimationResponse.VatByPeriod(p1, p2, p1.estimatedPayable() + p2.estimatedPayable());
     }
 
@@ -171,33 +154,55 @@ public class TaxEstimationService {
     }
 
     /** 세율 구간 상세 — 소득세법 §55 */
-    private TaxEstimationResponse.BracketDetail buildBracketDetail(long taxableIncome) {
+    private TaxEstimationResponse.BracketDetail buildBracketDetail(long taxableIncome, List<TaxBracket> brackets) {
         long prevMax = 0;
-        for (int i = 0; i < TAX_BRACKETS.length; i++) {
-            if (taxableIncome <= TAX_BRACKETS[i][0]) {
-                long bracketMax = TAX_BRACKETS[i][0];
-                String currentRate = TAX_BRACKETS[i][1] + "%";
-                Long toNext = (bracketMax == Long.MAX_VALUE) ? null : bracketMax - taxableIncome;
-                String nextRate = (i + 1 < TAX_BRACKETS.length && bracketMax != Long.MAX_VALUE)
-                        ? TAX_BRACKETS[i + 1][1] + "%" : null;
+        for (int i = 0; i < brackets.size(); i++) {
+            TaxBracket b = brackets.get(i);
+            if (taxableIncome >= b.getBracketMin() && taxableIncome <= b.getBracketMax()) {
+                long bracketMax = b.getBracketMax();
+                String currentRate = Math.round(b.getRate() * 100) + "%";
+                Long toNext = (bracketMax >= 9_999_999_999L) ? null : bracketMax - taxableIncome;
+                String nextRate = (i + 1 < brackets.size() && bracketMax < 9_999_999_999L)
+                        ? Math.round(brackets.get(i + 1).getRate() * 100) + "%"
+                        : null;
                 return new TaxEstimationResponse.BracketDetail(
                         currentRate, prevMax, bracketMax, taxableIncome, toNext, nextRate);
             }
-            prevMax = TAX_BRACKETS[i][0];
+            prevMax = b.getBracketMax();
         }
         // 최고 구간
-        return new TaxEstimationResponse.BracketDetail(
-                "45%", 1_000_000_000L, Long.MAX_VALUE, taxableIncome, null, null);
+        if (!brackets.isEmpty()) {
+            TaxBracket last = brackets.get(brackets.size() - 1);
+            return new TaxEstimationResponse.BracketDetail(
+                    Math.round(last.getRate() * 100) + "%",
+                    last.getBracketMin(), last.getBracketMax(), taxableIncome, null, null);
+        }
+        return new TaxEstimationResponse.BracketDetail("0%", 0, 0, taxableIncome, null, null);
     }
 
-    private String findBracket(long taxableIncome) {
-        if (taxableIncome <= 14_000_000L) return "6%";
-        if (taxableIncome <= 50_000_000L) return "15%";
-        if (taxableIncome <= 88_000_000L) return "24%";
-        if (taxableIncome <= 150_000_000L) return "35%";
-        if (taxableIncome <= 300_000_000L) return "38%";
-        if (taxableIncome <= 500_000_000L) return "40%";
-        if (taxableIncome <= 1_000_000_000L) return "42%";
-        return "45%";
+    /** 종합소득세 신고기한 조회 (DB 우선, 폴백: 기본값) */
+    private String resolveIncomeTaxDueDate(int year) {
+        int deadlineYear = year + 1;
+        return taxDeadlineRepository.findByYearAndName(deadlineYear, "종합소득세 신고")
+                .or(() -> taxDeadlineRepository.findByYearAndName(year, "종합소득세 신고"))
+                .map(d -> deadlineYear + "-" + String.format("%02d-%02d", d.getDeadlineMonth(), d.getDeadlineDay()))
+                .orElse(deadlineYear + "-05-31");
+    }
+
+    /** 부가세 확정신고기한 조회 (DB 우선, 폴백: 기본값) */
+    private String resolveVatDueDate(int year, boolean isFirstHalf) {
+        if (isFirstHalf) {
+            String name = "부가가치세 확정신고 (1기)";
+            return taxDeadlineRepository.findByYearAndName(year, name)
+                    .map(d -> year + "-" + String.format("%02d-%02d", d.getDeadlineMonth(), d.getDeadlineDay()))
+                    .orElse(year + "-07-25");
+        } else {
+            String name = "부가가치세 확정신고 (2기)";
+            int nextYear = year + 1;
+            return taxDeadlineRepository.findByYearAndName(nextYear, name)
+                    .or(() -> taxDeadlineRepository.findByYearAndName(year, name))
+                    .map(d -> nextYear + "-" + String.format("%02d-%02d", d.getDeadlineMonth(), d.getDeadlineDay()))
+                    .orElse(nextYear + "-01-25");
+        }
     }
 }

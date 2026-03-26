@@ -72,6 +72,9 @@ public class BookEntry extends BaseTimeEntity {
     private Boolean isVatDeductible;
 
     @Column(nullable = false)
+    private Integer confidenceScore;
+
+    @Column(nullable = false)
     private Boolean confirmed;
 
     private LocalDateTime confirmedAt;
@@ -85,7 +88,7 @@ public class BookEntry extends BaseTimeEntity {
                      Long incomeAmount, Long expenseAmount, Long fixedAssetAmount,
                      Long vatAmount, Long supplyPrice,
                      String categoryCode, String categoryName,
-                     Boolean isVatDeductible, String note) {
+                     Boolean isVatDeductible, Integer confidenceScore, String note) {
         this.userId = userId;
         this.paymentId = paymentId;
         this.entryDate = entryDate;
@@ -101,6 +104,7 @@ public class BookEntry extends BaseTimeEntity {
         this.categoryName = categoryName;
         this.isBusinessExpense = true;
         this.isVatDeductible = isVatDeductible != null ? isVatDeductible : true;
+        this.confidenceScore = confidenceScore != null ? confidenceScore : 0;
         this.confirmed = false;
         this.note = note;
     }

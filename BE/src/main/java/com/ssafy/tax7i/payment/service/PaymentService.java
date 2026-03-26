@@ -371,6 +371,7 @@ public class PaymentService {
             // 세목 자동분류
             String categoryCode = null;
             String categoryName = null;
+            int confidenceScore = 0;
             boolean isConfirmed = false;
 
             try {
@@ -393,11 +394,13 @@ public class PaymentService {
                 // taxCategory에서 categoryCode 추출
                 categoryCode = resolveCategoryCode(categoryName);
 
+                confidenceScore = result.confidenceScore();
+
                 // CONFIRMED → 자동 확정, 나머지 → 미확인 (사용자 확인 필요)
                 isConfirmed = result.confidence() == ClassificationResult.Confidence.CONFIRMED;
 
-                log.info("세목 자동분류: merchant={}, category={} ({}), confidence={}",
-                        payment.getMerchantName(), categoryName, categoryCode, result.confidence());
+                log.info("세목 자동분류: merchant={}, category={} ({}), confidence={}, score={}",
+                        payment.getMerchantName(), categoryName, categoryCode, result.confidence(), confidenceScore);
             } catch (Exception e) {
                 log.warn("세목 분류 실패, 미분류로 장부 생성: {}", e.getMessage());
             }
@@ -412,6 +415,7 @@ public class PaymentService {
                     false,
                     categoryCode,
                     categoryName,
+                    confidenceScore,
                     null
             );
             var entry = bookEntryService.create(payment.getUser().getId(), bookRequest);
