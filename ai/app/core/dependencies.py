@@ -29,6 +29,13 @@ INTENTS_PATH = "app/data/intents/tax_intents.json"
 
 @lru_cache
 def get_settings() -> Settings:
+    """애플리케이션 설정을 로드하고 반환한다.
+
+    캐시되어 있으므로 동일한 Settings 인스턴스를 반환한다.
+
+    Returns:
+        Settings: 애플리케이션 설정 객체.
+    """
     return Settings()
 
 
@@ -51,6 +58,17 @@ async def init_services() -> None:
     except Exception as e:
         logger.error("VectorStoreService 초기화 실패: %s", e, exc_info=True)
         raise
+
+    # ChromaDB가 비어있으면 자동 인덱싱 실행
+    stats = _vectorstore_service.get_collection_stats()
+    if stats["total_documents"] == 0:
+        logger.info("ChromaDB가 비어있습니다. 자동 인덱싱을 시작합니다.")
+        try:
+            from app.scripts.index_documents import run_indexing
+
+            run_indexing(_vectorstore_service)
+        except Exception as e:
+            logger.error("자동 인덱싱 실패: %s", e, exc_info=True)
 
     bm25_index = BM25Index()
     all_docs = _vectorstore_service.get_all_documents()

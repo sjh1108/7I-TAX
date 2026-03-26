@@ -8,6 +8,18 @@ from app.services.embedding_service import EmbeddingService
 
 @dataclass
 class CacheEntry:
+    """시맨틱 캐시의 단일 항목.
+
+    query_embedding과 response를 저장하여 임베딩 유사도 기반 캐시 히트 판정에 사용된다.
+
+    Attributes:
+        query_embedding: 질문의 임베딩 벡터 (numpy array).
+        response: 캐시된 응답 텍스트.
+        intent: 사용자 인텐트.
+        created_at: 캐시 생성 시간.
+        hit_count: 캐시 히트 횟수.
+    """
+
     query_embedding: np.ndarray
     response: str
     intent: str

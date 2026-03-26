@@ -116,6 +116,7 @@ class LegalParser:
         articles: list[dict] = []
 
         def flush():
+            """현재 버퍼의 내용을 조 정보와 함께 저장한다."""
             if current_article is not None and current_lines:
                 articles.append({
                     "article": current_article,

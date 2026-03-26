@@ -55,6 +55,11 @@ class BM25Index:
 
     @property
     def is_built(self) -> bool:
+        """BM25 인덱스 구축 여부를 확인한다.
+
+        Returns:
+            bool: 인덱스가 구축되었으면 True, 아니면 False.
+        """
         return self.bm25 is not None
 
 
@@ -66,6 +71,7 @@ class RetrievalService:
     """
 
     RRF_K = 60
+    MIN_VECTOR_RELEVANCE = 0.25  # 벡터 검색 코사인 유사도 최소 임계치
 
     def __init__(
         self,
@@ -98,23 +104,46 @@ class RetrievalService:
         if search_strategy == "none":
             return []
 
+        # 기본: 테이블 데이터 제외 (경비율표 청크가 법조문 검색을 방해하지 않도록)
+        effective_filter = self._build_effective_filter(metadata_filter)
+
         if search_strategy == "vector":
-            return await self._vector_search(query, top_k, metadata_filter)
+            results = await self._vector_search(query, top_k, effective_filter)
+            return self._apply_score_threshold(results)
 
         if search_strategy == "metadata_filter":
-            return await self._filtered_search(query, top_k, metadata_filter)
+            results = await self._filtered_search(query, top_k, effective_filter)
+            return self._apply_score_threshold(results)
 
         if search_strategy == "multi_query":
-            return await self._multi_query_search(query, top_k)
+            return await self._multi_query_search(query, top_k, effective_filter)
 
         if search_strategy == "hybrid":
-            return await self._hybrid_search(query, top_k, metadata_filter)
+            return await self._hybrid_search(query, top_k, effective_filter)
 
         if search_strategy == "hybrid_with_be_data":
-            results = await self._hybrid_search(query, top_k, metadata_filter)
+            results = await self._hybrid_search(query, top_k, effective_filter)
             return self._enrich_with_be_data(results, be_data or {})
 
         raise ValueError(f"알 수 없는 검색 전략: {search_strategy}")
+
+    def _build_effective_filter(self, metadata_filter: dict | None) -> dict | None:
+        """기본 필터를 적용한다.
+
+        테이블 타입(경비율표 등)을 기본 제외하여
+        법조문 검색 시 경비율표 청크가 상위를 점유하는 문제를 방지한다.
+        사용자가 명시적으로 law_type 필터를 지정한 경우 그대로 사용한다.
+        """
+        default_exclude = {"law_type": {"$ne": "테이블"}}
+        if metadata_filter is None:
+            return default_exclude
+        if "law_type" in metadata_filter:
+            return metadata_filter
+        return {**default_exclude, **metadata_filter}
+
+    def _apply_score_threshold(self, results: list[SearchResult]) -> list[SearchResult]:
+        """벡터 검색 결과에서 최소 관련성 점수 미만 결과를 필터링한다."""
+        return [r for r in results if r.score >= self.MIN_VECTOR_RELEVANCE]
 
     def _enrich_with_be_data(
         self,
@@ -199,9 +228,10 @@ class RetrievalService:
         self,
         query: str,
         top_k: int,
+        metadata_filter: dict | None = None,
     ) -> list[SearchResult]:
         """다중 쿼리 검색 (COMPARISON). MVP: 단일 쿼리로 검색."""
-        return await self._vector_search(query, top_k, None)
+        return await self._vector_search(query, top_k, metadata_filter)
 
     def _bm25_search(
         self,
@@ -246,6 +276,14 @@ class RetrievalService:
                 if isinstance(condition, dict):
                     if "$in" in condition:
                         if meta.get(key) not in condition["$in"]:
+                            match = False
+                            break
+                    elif "$nin" in condition:
+                        if meta.get(key) in condition["$nin"]:
+                            match = False
+                            break
+                    elif "$ne" in condition:
+                        if meta.get(key) == condition["$ne"]:
                             match = False
                             break
                     elif "$contains" in condition:

@@ -2,6 +2,10 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
+    """애플리케이션 설정.
+
+    환경 변수에서 설정값을 로드한다.
+    """
     app_name: str = "tax7i-ai"
     app_version: str = "0.1.0"
     debug: bool = False

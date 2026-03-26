@@ -12,6 +12,18 @@ async def chat(
     request: ChatRequest,
     service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
+    """채팅 메시지를 처리하고 AI 응답을 반환한다.
+
+    RAG 파이프라인을 통해 관련 문서를 검색하고 LLM이 답변을 생성한다.
+    \f
+
+    Args:
+        request: 채팅 요청 객체.
+        service: ChatService 의존성 주입.
+
+    Returns:
+        ChatResponse: AI 응답과 세션 정보.
+    """
     answer, session_id, model_used = await service.get_response(
         request.message, request.session_id, request.user_id
     )
@@ -25,5 +37,17 @@ async def get_history(
     session_id: str,
     service: ChatService = Depends(get_chat_service),
 ) -> ChatHistoryResponse:
+    """특정 세션의 채팅 히스토리를 조회한다.
+
+    세션 ID에 해당하는 모든 메시지 기록을 반환한다.
+    \f
+
+    Args:
+        session_id: 조회할 세션 ID.
+        service: ChatService 의존성 주입.
+
+    Returns:
+        ChatHistoryResponse: 세션의 채팅 메시지 목록과 메시지 수.
+    """
     messages = service.get_history(session_id)
     return ChatHistoryResponse(session_id=session_id, messages=messages, message_count=len(messages),)
