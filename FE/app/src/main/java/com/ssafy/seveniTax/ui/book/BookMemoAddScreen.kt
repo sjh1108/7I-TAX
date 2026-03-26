@@ -120,7 +120,7 @@ fun BookMemoAddScreen(
                 Spacer(modifier = Modifier.height(20.dp))
 
                 Text(
-                    text = "메모를 추가하시겠어요?",
+                    text = "증빙 자료를 추가하시겠어요?",
                     fontSize = 24.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF343434)
