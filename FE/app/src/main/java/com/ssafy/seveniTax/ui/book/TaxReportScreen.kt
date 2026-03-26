@@ -154,6 +154,8 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                     val vm = bookEntryViewModel
                     val annualIncome = vm?.getAnnualIncome(selectedYear) ?: 0L
                     val annualExpense = vm?.getAnnualExpense(selectedYear) ?: 0L
+                    val prevIncome = vm?.getAnnualIncome(selectedYear - 1) ?: 0L
+                    val prevExpense = vm?.getAnnualExpense(selectedYear - 1) ?: 0L
                     val annualExpByCat = vm?.getAnnualExpenseByCategory(selectedYear) ?: emptyList()
                     val annualIncByMerchant = vm?.getAnnualIncomeByMerchant(selectedYear) ?: emptyList()
                     val annualTrend = vm?.getAnnualMonthlyTrend(selectedYear) ?: emptyList()
@@ -162,6 +164,8 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                         year = selectedYear,
                         income = annualIncome,
                         expense = annualExpense,
+                        prevIncome = prevIncome,
+                        prevExpense = prevExpense,
                         expenseByCategory = annualExpByCat,
                         incomeByMerchant = annualIncByMerchant,
                         trend = annualTrend,
@@ -282,6 +286,7 @@ private fun MonthlyReport(
 private fun AnnualReport(
     year: Int,
     income: Long, expense: Long,
+    prevIncome: Long, prevExpense: Long,
     expenseByCategory: List<Pair<String, Long>>,
     incomeByMerchant: List<Pair<String, Long>>,
     trend: List<Triple<String, Long, Long>>,
@@ -289,7 +294,15 @@ private fun AnnualReport(
     onSavingsClick: () -> Unit = {}
 ) {
     val net = income - expense
+    val prevNet = prevIncome - prevExpense
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
+
+    fun pctChange(cur: Long, prev: Long): String {
+        if (prev == 0L) return if (cur > 0) "신규" else "-"
+        val pct = ((cur - prev) * 100 / prev).toInt()
+        return if (pct >= 0) "+${pct}%" else "${pct}%"
+    }
+    fun toMan(v: Long): String = "${fmt.format(v / 10000)}만"
 
     Spacer(Modifier.height(16.dp))
     DateNavigator(text = "${year}년", onPrev = onPrev, onNext = onNext)
@@ -304,11 +317,11 @@ private fun AnnualReport(
     SectionTitle("전년 대비")
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        ComparisonBox("수입", "+23%", "4,070만 → 5,000만", Color(0xFFEDF8F6), Color(0xFF3DBDA2), Modifier.weight(1f))
-        ComparisonBox("비용", "-5%", "2,100만 → 2,000만", Color(0xFFFFF0F3), Color(0xFFE8475A), Modifier.weight(1f))
+        ComparisonBox("수입", pctChange(income, prevIncome), "${toMan(prevIncome)} → ${toMan(income)}", Color(0xFFEDF8F6), Color(0xFF3DBDA2), Modifier.weight(1f))
+        ComparisonBox("비용", pctChange(expense, prevExpense), "${toMan(prevExpense)} → ${toMan(expense)}", Color(0xFFFFF0F3), Color(0xFFE8475A), Modifier.weight(1f))
     }
     Spacer(Modifier.height(10.dp))
-    ComparisonBox("순이익", "+52%", "1,970만 → 3,000만", Surface, BrandPurple, Modifier.fillMaxWidth())
+    ComparisonBox("순이익", pctChange(net, prevNet), "${toMan(prevNet)} → ${toMan(net)}", Surface, BrandPurple, Modifier.fillMaxWidth())
 
     Spacer(Modifier.height(24.dp))
 
