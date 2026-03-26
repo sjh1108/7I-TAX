@@ -142,27 +142,7 @@ fun HomeScreen(
                         .padding(horizontal = 24.dp)
                 ) {
                     HomeHeader(userName = userName)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    // 알림 테스트 버튼
-                    val context = LocalContext.current
-                    androidx.compose.material3.Button(
-                        onClick = {
-                            NotificationHelper.showClassificationNotification(
-                                context = context,
-                                transactionId = "test_${System.currentTimeMillis()}",
-                                merchantName = "스타벅스 강남점",
-                                amount = "5,500원",
-                                aiCategory = "복리후생비",
-                                confidence = 92
-                            )
-                        },
-                        modifier = Modifier.fillMaxWidth().height(40.dp),
-                        shape = RoundedCornerShape(10.dp),
-                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Error)
-                    ) {
-                        Text("알림 테스트", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-                    }
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
                 }
             }
 
