@@ -28,6 +28,8 @@ public record BookEntryCreateRequest(
 
         String categoryName,
 
+        Integer confidenceScore,
+
         String note
 ) {
     public boolean isVatExemptOrDefault() {

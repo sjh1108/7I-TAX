@@ -46,6 +46,7 @@ import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
 import com.ssafy.seveniTax.ui.book.BookEntryDetailScreen
 import com.ssafy.seveniTax.ui.book.BookEntryListScreen
 import com.ssafy.seveniTax.ui.book.BookFilterScreen
+import com.ssafy.seveniTax.ui.book.BookMemoAddScreen
 import com.ssafy.seveniTax.ui.book.ExportDateRangeScreen
 import com.ssafy.seveniTax.ui.book.ExportFormatScreen
 import com.ssafy.seveniTax.ui.book.ExportPurposeScreen
@@ -56,11 +57,18 @@ import com.ssafy.seveniTax.ui.calendar.TaxCalendarDetailScreen
 import com.ssafy.seveniTax.ui.calendar.TaxCalendarScreen
 import com.ssafy.seveniTax.ui.test.ServerTestScreen
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
+import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
+import com.ssafy.seveniTax.viewmodel.CardViewModel
+import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 
 private const val AUTH_GRAPH_ROUTE = "auth_graph"
 
 @Composable
 fun NavGraph(navController: NavHostController) {
+    val cardViewModel: CardViewModel = hiltViewModel()
+    val taxCalendarViewModel: TaxCalendarViewModel = hiltViewModel()
+    val bookEntryViewModel: BookEntryViewModel = hiltViewModel()
+
     NavHost(
         navController = navController,
         startDestination = AUTH_GRAPH_ROUTE
@@ -170,11 +178,11 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.CardList.path) {
-            CardListScreen(navController)
+            CardListScreen(navController, cardViewModel)
         }
 
         composable(Route.CardTypeSelect.path) {
-            CardTypeSelectScreen(navController)
+            CardTypeSelectScreen(navController, cardViewModel)
         }
 
         composable(
@@ -182,7 +190,7 @@ fun NavGraph(navController: NavHostController) {
             arguments = listOf(navArgument("cardType") { type = NavType.StringType })
         ) { backStackEntry ->
             val cardType = backStackEntry.arguments?.getString("cardType") ?: "personal"
-            CardInputScreen(navController, cardType)
+            CardInputScreen(navController, cardViewModel, cardType)
         }
 
         composable(Route.CardBusinessInfo.path) {
@@ -194,15 +202,15 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.CardSms.path) {
-            CardSmsScreen(navController)
+            CardSmsScreen(navController, cardViewModel)
         }
 
         composable(Route.CardComplete.path) {
-            CardCompleteScreen(navController)
+            CardCompleteScreen(navController, cardViewModel)
         }
 
         composable(Route.CardChange.path) {
-            CardChangeScreen(navController)
+            CardChangeScreen(navController, cardViewModel)
         }
 
         composable(
@@ -210,7 +218,7 @@ fun NavGraph(navController: NavHostController) {
             arguments = listOf(navArgument("cardId") { type = NavType.StringType })
         ) { backStackEntry ->
             val cardId = backStackEntry.arguments?.getString("cardId").orEmpty()
-            CardDetailScreen(navController, cardId)
+            CardDetailScreen(navController, cardViewModel, cardId)
         }
 
         composable(Route.ClassificationLoading.path) {
@@ -231,13 +239,27 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Route.CategorySelect.path) {
+        composable(
+            route = Route.CategorySelect.path,
+            arguments = listOf(
+                navArgument("returnTo") { type = NavType.StringType; defaultValue = "" },
+                navArgument("entryId") { type = NavType.LongType; defaultValue = -1L }
+            )
+        ) { backStackEntry ->
+            val returnTo = backStackEntry.arguments?.getString("returnTo") ?: ""
+            val entryId = backStackEntry.arguments?.getLong("entryId") ?: -1L
             CategorySelectScreen(
                 navController = navController,
-                onCategorySelected = {
-                    // 선택 완료 → 메모 추가 페이지
-                    navController.navigate(Route.MemoAdd.path) {
-                        popUpTo(Route.CategorySelect.path) { inclusive = true }
+                onCategorySelected = { category ->
+                    if (returnTo == "book" && entryId > 0) {
+                        bookEntryViewModel.updateEntryCategory(entryId, category)
+                        navController.navigate(Route.ClassificationComplete.create("book")) {
+                            popUpTo(Route.BookEntryList.path) { inclusive = false }
+                        }
+                    } else {
+                        navController.navigate(Route.MemoAdd.path) {
+                            popUpTo(Route.CategorySelect.path) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -251,12 +273,24 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Route.ClassificationComplete.path) {
+        composable(
+            route = Route.ClassificationComplete.path,
+            arguments = listOf(navArgument("returnTo") {
+                type = NavType.StringType; defaultValue = ""
+            })
+        ) { backStackEntry ->
+            val returnTo = backStackEntry.arguments?.getString("returnTo") ?: ""
             ClassificationCompleteScreen(
                 navController = navController,
                 onConfirm = {
-                    navController.navigate(Route.Main.path) {
-                        popUpTo(Route.Main.path) { inclusive = true }
+                    if (returnTo == "book") {
+                        navController.navigate(Route.BookEntryList.path) {
+                            popUpTo(Route.BookEntryList.path) { inclusive = false }
+                        }
+                    } else {
+                        navController.navigate(Route.Main.path) {
+                            popUpTo(Route.Main.path) { inclusive = true }
+                        }
                     }
                 }
             )
@@ -296,15 +330,19 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.BookEntryList.path) {
-            BookEntryListScreen(navController)
+            BookEntryListScreen(navController, viewModel = bookEntryViewModel)
         }
 
         composable(Route.BookFilter.path) {
-            BookFilterScreen(navController)
+            BookFilterScreen(navController, viewModel = bookEntryViewModel)
+        }
+
+        composable(Route.BookMemoAdd.path) {
+            BookMemoAddScreen(navController)
         }
 
         composable(Route.TaxReport.path) {
-            TaxReportScreen(navController)
+            TaxReportScreen(navController, bookEntryViewModel)
         }
 
         composable(Route.TaxSavingsDetail.path) {
@@ -346,11 +384,11 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.TaxCalendar.path) {
-            TaxCalendarScreen(navController)
+            TaxCalendarScreen(navController, viewModel = taxCalendarViewModel)
         }
 
         composable(Route.NotificationSettings.path) {
-            NotificationSettingsScreen(navController)
+            NotificationSettingsScreen(navController, taxCalendarViewModel)
         }
 
         composable(
@@ -370,7 +408,7 @@ fun NavGraph(navController: NavHostController) {
             val description = java.net.URLDecoder.decode(
                 backStackEntry.arguments?.getString("description").orEmpty(), "UTF-8"
             )
-            TaxCalendarDetailScreen(navController, taxName, deadline, dDay, description)
+            TaxCalendarDetailScreen(navController, taxName, deadline, dDay, description, taxCalendarViewModel)
         }
 
         composable(Route.AutoClassification.path) {

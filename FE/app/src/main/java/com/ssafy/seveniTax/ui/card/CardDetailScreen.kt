@@ -13,16 +13,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.CardViewModel
 
 @Composable
 fun CardDetailScreen(
     navController: NavController,
+    viewModel: CardViewModel,
     cardId: String
 ) {
-    // Mock data based on card ID
-    val cardName = if (cardId == "1") "일반카드" else "사업자카드"
-    val cardNumber = if (cardId == "1") "5876-8847-2283-••••" else "4120-9901-5532-••••"
-    val cardExpiry = if (cardId == "1") "12/27" else "09/28"
+    val card = viewModel.getCardById(cardId)
+    val cardName = if (card?.type == "personal") "일반카드" else "사업자카드"
+    val cardNumber = card?.cardNumber ?: ""
+    val cardExpiry = card?.expiry ?: ""
 
     Column(
         modifier = Modifier
@@ -82,7 +84,7 @@ fun CardDetailScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .clickable {
-                        // TODO: Implement card deletion
+                        viewModel.deleteCard(cardId)
                         navController.popBackStack()
                     }
                     .padding(vertical = 16.dp)

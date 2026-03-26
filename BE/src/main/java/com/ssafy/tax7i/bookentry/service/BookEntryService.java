@@ -83,6 +83,7 @@ public class BookEntryService {
                 .categoryCode(request.categoryCode())
                 .categoryName(request.categoryName())
                 .isVatDeductible(!request.isVatExemptOrDefault())
+                .confidenceScore(request.confidenceScore())
                 .note(request.note())
                 .build();
 

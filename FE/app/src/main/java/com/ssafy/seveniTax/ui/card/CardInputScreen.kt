@@ -29,10 +29,12 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.CardViewModel
 
 @Composable
 fun CardInputScreen(
     navController: NavController,
+    viewModel: CardViewModel,
     cardType: String = "personal"
 ) {
     var cardNumber by remember { mutableStateOf("") }
@@ -320,7 +322,11 @@ fun CardInputScreen(
 
             TaxButton(
                 text = "다음으로",
-                onClick = { navController.navigate(Route.CardOwnerVerify.path) },
+                onClick = {
+                    viewModel.updateCardNumber(cardNumber)
+                    viewModel.updateExpiry(expiry)
+                    navController.navigate(Route.CardOwnerVerify.path)
+                },
                 enabled = isFormComplete
             )
 

@@ -62,8 +62,8 @@ fun DashboardScreen(
                             // JS 브리지는 백그라운드 스레드 → 메인 스레드로 전환
                             mainHandler.post {
                                 when (route) {
-                                    "card_list"   -> navController.navigate(Route.CardList.path)
-                                    "card_change" -> navController.navigate(Route.CardChange.path)
+                                    "card_list"   -> { /* 카드 관리 준비 중 */ }
+                                    "card_change" -> { /* 카드 관리 준비 중 */ }
                                     "pay_intro"   -> navController.navigate(Route.PayIntro.path)
                                     else          -> navController.navigate(route)
                                 }

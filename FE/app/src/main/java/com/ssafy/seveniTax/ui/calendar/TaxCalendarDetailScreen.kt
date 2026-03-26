@@ -1,5 +1,7 @@
 package com.ssafy.seveniTax.ui.calendar
 
+import android.content.Intent
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -25,10 +27,12 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -132,8 +136,14 @@ fun TaxCalendarDetailScreen(
     taxName: String,
     deadline: String,
     dDay: Int,
-    description: String
+    description: String,
+    viewModel: TaxCalendarViewModel
 ) {
+    val reminderEnabled by viewModel.reminderEnabled.collectAsState()
+    val d7 by viewModel.reminderD7.collectAsState()
+    val d3 by viewModel.reminderD3.collectAsState()
+    val d1 by viewModel.reminderD1.collectAsState()
+    val dDayReminder by viewModel.reminderDDay.collectAsState()
     val detailInfo = remember(taxName, deadline, description) {
         buildTaxDetailInfo(taxName, deadline, description)
     }
@@ -179,6 +189,19 @@ fun TaxCalendarDetailScreen(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // 리마인드 알림
+            ReminderCard(
+                enabled = reminderEnabled,
+                onToggle = { viewModel.setReminderEnabled(it) },
+                d7 = d7,
+                d3 = d3,
+                d1 = d1,
+                dDay = dDayReminder,
+                onChangeReminder = { navController.navigate(Route.NotificationSettings.path) }
+            )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
             // 준비 체크리스트
             if (detailInfo.checklist.isNotEmpty()) {
                 ChecklistCard(
@@ -190,51 +213,14 @@ fun TaxCalendarDetailScreen(
                         }
                     },
                     completedCount = completedCount,
-                    totalCount = totalCount
+                    totalCount = totalCount,
+                    allCompleted = allCompleted
                 )
-
-                // 전부 체크 완료 시 홈택스 메시지
-                if (allCompleted) {
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Card(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 20.dp),
-                        shape = RoundedCornerShape(12.dp),
-                        colors = CardDefaults.cardColors(containerColor = Color(0xFFEDF8F6))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("✅", fontSize = 18.sp)
-                            Spacer(modifier = Modifier.width(10.dp))
-                            Column {
-                                Text(
-                                    "준비 완료!",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF1D9E75)
-                                )
-                                Text(
-                                    "홈택스에서 신고를 진행하세요",
-                                    fontSize = 13.sp,
-                                    color = TextSecondary
-                                )
-                            }
-                        }
-                    }
-                }
 
                 Spacer(modifier = Modifier.height(16.dp))
             }
 
-            // 리마인드 알림
-            ReminderCard(
-                onChangeReminder = { navController.navigate(Route.NotificationSettings.path) }
-            )
-
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
             // 하단 버튼들
             BottomButtons(allCompleted = allCompleted)
@@ -416,7 +402,8 @@ private fun ChecklistCard(
     checkStates: List<Boolean>,
     onToggle: (Int) -> Unit,
     completedCount: Int,
-    totalCount: Int
+    totalCount: Int,
+    allCompleted: Boolean = false
 ) {
     Card(
         modifier = Modifier
@@ -426,60 +413,88 @@ private fun ChecklistCard(
         colors = CardDefaults.cardColors(containerColor = Color.White),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
-        Column(modifier = Modifier.padding(20.dp)) {
-            // 헤더
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "준비 체크리스트",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "$completedCount/$totalCount 완료",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Accent
-                )
-            }
+        Box {
+            Column(modifier = Modifier.padding(20.dp)) {
+                // 헤더
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = "준비 체크리스트",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "$completedCount/$totalCount 완료",
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = Accent
+                    )
+                }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 프로그레스 바
-            val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(Disabled.copy(alpha = 0.4f))
-            ) {
+                // 프로그레스 바
+                val progress = if (totalCount > 0) completedCount.toFloat() / totalCount else 0f
                 Box(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .fillMaxWidth(progress)
+                        .fillMaxWidth()
+                        .height(6.dp)
                         .clip(RoundedCornerShape(3.dp))
-                        .background(
-                            Brush.horizontalGradient(
-                                colors = listOf(Accent, BrandPurple)
+                        .background(Disabled.copy(alpha = 0.4f))
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .fillMaxWidth(progress)
+                            .clip(RoundedCornerShape(3.dp))
+                            .background(
+                                Brush.horizontalGradient(
+                                    colors = listOf(Accent, BrandPurple)
+                                )
                             )
-                        )
-                )
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // 체크리스트 항목들
+                items.forEachIndexed { index, item ->
+                    val isChecked = checkStates.getOrElse(index) { item.isCompleted }
+                    ChecklistItemRow(
+                        item = item.copy(isCompleted = isChecked),
+                        onToggle = { onToggle(index) }
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.height(8.dp))
-
-            // 체크리스트 항목들
-            items.forEachIndexed { index, item ->
-                val isChecked = checkStates.getOrElse(index) { item.isCompleted }
-                ChecklistItemRow(
-                    item = item.copy(isCompleted = isChecked),
-                    onToggle = { onToggle(index) }
-                )
+            // 전부 완료 시 오버레이
+            if (allCompleted) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(16.dp))
+                        .background(Color(0xFFF5F5F5).copy(alpha = 0.93f)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = "준비 완료!",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = BrandPurple
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                        Text(
+                            text = "홈택스에서 신고를 진행하세요",
+                            fontSize = 14.sp,
+                            color = TextSecondary
+                        )
+                    }
+                }
             }
         }
     }
@@ -554,8 +569,23 @@ private fun ChecklistItemRow(item: ChecklistItem, onToggle: () -> Unit = {}) {
 // ─── 리마인드 알림 카드 ─────────────────────────────────
 
 @Composable
-private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
-    var reminderEnabled by remember { mutableStateOf(true) }
+private fun ReminderCard(
+    enabled: Boolean = true,
+    onToggle: (Boolean) -> Unit = {},
+    d7: Boolean = true,
+    d3: Boolean = true,
+    d1: Boolean = true,
+    dDay: Boolean = true,
+    onChangeReminder: () -> Unit = {}
+) {
+    val enabledChips = if (enabled) {
+        buildList {
+            if (d7) add("D-7")
+            if (d3) add("D-3")
+            if (d1) add("D-1")
+            if (dDay) add("당일")
+        }
+    } else emptyList()
 
     Card(
         modifier = Modifier
@@ -583,8 +613,8 @@ private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
                     )
                 }
                 Switch(
-                    checked = reminderEnabled,
-                    onCheckedChange = { reminderEnabled = it },
+                    checked = enabled,
+                    onCheckedChange = onToggle,
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color.White,
                         checkedTrackColor = Accent,
@@ -596,28 +626,38 @@ private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // D-day 칩들
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf("D-7", "D-3", "D-1").forEach { label ->
-                    Box(
-                        modifier = Modifier
-                            .border(1.dp, Disabled, RoundedCornerShape(8.dp))
-                            .padding(horizontal = 16.dp, vertical = 8.dp)
-                    ) {
-                        Text(
-                            text = label,
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = TextPrimary
-                        )
+            // D-day 칩들 (활성화된 것만 표시)
+            if (enabledChips.isNotEmpty()) {
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    enabledChips.forEach { label ->
+                        Box(
+                            modifier = Modifier
+                                .border(1.dp, Disabled, RoundedCornerShape(8.dp))
+                                .padding(horizontal = 16.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = label,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                color = TextPrimary
+                            )
+                        }
                     }
                 }
+            } else {
+                Text(
+                    text = if (enabled) "설정된 알림이 없습니다" else "알림이 꺼져 있습니다",
+                    fontSize = 13.sp,
+                    color = TextSecondary
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            if (enabled) {
+                Spacer(modifier = Modifier.height(12.dp))
+            }
 
-            // 알림 시점 변경
-            Row(
+            // 알림 시점 변경 (ON일 때만 표시)
+            if (enabled) Row(
                 modifier = Modifier.clickable { onChangeReminder() },
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -643,40 +683,24 @@ private fun ReminderCard(onChangeReminder: () -> Unit = {}) {
 
 @Composable
 private fun BottomButtons(allCompleted: Boolean = false) {
+    val context = LocalContext.current
+    val hometaxUrl = "https://hometax.go.kr/websquare/websquare.html?w2xPath=/ui/pp/index_pp.xml&menuCd=index3"
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 20.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        // AI 신고 가이드 받기
-        Button(
-            onClick = { },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(54.dp),
-            shape = RoundedCornerShape(15.dp),
-            colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
-        ) {
-            Text("Ⓐ", fontSize = 16.sp) // AI 아이콘 대체
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(
-                text = "AI 신고 가이드 받기",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-        }
-
         // 홈택스에서 신고하기 (체크리스트 완료 시 강조)
         if (allCompleted) {
             Button(
-                onClick = { },
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(hometaxUrl))) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
                 shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF1D9E75))
+                colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
             ) {
                 Text(
                     text = "홈택스에서 신고하기",
@@ -687,7 +711,7 @@ private fun BottomButtons(allCompleted: Boolean = false) {
             }
         } else {
             OutlinedButton(
-                onClick = { },
+                onClick = { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(hometaxUrl))) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(54.dp),
