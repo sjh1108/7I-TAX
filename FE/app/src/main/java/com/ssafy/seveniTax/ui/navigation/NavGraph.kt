@@ -230,11 +230,11 @@ fun NavGraph(navController: NavHostController) {
                 navController = navController,
                 onConfirm = {
                     // 확인 → 바로 세목 저장 완료
-                    navController.navigate(Route.ClassificationComplete.path)
+                    navController.navigate(Route.ClassificationComplete.create())
                 },
                 onChangeCategory = {
                     // 세목 변경 → 카테고리 선택 페이지
-                    navController.navigate(Route.CategorySelect.path)
+                    navController.navigate(Route.CategorySelect.create())
                 }
             )
         }
@@ -258,7 +258,7 @@ fun NavGraph(navController: NavHostController) {
                         }
                     } else {
                         navController.navigate(Route.MemoAdd.path) {
-                            popUpTo(Route.CategorySelect.path) { inclusive = true }
+                            popUpTo("category_select") { inclusive = true }
                         }
                     }
                 }
@@ -268,8 +268,8 @@ fun NavGraph(navController: NavHostController) {
         composable(Route.MemoAdd.path) {
             MemoAddScreen(
                 navController = navController,
-                onSave = { navController.navigate(Route.ClassificationComplete.path) },
-                onSkip = { navController.navigate(Route.ClassificationComplete.path) }
+                onSave = { navController.navigate(Route.ClassificationComplete.create()) },
+                onSkip = { navController.navigate(Route.ClassificationComplete.create()) }
             )
         }
 
@@ -300,7 +300,7 @@ fun NavGraph(navController: NavHostController) {
             UnclassifiedListScreen(
                 navController = navController,
                 onBulkConfirm = {
-                    navController.navigate(Route.ClassificationComplete.path)
+                    navController.navigate(Route.ClassificationComplete.create())
                 },
                 onAiRecommend = {
                     // AI로 경비 추천 받기 → 일괄 분석 로딩
@@ -415,7 +415,7 @@ fun NavGraph(navController: NavHostController) {
             AutoClassificationScreen(
                 navController = navController,
                 onConfirm = { navController.popBackStack() },
-                onEditCategory = { navController.navigate(Route.CategorySelect.path) }
+                onEditCategory = { navController.navigate(Route.CategorySelect.create()) }
             )
         }
     }
