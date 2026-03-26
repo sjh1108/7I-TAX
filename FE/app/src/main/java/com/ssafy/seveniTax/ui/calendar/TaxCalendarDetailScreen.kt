@@ -119,7 +119,8 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
         taxName.contains("부가") -> TaxDetailInfo(
             taxType = "부가가치세",
             reportType = description.ifEmpty { "확정신고" },
-            reportPeriod = "${deadlineDate.year}.${"%02d".format(deadlineDate.monthValue)}.01 ~ $deadlineFormatted",
+            reportPeriod = if (taxName.contains("1기")) "${deadlineDate.year}.01.01 ~ ${deadlineDate.year}.06.30"
+                          else "${deadlineDate.year}.07.01 ~ ${deadlineDate.year}.12.31",
             deadlineFormatted = deadlineFormatted,
             taxOffice = "역삼세무서",
             checklist = listOf(
@@ -404,7 +405,8 @@ private fun InfoRow(label: String, value: String) {
             text = value,
             fontSize = 14.sp,
             fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
+            color = TextPrimary,
+            maxLines = 1
         )
     }
 }
