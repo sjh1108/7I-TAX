@@ -359,7 +359,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         }
 
         composable(Route.TaxSavingsDetail.path) {
-            TaxSavingsDetailScreen(navController)
+            TaxSavingsDetailScreen(navController, bookEntryViewModel)
         }
 
         composable(

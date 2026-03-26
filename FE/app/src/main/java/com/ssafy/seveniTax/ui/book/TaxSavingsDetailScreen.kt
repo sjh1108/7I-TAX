@@ -24,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
 
 private data class SavingItem(
     val name: String,
@@ -33,14 +34,25 @@ private data class SavingItem(
     val icon: String
 )
 
-private val savingItems = listOf(
-    SavingItem("노란우산공제", "연간 한도 500만원", 5_000_000, 3_000_000, "☂️"),
-    SavingItem("사업용카드 공제", "연간 한도 240만원", 2_400_000, 2_160_000, "💳"),
-    SavingItem("교육훈련비 공제", "연간 한도 150만원", 1_500_000, 320_000, "📚")
-)
-
 @Composable
-fun TaxSavingsDetailScreen(navController: NavController) {
+fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: BookEntryViewModel? = null) {
+    val year = java.time.LocalDate.now().year
+    val expenses = bookEntryViewModel?.getAnnualExpenseByCategory(year) ?: emptyList()
+    val expenseMap = expenses.toMap()
+
+    val savingItems = listOf(
+        SavingItem("노란우산공제", "연간 한도 5,000,000원", 5_000_000,
+            (expenseMap["보험료"] ?: 0L).coerceAtMost(5_000_000), "☂️"),
+        SavingItem("사업용카드 공제", "연간 한도 전액 공제", expenses.sumOf { it.second },
+            expenses.sumOf { it.second }, "💳"),
+        SavingItem("교육훈련비 공제", "연간 한도 1,500,000원", 1_500_000,
+            (expenseMap["교육훈련비"] ?: expenseMap["도서인쇄비"] ?: 0L).coerceAtMost(1_500_000), "📚"),
+        SavingItem("접대비 공제", "연간 한도 36,000,000원", 36_000_000,
+            (expenseMap["접대비"] ?: 0L).coerceAtMost(36_000_000), "🍽️"),
+        SavingItem("통신비 공제", "사업용 비율 공제", 1_200_000,
+            (expenseMap["통신비"] ?: 0L).coerceAtMost(1_200_000), "📱")
+    )
+
     val totalLimit = savingItems.sumOf { it.limit }
     val totalUsed = savingItems.sumOf { it.used }
     val totalRemaining = totalLimit - totalUsed
