@@ -302,7 +302,7 @@ private fun AnnualReport(
         val pct = ((cur - prev) * 100 / prev).toInt()
         return if (pct >= 0) "+${pct}%" else "${pct}%"
     }
-    fun toMan(v: Long): String = "${fmt.format(v / 10000)}만"
+    fun fmtWon(v: Long): String = "${fmt.format(v)}원"
 
     Spacer(Modifier.height(16.dp))
     DateNavigator(text = "${year}년", onPrev = onPrev, onNext = onNext)
@@ -317,11 +317,11 @@ private fun AnnualReport(
     SectionTitle("전년 대비")
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        ComparisonBox("수입", pctChange(income, prevIncome), "${toMan(prevIncome)} → ${toMan(income)}", Color(0xFFEDF8F6), Color(0xFF3DBDA2), Modifier.weight(1f))
-        ComparisonBox("비용", pctChange(expense, prevExpense), "${toMan(prevExpense)} → ${toMan(expense)}", Color(0xFFFFF0F3), Color(0xFFE8475A), Modifier.weight(1f))
+        ComparisonBox("수입", pctChange(income, prevIncome), "${fmtWon(prevIncome)} → ${fmtWon(income)}", Color(0xFFEDF8F6), Color(0xFF3DBDA2), Modifier.weight(1f))
+        ComparisonBox("비용", pctChange(expense, prevExpense), "${fmtWon(prevExpense)} → ${fmtWon(expense)}", Color(0xFFFFF0F3), Color(0xFFE8475A), Modifier.weight(1f))
     }
     Spacer(Modifier.height(10.dp))
-    ComparisonBox("순이익", pctChange(net, prevNet), "${toMan(prevNet)} → ${toMan(net)}", Surface, BrandPurple, Modifier.fillMaxWidth())
+    ComparisonBox("순이익", pctChange(net, prevNet), "${fmtWon(prevNet)} → ${fmtWon(net)}", Surface, BrandPurple, Modifier.fillMaxWidth())
 
     Spacer(Modifier.height(24.dp))
 
