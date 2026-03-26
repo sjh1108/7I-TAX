@@ -35,6 +35,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -168,7 +169,9 @@ fun HomeScreen(
                         .padding(horizontal = 24.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    val unclassifiedCount = 12 // TODO: 서버 데이터로 교체
+                    val bookEntryViewModel: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
+                    val unclassifiedCount by bookEntryViewModel.unconfirmedCount.collectAsState()
+                    LaunchedEffect(Unit) { bookEntryViewModel.loadUnconfirmedCount() }
                     if (unclassifiedCount > 0) {
                         UnconfirmedLedgerCard(
                             count = unclassifiedCount,

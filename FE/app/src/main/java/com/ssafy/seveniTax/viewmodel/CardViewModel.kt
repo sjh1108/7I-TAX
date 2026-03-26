@@ -1,6 +1,5 @@
 package com.ssafy.seveniTax.viewmodel
 
-import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ssafy.seveniTax.data.model.card.CardCreateRequest
@@ -55,9 +54,6 @@ class CardViewModel @Inject constructor(
     private val cardRepository: CardRepository
 ) : ViewModel() {
 
-    companion object {
-        private const val TAG = "CardVM"
-    }
 
     private val _uiState = MutableStateFlow(CardUiState())
     val uiState: StateFlow<CardUiState> = _uiState.asStateFlow()
@@ -67,11 +63,9 @@ class CardViewModel @Inject constructor(
     }
 
     fun loadCards() = viewModelScope.launch {
-        Log.d(TAG, "loadCards() 호출")
         _uiState.update { it.copy(isLoading = true) }
         try {
             val response = cardRepository.getCards()
-            Log.d(TAG, "loadCards() 응답: status=${response.status}, data=${response.data?.size}개")
             if (response.status == "success" && response.data != null) {
                 _uiState.update {
                     it.copy(
@@ -80,42 +74,32 @@ class CardViewModel @Inject constructor(
                     )
                 }
             } else {
-                Log.e(TAG, "loadCards() 실패: ${response.message}")
                 _uiState.update { it.copy(isLoading = false, errorMessage = response.message ?: "카드 목록 조회 실패") }
             }
         } catch (e: Exception) {
-            Log.e(TAG, "loadCards() 에러: ${e.message}", e)
             _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "네트워크 오류") }
         }
     }
 
     fun loadAccounts() = viewModelScope.launch {
-        Log.d(TAG, "loadAccounts() 호출")
         try {
             val response = cardRepository.getMyAccounts()
             if (response.status == "success" && response.data != null) {
-                Log.d(TAG, "loadAccounts() 성공: ${response.data.size}개")
                 _uiState.update { it.copy(accounts = response.data) }
             } else {
-                Log.e(TAG, "loadAccounts() 실패: ${response.message}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "loadAccounts() 에러: ${e.message}", e)
         }
     }
 
     fun loadProducts() = viewModelScope.launch {
-        Log.d(TAG, "loadProducts() 호출")
         try {
             val response = cardRepository.getCardProducts()
             if (response.status == "success" && response.data != null) {
-                Log.d(TAG, "loadProducts() 성공: ${response.data.size}개")
                 _uiState.update { it.copy(products = response.data) }
             } else {
-                Log.e(TAG, "loadProducts() 실패: ${response.message}")
             }
         } catch (e: Exception) {
-            Log.e(TAG, "loadProducts() 에러: ${e.message}", e)
         }
     }
 
@@ -141,7 +125,6 @@ class CardViewModel @Inject constructor(
 
     fun completeRegistration() = viewModelScope.launch {
         val state = _uiState.value
-        Log.d(TAG, "completeRegistration() 호출: type=${state.selectedCardType}, number=${state.cardNumber.takeLast(4)}")
         _uiState.update { it.copy(isLoading = true) }
         try {
             val request = CardCreateRequest(
@@ -153,7 +136,6 @@ class CardViewModel @Inject constructor(
                 otpToken = "SKIP" // TODO: OTP 연동 시 실제 토큰으로 교체
             )
             val response = cardRepository.createCard(request)
-            Log.d(TAG, "createCard() 응답: status=${response.status}, data=${response.data}")
             if (response.status == "success" && response.data != null) {
                 val newCard = RegisteredCard.from(response.data)
                 _uiState.update {
@@ -166,7 +148,6 @@ class CardViewModel @Inject constructor(
                 loadCards()
             } else {
                 // API 실패 시 인메모리로 폴백
-                Log.w(TAG, "createCard() API 실패, 인메모리 폴백: ${response.message}")
                 val last4 = if (state.cardNumber.length >= 4) state.cardNumber.takeLast(4) else state.cardNumber
                 val maskedNumber = "••••  ••••  ••••  $last4"
                 val expiryDisplay = if (state.expiry.length == 4) {
@@ -191,7 +172,6 @@ class CardViewModel @Inject constructor(
             }
         } catch (e: Exception) {
             // 네트워크 오류 시 인메모리로 폴백
-            Log.e(TAG, "createCard() 네트워크 에러, 인메모리 폴백: ${e.message}", e)
             val last4 = if (state.cardNumber.length >= 4) state.cardNumber.takeLast(4) else state.cardNumber
             val maskedNumber = "••••  ••••  ••••  $last4"
             val expiryDisplay = if (state.expiry.length == 4) {
