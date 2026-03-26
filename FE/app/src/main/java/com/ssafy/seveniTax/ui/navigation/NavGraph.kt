@@ -327,7 +327,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                     navController.navigate(Route.ClassificationResult.path)
                 },
                 onTransactionClick = {
-                    navController.navigate(Route.ClassificationLoading.path)
+                    navController.navigate(Route.CategorySelect.create())
                 }
             )
         }
