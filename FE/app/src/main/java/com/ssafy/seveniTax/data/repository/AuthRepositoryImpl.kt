@@ -46,7 +46,10 @@ class AuthRepositoryImpl @Inject constructor(
 
     override suspend fun logout() {
         try {
-            authApi.logout()
+            val token = secureStorage.getAccessToken()
+            if (token != null) {
+                authApi.logout("Bearer $token")
+            }
         } catch (_: Exception) {
         }
         clearSession()
@@ -73,8 +76,10 @@ class AuthRepositoryImpl @Inject constructor(
 
     private fun extractErrorMessage(response: Response<*>, fallback: String): String {
         val raw = response.errorBody()?.string()?.takeIf { it.isNotBlank() } ?: return fallback
+        // HTML 응답이면 fallback 메시지 반환
+        if (raw.trimStart().startsWith("<")) return fallback
         return runCatching {
-            JSONObject(raw).optString("message").takeIf { it.isNotBlank() } ?: raw
-        }.getOrDefault(raw)
+            JSONObject(raw).optString("message").takeIf { it.isNotBlank() } ?: fallback
+        }.getOrDefault(fallback)
     }
 }
