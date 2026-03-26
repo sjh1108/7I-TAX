@@ -356,8 +356,12 @@ class BookEntryViewModel @Inject constructor(
     }
 
     fun getAnnualMonthlyTrend(year: Int): List<Triple<String, Long, Long>> {
+        var cumIncome = 0L
+        var cumExpense = 0L
         return (1..12).map { m ->
-            Triple("${m}월", getIncomeFor(year, m), getExpenseFor(year, m))
+            cumIncome += getIncomeFor(year, m)
+            cumExpense += getExpenseFor(year, m)
+            Triple("${m}월", cumIncome, cumExpense)
         }
     }
 }
