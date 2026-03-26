@@ -1,12 +1,13 @@
 package com.ssafy.seveniTax
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.compose.runtime.LaunchedEffect
+import androidx.navigation.NavHostController
 import androidx.navigation.compose.rememberNavController
 import com.ssafy.seveniTax.ui.navigation.NavGraph
 import com.ssafy.seveniTax.ui.navigation.Route
@@ -15,6 +16,8 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private var navController: NavHostController? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -31,29 +34,29 @@ class MainActivity : ComponentActivity() {
         )
 
         val navigateTo = intent?.getStringExtra("navigate_to")
-        // savedInstanceState != null → 앱이 이미 실행 중 (내부 알림 탭)
-        val isAppAlreadyRunning = savedInstanceState != null
 
         setContent {
             SevenITaxTheme {
-                val navController = rememberNavController()
+                val nc = rememberNavController()
+                navController = nc
 
                 NavGraph(
-                    navController = navController,
-                    pendingNavigateTo = if (isAppAlreadyRunning) null else navigateTo
+                    navController = nc,
+                    pendingNavigateTo = navigateTo
                 )
+            }
+        }
+    }
 
-                // 앱 내부에서 알림 탭 → PIN 없이 바로 이동
-                if (isAppAlreadyRunning && navigateTo != null) {
-                    LaunchedEffect(Unit) {
-                        when (navigateTo) {
-                            "classification_result" -> navController.navigate(Route.ClassificationLoading.path)
-                            "tax_calendar" -> navController.navigate(Route.TaxCalendar.path)
-                        }
-                    }
-                }
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        // 앱 실행 중 알림 탭 → PIN 없이 바로 이동
+        val navigateTo = intent.getStringExtra("navigate_to") ?: return
+        navController?.let { nc ->
+            when (navigateTo) {
+                "classification_result" -> nc.navigate(Route.ClassificationLoading.path)
+                "tax_calendar" -> nc.navigate(Route.TaxCalendar.path)
             }
         }
     }
 }
-
