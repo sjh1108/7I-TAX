@@ -91,7 +91,7 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
         )
         taxName.contains("종합소득세") -> TaxDetailInfo(
             taxType = "종합소득세",
-            reportType = "확정신고 (${deadlineDate.year - 1}년 귀속)",
+            reportType = "확정신고",
             reportPeriod = "${deadlineDate.year}.05.01 ~ ${deadlineDate.year}.05.31",
             deadlineFormatted = deadlineFormatted,
             checklist = listOf(
@@ -243,7 +243,9 @@ fun TaxCalendarDetailScreen(
             // 하단 버튼들
             BottomButtons(allCompleted = allCompleted)
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier
+                .navigationBarsPadding()
+                .height(24.dp))
         }
     }
 }

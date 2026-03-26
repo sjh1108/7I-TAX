@@ -35,6 +35,8 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -64,7 +66,7 @@ private data class SummaryMetric(
 private data class ScheduleItem(
     val title: String,
     val dueText: String,
-    val dDayText: String
+    val dDay: Int
 )
 
 private data class TransactionItem(
@@ -106,10 +108,20 @@ fun HomeScreen(
         }
     )
 
-    val schedules = listOf(
-        ScheduleItem("부가세 예정신고", "3월 31일", "D-6"),
-        ScheduleItem("원천세 신고", "4월 10일", "D-16")
-    )
+    // 서버에서 가져온 세금 일정 → 가까운 순 2개
+    val taxCalendarViewModel: com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel = hiltViewModel()
+    val deadlines by taxCalendarViewModel.deadlines.collectAsState()
+    val schedules = deadlines
+        .filter { it.dDay >= 0 }
+        .sortedBy { it.dDay }
+        .take(2)
+        .map {
+            val date = try {
+                val d = java.time.LocalDate.parse(it.deadline)
+                "${d.monthValue}월 ${d.dayOfMonth}일"
+            } catch (_: Exception) { it.deadline }
+            ScheduleItem(it.taxName, date, it.dDay)
+        }
     val recentTransactions = listOf(
         TransactionItem("스타벅스 강남점", "12,000원", "미분류"),
         TransactionItem("쿠팡", "48,000원", "사업용"),
@@ -156,9 +168,13 @@ fun HomeScreen(
                         .padding(horizontal = 24.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    UnconfirmedLedgerCard(
-                        onClick = { navController.navigate(Route.UnclassifiedList.path) }
-                    )
+                    val unclassifiedCount = 12 // TODO: 서버 데이터로 교체
+                    if (unclassifiedCount > 0) {
+                        UnconfirmedLedgerCard(
+                            count = unclassifiedCount,
+                            onClick = { navController.navigate(Route.UnclassifiedList.path) }
+                        )
+                    }
                     ActionGrid(
                         navController = navController,
                         items = actions
@@ -284,7 +300,7 @@ private fun SummaryStat(label: String, value: String, modifier: Modifier = Modif
 }
 
 @Composable
-private fun UnconfirmedLedgerCard(onClick: () -> Unit) {
+private fun UnconfirmedLedgerCard(count: Int = 0, onClick: () -> Unit) {
     Card(
         modifier = Modifier.clickable { onClick() },
         shape = RoundedCornerShape(22.dp),
@@ -305,7 +321,7 @@ private fun UnconfirmedLedgerCard(onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "12건",
+                    text = "${count}건",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = BrandPurple
@@ -432,11 +448,16 @@ private fun ScheduleRow(item: ScheduleItem) {
                 color = TextSecondary
             )
         }
+        val ddayColor = when {
+            item.dDay <= 3 -> com.ssafy.seveniTax.ui.theme.DdayError
+            item.dDay <= 7 -> com.ssafy.seveniTax.ui.theme.DdayWarning
+            else -> com.ssafy.seveniTax.ui.theme.DdayNormal
+        }
         Text(
-            text = item.dDayText,
+            text = if (item.dDay == 0) "D-Day" else "D-${item.dDay}",
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = BrandPurple
+            color = ddayColor
         )
     }
 }
