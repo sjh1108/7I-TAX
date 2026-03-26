@@ -116,7 +116,7 @@ fun HomeScreen(
     )
     val insights = listOf(
         InsightItem("경비 처리 누락 가능 거래 4건", "정리하면 약 32만원 수준의 절세 여지를 확인할 수 있어요."),
-        InsightItem("신고 전 검토 추천", "미확인 장부를 먼저 처리하면 신고 누락 위험을 줄일 수 있어요.")
+        InsightItem("신고 전 검토 추천", "미분류 경비를 먼저 처리하면 신고 누락 위험을 줄일 수 있어요.")
     )
 
     Box(
@@ -176,7 +176,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
                     UnconfirmedLedgerCard(
-                        onClick = { navController.navigate(Route.BookEntryList.path) }
+                        onClick = { navController.navigate(Route.UnclassifiedList.path) }
                     )
                     ActionGrid(
                         navController = navController,
@@ -323,7 +323,7 @@ private fun UnconfirmedLedgerCard(onClick: () -> Unit) {
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "미확인 장부",
+                    text = "미분류 경비",
                     fontSize = 14.sp,
                     color = TextSecondary
                 )
