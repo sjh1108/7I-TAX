@@ -30,6 +30,7 @@ class ClassificationControllerTest {
     @Autowired private ObjectMapper objectMapper;
 
     @MockitoBean private TaxClassificationService classificationService;
+    @MockitoBean private com.ssafy.tax7i.ai.service.AiRateLimiter aiRateLimiter;
     @MockitoBean private com.ssafy.tax7i.global.jwt.JwtTokenProvider jwtTokenProvider;
     @MockitoBean private org.springframework.data.redis.core.RedisTemplate<String, String> redisTemplate;
 

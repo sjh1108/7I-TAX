@@ -9,6 +9,7 @@ import com.ssafy.tax7i.ai.dto.ChatbotRequest;
 import com.ssafy.tax7i.ai.dto.ChatbotResponse;
 import com.ssafy.tax7i.ai.repository.ChatMessageRepository;
 import com.ssafy.tax7i.ai.repository.ChatSessionRepository;
+import com.ssafy.tax7i.ai.service.AiRateLimiter;
 import com.ssafy.tax7i.ai.service.ChatbotService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -19,12 +20,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
+
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +45,9 @@ class ChatbotServiceTest {
 
     @Mock
     private ChatMessageRepository chatMessageRepository;
+
+    @Mock
+    private AiRateLimiter rateLimiter;
 
     @InjectMocks
     private ChatbotService chatbotService;
@@ -76,10 +86,13 @@ class ChatbotServiceTest {
     }
 
     @Test
-    @DisplayName("getHistory 성공 시 메시지 리스트 매핑")
+    @DisplayName("getHistory 성공 시 메시지 리스트 매핑 (DB 비어있으면 AI 폴백)")
     void getHistory_성공() {
         // given
         given(chatSessionRepository.findBySessionId("session-1")).willReturn(Optional.empty());
+        given(chatMessageRepository.findByChatSessionSessionIdOrderByCreatedAtDesc(
+                eq("session-1"), any(Pageable.class)))
+                .willReturn(new PageImpl<>(Collections.emptyList()));
         List<AiChatMessage> aiMessages = List.of(
                 new AiChatMessage("user", "부가세 신고 기간은?"),
                 new AiChatMessage("assistant", "부가세 신고 기간은 1월, 7월입니다.")
@@ -103,6 +116,9 @@ class ChatbotServiceTest {
     void getHistory_AI_장애() {
         // given
         given(chatSessionRepository.findBySessionId("session-1")).willReturn(Optional.empty());
+        given(chatMessageRepository.findByChatSessionSessionIdOrderByCreatedAtDesc(
+                eq("session-1"), any(Pageable.class)))
+                .willReturn(new PageImpl<>(Collections.emptyList()));
         given(aiClient.getChatHistory("session-1"))
                 .willThrow(new BusinessException(ErrorCode.AI_SERVICE_UNAVAILABLE));
 

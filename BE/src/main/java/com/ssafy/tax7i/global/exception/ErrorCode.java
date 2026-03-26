@@ -79,6 +79,9 @@ public enum ErrorCode {
     // 429 Too Many Requests
     OTP_SEND_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 발송 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
 
+    // 429 Too Many Requests (AI)
+    AI_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."),
+
     // 503 Service Unavailable
     BANK_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "은행 연동 서비스가 일시적으로 불가합니다."),
     AI_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "AI 서비스가 일시적으로 불가합니다.");

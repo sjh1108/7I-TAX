@@ -16,6 +16,8 @@ import org.springframework.web.bind.annotation.*;
 @RequiredArgsConstructor
 public class ChatbotController {
 
+    private static final int MAX_HISTORY_SIZE = 50;
+
     private final ChatbotService chatbotService;
 
     @PostMapping
@@ -29,8 +31,11 @@ public class ChatbotController {
     @GetMapping("/history/{sessionId}")
     public ResponseEntity<SuccessResponse<ChatHistoryResponse>> getHistory(
             @AuthenticationPrincipal Long userId,
-            @PathVariable String sessionId) {
-        ChatHistoryResponse response = chatbotService.getHistory(userId, sessionId);
+            @PathVariable String sessionId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size) {
+        int safeSize = Math.min(size, MAX_HISTORY_SIZE);
+        ChatHistoryResponse response = chatbotService.getHistory(userId, sessionId, page, safeSize);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 }
