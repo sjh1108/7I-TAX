@@ -3,7 +3,19 @@ package com.ssafy.seveniTax.ui.pay
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +37,9 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.R
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.ui.theme.Background
+import com.ssafy.seveniTax.ui.theme.TextPrimary
+import com.ssafy.seveniTax.ui.theme.TextSecondary
 
 private data class PayFeature(
     val title: String,
@@ -34,10 +48,10 @@ private data class PayFeature(
 )
 
 private val features = listOf(
-    PayFeature("카드 등록", "일반 카드 및 사업자 카드를\n등록하고 관리하세요", R.drawable.ill_01),
-    PayFeature("간편 결제", "QR 또는 온라인으로 빠르게\n결제하세요", R.drawable.ill_02),
-    PayFeature("결제 내역", "기간별, 카드별로 내역을\n조회할 수 있어요", R.drawable.ill_03),
-    PayFeature("세무 자동화", "간편 장부를 기반으로\n세무 자동화 기능까지 한번에", R.drawable.ill_04),
+    PayFeature("카드 등록", "사업용 카드와 개인 카드를 등록해 결제 수단을 쉽게 관리할 수 있습니다.", R.drawable.ill_01),
+    PayFeature("간편 결제", "QR 또는 온라인으로 빠르게 결제할 수 있습니다.", R.drawable.ill_02),
+    PayFeature("결제 내역", "기간별 결제 기록을 확인하고 정리할 수 있습니다.", R.drawable.ill_03),
+    PayFeature("자동 분류", "결제 내역을 장부와 연결해 자동 분류를 도와줍니다.", R.drawable.ill_04),
 )
 
 @Composable
@@ -48,7 +62,6 @@ fun PayIntroScreen(navController: NavController) {
             .statusBarsPadding()
             .background(Background)
     ) {
-        // 상단 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -71,7 +84,6 @@ fun PayIntroScreen(navController: NavController) {
             )
         }
 
-        // 카드 목록
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -86,14 +98,13 @@ fun PayIntroScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // 하단 버튼
         Box(
             modifier = Modifier
                 .navigationBarsPadding()
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             TaxButton(
-                text = "가입 시작하기",
+                text = "페이 서비스 시작",
                 onClick = { navController.navigate(Route.PayTerms.path) }
             )
         }
@@ -110,7 +121,6 @@ private fun FeatureCard(feature: PayFeature) {
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 텍스트
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = feature.title,
@@ -129,7 +139,6 @@ private fun FeatureCard(feature: PayFeature) {
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // 일러스트
         Image(
             painter = painterResource(feature.illustRes),
             contentDescription = feature.title,
