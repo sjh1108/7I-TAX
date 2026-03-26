@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -243,6 +244,16 @@ private fun MonthlyReport(
     Spacer(Modifier.height(12.dp))
 
     TotalTaxBox("월간 총 예상 세금", "${fmt.format(totalTax)}원")
+
+    Spacer(Modifier.height(16.dp))
+
+    // 추가 절세 가능 금액
+    val unconfirmedExpense = expense / 5  // 미확인 경비 약 20% 가정
+    val saveable = (unconfirmedExpense * 0.15).toLong()
+    SavingsHintBox(
+        unconfirmedAmount = unconfirmedExpense,
+        saveableAmount = saveable
+    )
 }
 
 // ─── 연간 리포트 ────────────────────────────────────────
@@ -459,6 +470,50 @@ private fun TaxBracketCard() {
                     Text("다음 구간까지", fontSize = 12.sp, color = Color(0xFFE0A44A))
                     Text("23,000,000원 더 벌면 24% 구간", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SavingsHintBox(unconfirmedAmount: Long, saveableAmount: Long) {
+    val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(
+                Brush.horizontalGradient(listOf(Color(0xFFF6F3FF), Color(0xFFEDE8FF))),
+                RoundedCornerShape(16.dp)
+            )
+            .padding(20.dp)
+    ) {
+        Column {
+            Text(
+                "아직 더 아낄 수 있어요!",
+                fontSize = 16.sp,
+                fontWeight = FontWeight.Bold,
+                color = BrandPurple
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "미확인 경비 ${fmt.format(unconfirmedAmount)}원을 세목 분류하면",
+                fontSize = 13.sp,
+                color = TextSecondary
+            )
+            Spacer(Modifier.height(4.dp))
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(
+                    "최대 ${fmt.format(saveableAmount)}원",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = BrandPurple
+                )
+                Text(
+                    " 절세 가능",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
             }
         }
     }
