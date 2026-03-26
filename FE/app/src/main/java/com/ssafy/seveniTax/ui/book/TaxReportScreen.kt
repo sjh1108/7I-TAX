@@ -308,12 +308,25 @@ private fun AnnualReport(
     DateNavigator(text = "${year}년", onPrev = onPrev, onNext = onNext)
     Spacer(Modifier.height(20.dp))
 
-    // 1. 연간 순이익
+    // 1. 아낄 수 있는 돈
+    val saveable = (expense / 5 * 0.15).toLong()
+    SavingsHintBox(unconfirmedAmount = expense / 5, saveableAmount = saveable, onClick = onSavingsClick)
+
+    Spacer(Modifier.height(24.dp))
+
+    // 2. 내 세율 구간
+    SectionTitle("내 세율 구간")
+    Spacer(Modifier.height(12.dp))
+    TaxBracketCard()
+
+    Spacer(Modifier.height(24.dp))
+
+    // 3. 연간 순이익
     ReportSummaryCard("연간 순이익", net, income, -expense)
 
     Spacer(Modifier.height(24.dp))
 
-    // 2. 전년 대비
+    // 4. 전년 대비
     SectionTitle("전년 대비")
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -325,7 +338,7 @@ private fun AnnualReport(
 
     Spacer(Modifier.height(24.dp))
 
-    // 3. 연간 세금 예상액
+    // 5. 연간 세금 예상액
     val vatSales = (income * 0.1).toLong()
     val vatPurchase = (expense * 0.1).toLong()
     val vatPayable = vatSales - vatPurchase
@@ -373,14 +386,7 @@ private fun AnnualReport(
 
     Spacer(Modifier.height(24.dp))
 
-    // 4. 내 세율 구간
-    SectionTitle("내 세율 구간")
-    Spacer(Modifier.height(12.dp))
-    TaxBracketCard()
-
-    Spacer(Modifier.height(24.dp))
-
-    // 5. 올해 공제 요약
+    // 올해 공제 요약
     SectionTitle("올해 공제 요약")
     Spacer(Modifier.height(12.dp))
     DeductionSummaryCard()
@@ -411,9 +417,6 @@ private fun AnnualReport(
         Spacer(Modifier.height(24.dp))
     }
 
-    // 9. 절세 현황 배너
-    val saveable = (expense / 5 * 0.15).toLong()
-    SavingsHintBox(unconfirmedAmount = expense / 5, saveableAmount = saveable, onClick = onSavingsClick)
 }
 
 // ─── 날짜 네비게이터 ─────────────────────────────────────
