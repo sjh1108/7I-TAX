@@ -317,7 +317,7 @@ private fun AnnualReport(
     // 2. 내 세율 구간
     SectionTitle("내 세율 구간")
     Spacer(Modifier.height(12.dp))
-    TaxBracketCard()
+    TaxBracketCard(income = income, expense = expense)
 
     Spacer(Modifier.height(24.dp))
 
@@ -530,7 +530,31 @@ private fun ComparisonBox(label: String, percent: String, detail: String, bg: Co
 }
 
 @Composable
-private fun TaxBracketCard() {
+private fun TaxBracketCard(income: Long = 0, expense: Long = 0) {
+    val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
+    val maxLimit = 150_000_000L // 간편장부 한도 1억 5천
+    val taxable = (income - expense).coerceAtLeast(0)
+
+    data class Bracket(val limit: Long, val rate: Int)
+    val brackets = listOf(
+        Bracket(14_000_000, 6),
+        Bracket(50_000_000, 15),
+        Bracket(88_000_000, 24),
+        Bracket(150_000_000, 35)
+    )
+
+    val currentBracket = brackets.lastOrNull { taxable >= it.limit }
+        ?: brackets.first()
+    val currentRate = when {
+        taxable <= 14_000_000 -> 6
+        taxable <= 50_000_000 -> 15
+        taxable <= 88_000_000 -> 24
+        taxable <= 150_000_000 -> 35
+        else -> 38
+    }
+    val nextBracket = brackets.firstOrNull { taxable < it.limit }
+    val progress = (taxable.toFloat() / maxLimit).coerceIn(0f, 1f)
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
@@ -540,27 +564,40 @@ private fun TaxBracketCard() {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("현재 과세표준", fontSize = 13.sp, color = TextSecondary)
-                Text("27,000,000원", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text("${fmt.format(taxable)}원", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             }
             Spacer(Modifier.height(8.dp))
             Box(Modifier.background(Surface, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
-                Text("15% 구간", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrandPurple)
+                Text("${currentRate}% 구간", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrandPurple)
             }
             Spacer(Modifier.height(12.dp))
-            // 프로그레스 바
+            // 프로그레스 바 (최대 1억 5천)
             Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(0.54f).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
+                Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
             }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text("1,400만원 (6%)", fontSize = 10.sp, color = TextSecondary)
-                Text("5,000만원 (24%)", fontSize = 10.sp, color = TextSecondary)
+                Text("0원", fontSize = 10.sp, color = TextSecondary)
+                Text("1억 5,000만원", fontSize = 10.sp, color = TextSecondary)
             }
-            Spacer(Modifier.height(12.dp))
-            Box(Modifier.fillMaxWidth().background(Color(0xFFFFF8EE), RoundedCornerShape(8.dp)).padding(12.dp)) {
-                Column {
-                    Text("다음 구간까지", fontSize = 12.sp, color = Color(0xFFE0A44A))
-                    Text("23,000,000원 더 벌면 24% 구간", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Spacer(Modifier.height(4.dp))
+            Text("간편장부 대상 한도 (정보통신업)", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.fillMaxWidth(), textAlign = TextAlign.End)
+
+            if (nextBracket != null) {
+                Spacer(Modifier.height(12.dp))
+                val remaining = nextBracket.limit - taxable
+                Box(Modifier.fillMaxWidth().background(Color(0xFFFFF8EE), RoundedCornerShape(8.dp)).padding(12.dp)) {
+                    Column {
+                        Text("다음 구간까지", fontSize = 12.sp, color = Color(0xFFE0A44A))
+                        Text("${fmt.format(remaining)}원 더 벌면 ${nextBracket.rate}% 구간", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    }
+                }
+            }
+
+            if (income >= maxLimit) {
+                Spacer(Modifier.height(12.dp))
+                Box(Modifier.fillMaxWidth().background(Color(0xFFFFF0F3), RoundedCornerShape(8.dp)).padding(12.dp)) {
+                    Text("간편장부 한도를 초과했습니다. 복식부기 전환을 권장합니다.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE8475A))
                 }
             }
         }
