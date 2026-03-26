@@ -7,7 +7,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -26,8 +28,15 @@ import com.ssafy.seveniTax.ui.theme.*
 fun ClassificationLoadingScreen(
     navController: NavController,
     merchantName: String = "스타벅스 강남점",
-    industryCode: String = "카페/음료"
+    industryCode: String = "카페/음료",
+    onComplete: () -> Unit = {}
 ) {
+    // TODO: 실제 AI API 호출로 교체. 지금은 3초 딜레이 후 결과 화면 이동
+    LaunchedEffect(Unit) {
+        delay(3000L)
+        onComplete()
+    }
+
     Column(
         modifier = Modifier
             .fillMaxSize()

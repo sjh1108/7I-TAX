@@ -42,7 +42,7 @@ class MainActivity : ComponentActivity() {
                 if (navigateTo != null) {
                     LaunchedEffect(Unit) {
                         when (navigateTo) {
-                            "classification_result" -> navController.navigate(Route.ClassificationResult.path)
+                            "classification_result" -> navController.navigate(Route.ClassificationLoading.path)
                             "tax_calendar" -> navController.navigate(Route.TaxCalendar.path)
                         }
                     }

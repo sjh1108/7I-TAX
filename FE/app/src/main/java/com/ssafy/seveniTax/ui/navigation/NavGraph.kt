@@ -222,7 +222,14 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.ClassificationLoading.path) {
-            ClassificationLoadingScreen(navController)
+            ClassificationLoadingScreen(
+                navController = navController,
+                onComplete = {
+                    navController.navigate(Route.ClassificationResult.path) {
+                        popUpTo(Route.ClassificationLoading.path) { inclusive = true }
+                    }
+                }
+            )
         }
 
         composable(Route.ClassificationResult.path) {
