@@ -122,8 +122,12 @@ fun CardAccountSelectScreen(navController: NavController, viewModel: CardViewMod
                                 color = TextSecondary
                             )
                             Spacer(modifier = Modifier.height(4.dp))
+                            val formattedBalance = try {
+                                java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+                                    .format(account.accountBalance.toLong())
+                            } catch (_: Exception) { account.accountBalance }
                             Text(
-                                text = "잔액 ${account.accountBalance}원",
+                                text = "잔액 ${formattedBalance}원",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = BrandPurple

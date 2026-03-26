@@ -134,6 +134,14 @@ fun CardProductSelectScreen(navController: NavController, viewModel: CardViewMod
                                 maxLines = 2
                             )
                             Spacer(modifier = Modifier.height(8.dp))
+                            val fmtPerformance = try {
+                                java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+                                    .format(product.baselinePerformance.toLong()) + "원"
+                            } catch (_: Exception) { product.baselinePerformance }
+                            val fmtLimit = try {
+                                java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+                                    .format(product.maxBenefitLimit.toLong()) + "원"
+                            } catch (_: Exception) { product.maxBenefitLimit }
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                                 Box(
                                     modifier = Modifier
@@ -141,7 +149,7 @@ fun CardProductSelectScreen(navController: NavController, viewModel: CardViewMod
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "실적 ${product.baselinePerformance}",
+                                        text = "실적 $fmtPerformance",
                                         fontSize = 11.sp,
                                         color = BrandPurple,
                                         fontWeight = FontWeight.Medium
@@ -153,7 +161,7 @@ fun CardProductSelectScreen(navController: NavController, viewModel: CardViewMod
                                         .padding(horizontal = 8.dp, vertical = 4.dp)
                                 ) {
                                     Text(
-                                        text = "한도 ${product.maxBenefitLimit}",
+                                        text = "한도 $fmtLimit",
                                         fontSize = 11.sp,
                                         color = BrandPurple,
                                         fontWeight = FontWeight.Medium

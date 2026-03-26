@@ -168,6 +168,15 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                                 applyFilter(setOf(category), "", false, false)
                             }
                             navController.navigate(Route.BookEntryList.path)
+                        },
+                        onMerchantClick = { merchant ->
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectMonth(selectedMonth)
+                                selectFilter(EntryFilter.INCOME)
+                                applyFilter(setOf("전체"), merchant, false, false)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
                     )
                 }
@@ -209,6 +218,14 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                                 applyFilter(setOf(category), "", false, false)
                             }
                             navController.navigate(Route.BookEntryList.path)
+                        },
+                        onMerchantClick = { merchant ->
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectFilter(EntryFilter.INCOME)
+                                applyFilter(setOf("전체"), merchant, false, false)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
                     )
                 }
@@ -231,7 +248,8 @@ private fun MonthlyReport(
     onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {},
     onSavingsClick: () -> Unit = {},
     onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> },
-    onCategoryClick: (String) -> Unit = {}
+    onCategoryClick: (String) -> Unit = {},
+    onMerchantClick: (String) -> Unit = {}
 ) {
     val net = income - expense
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
@@ -266,7 +284,7 @@ private fun MonthlyReport(
     if (incomeByMerchant.isNotEmpty()) {
         SectionTitle("거래처별 수입")
         Spacer(Modifier.height(12.dp))
-        IncomeBarChart(incomeByMerchant)
+        IncomeBarChart(incomeByMerchant, onMerchantClick = onMerchantClick)
     }
 
     Spacer(Modifier.height(24.dp))
@@ -333,7 +351,8 @@ private fun AnnualReport(
     onPrev: () -> Unit, onNext: () -> Unit,
     onSavingsClick: () -> Unit = {},
     onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> },
-    onCategoryClick: (String) -> Unit = {}
+    onCategoryClick: (String) -> Unit = {},
+    onMerchantClick: (String) -> Unit = {}
 ) {
     val net = income - expense
     val prevNet = prevIncome - prevExpense
@@ -455,7 +474,7 @@ private fun AnnualReport(
     if (incomeByMerchant.isNotEmpty()) {
         SectionTitle("거래처별 수입")
         Spacer(Modifier.height(12.dp))
-        IncomeBarChart(incomeByMerchant)
+        IncomeBarChart(incomeByMerchant, onMerchantClick = onMerchantClick)
         Spacer(Modifier.height(24.dp))
     }
 
@@ -948,7 +967,7 @@ private fun DonutChart(categoryData: List<Pair<String, Long>> = emptyList(), onC
 // ─── 거래처별 수입 막대 그래프 ────────────────────────────
 
 @Composable
-private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList()) {
+private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList(), onMerchantClick: (String) -> Unit = {}) {
     val totalIncome = merchantData.sumOf { it.second }.coerceAtLeast(1)
     val topItems = if (merchantData.size > 3) {
         val top2 = merchantData.take(2)
@@ -1026,7 +1045,13 @@ private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList())
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 bars.forEachIndexed { i, (name, _, pct) ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onMerchantClick(name) }
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
                         Text(name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                         Text("${pct}%", fontSize = 10.sp, color = TextSecondary)
                     }
