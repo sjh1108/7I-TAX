@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,25 +29,13 @@ import com.ssafy.seveniTax.ui.components.ButtonVariant
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
-
-data class MockCard(
-    val id: String,
-    val name: String,
-    val cardIssuer: String,
-    val cardNumber: String,
-    val expiry: String,
-    val type: String,
-    val isDefault: Boolean = false
-)
-
-private val mockCards = listOf(
-    MockCard("1", "일반 카드 (기본)", "신한 카드", "5876  ••••  ••••  2342", "12/27", "personal", isDefault = true),
-    MockCard("2", "사업자 카드", "현대 카드", "4756  ••••  ••••  9018", "12/27", "business")
-)
+import com.ssafy.seveniTax.viewmodel.CardViewModel
+import com.ssafy.seveniTax.viewmodel.RegisteredCard
 
 @Composable
-fun CardListScreen(navController: NavController) {
-    var cards by remember { mutableStateOf(mockCards) }
+fun CardListScreen(navController: NavController, viewModel: CardViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
+    val cards = uiState.cards
     val isEmpty = cards.isEmpty()
 
     Column(
@@ -179,10 +168,12 @@ fun CardListScreen(navController: NavController) {
 
 @Composable
 private fun CardWidget(
-    card: MockCard,
+    card: RegisteredCard,
     onClick: () -> Unit
 ) {
     val bgColor = if (card.type == "personal") CardGold else CardBlue
+    val typeName = if (card.type == "personal") "일반 카드" else "사업자 카드"
+    val displayName = if (card.isDefault) "$typeName (기본)" else typeName
 
     Box(
         modifier = Modifier
@@ -193,7 +184,6 @@ private fun CardWidget(
             .clickable(onClick = onClick)
             .padding(20.dp)
     ) {
-        // 원형 장식
         Box(
             modifier = Modifier
                 .size(70.dp)
@@ -214,18 +204,12 @@ private fun CardWidget(
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(
-                text = card.name,
+                text = displayName,
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
                 color = Color.White
             )
             Column {
-                Text(
-                    text = card.cardIssuer,
-                    fontSize = 13.sp,
-                    color = Color.White.copy(alpha = 0.7f)
-                )
-                Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = card.cardNumber,
                     fontSize = 15.sp,

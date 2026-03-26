@@ -41,6 +41,7 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
 import com.ssafy.seveniTax.R
+import com.ssafy.seveniTax.util.NotificationHelper
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.BrandPurple
 import com.ssafy.seveniTax.ui.theme.Error
@@ -92,9 +93,7 @@ fun HomeScreen(
         HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
             it.navigate(Route.QrPayment.path)
         },
-        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
-            it.navigate(Route.CardList.path)
-        },
+        HomeActionItem("카드 관리", "home/icon_card_manage.svg") { /* 준비 중 */ },
         HomeActionItem("리포트 보기", "home/icon_report.svg") {
             it.navigate(Route.TaxReport.path)
         },
@@ -143,7 +142,27 @@ fun HomeScreen(
                         .padding(horizontal = 24.dp)
                 ) {
                     HomeHeader(userName = userName)
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
+                    // 알림 테스트 버튼
+                    val context = LocalContext.current
+                    androidx.compose.material3.Button(
+                        onClick = {
+                            NotificationHelper.showClassificationNotification(
+                                context = context,
+                                transactionId = "test_${System.currentTimeMillis()}",
+                                merchantName = "스타벅스 강남점",
+                                amount = "5,500원",
+                                aiCategory = "복리후생비",
+                                confidence = 92
+                            )
+                        },
+                        modifier = Modifier.fillMaxWidth().height(40.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(containerColor = Error)
+                    ) {
+                        Text("알림 테스트", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    }
+                    Spacer(modifier = Modifier.height(12.dp))
                 }
             }
 
@@ -156,13 +175,6 @@ fun HomeScreen(
                         .padding(horizontal = 24.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    SummaryOverviewCard(
-                        metrics = listOf(
-                            SummaryMetric("최근 7일 거래", "26건"),
-                            SummaryMetric("다음 신고", "D-6"),
-                            SummaryMetric("미확인 장부", "12건")
-                        )
-                    )
                     UnconfirmedLedgerCard(
                         onClick = { navController.navigate(Route.BookEntryList.path) }
                     )
@@ -184,7 +196,7 @@ fun HomeScreen(
                     )
                     PaymentSection(
                         isPayEnrolled = viewModel.isPayEnrolled(),
-                        onCardClick = { navController.navigate(Route.CardList.path) },
+                        onCardClick = { /* 카드 관리 준비 중 */ },
                         onQrClick = { navController.navigate(Route.QrPayment.path) }
                     )
                     NoticeBanner()

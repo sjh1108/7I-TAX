@@ -23,9 +23,10 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.CardViewModel
 
 @Composable
-fun CardTypeSelectScreen(navController: NavController) {
+fun CardTypeSelectScreen(navController: NavController, viewModel: CardViewModel) {
     var selectedType by remember { mutableStateOf<String?>(null) }
 
     Column(
@@ -98,6 +99,7 @@ fun CardTypeSelectScreen(navController: NavController) {
             TaxButton(
                 text = "다음으로",
                 onClick = {
+                    selectedType?.let { viewModel.selectCardType(it) }
                     when (selectedType) {
                         "personal" -> navController.navigate(Route.CardInput.create("personal"))
                         "business" -> navController.navigate(Route.CardBusinessInfo.path)
