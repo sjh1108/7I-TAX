@@ -53,7 +53,6 @@ private data class TaxDetailInfo(
     val reportType: String,
     val reportPeriod: String,
     val deadlineFormatted: String,
-    val taxOffice: String,
     val checklist: List<ChecklistItem>
 )
 
@@ -84,7 +83,6 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
             reportType = "중간예납 납부",
             reportPeriod = "",
             deadlineFormatted = deadlineFormatted,
-            taxOffice = "역삼세무서",
             checklist = listOf(
                 ChecklistItem("고지서 수령 확인", "세무서에서 발송한 고지서 확인", false),
                 ChecklistItem("중간예납세액 확인", "직전 연도 소득세의 50%", false),
@@ -96,7 +94,6 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
             reportType = "확정신고 (${deadlineDate.year - 1}년 귀속)",
             reportPeriod = "${deadlineDate.year}.05.01 ~ ${deadlineDate.year}.05.31",
             deadlineFormatted = deadlineFormatted,
-            taxOffice = "역삼세무서",
             checklist = listOf(
                 ChecklistItem("간편장부 정리", "5/3 완료", true),
                 ChecklistItem("경비 증빙 확인", "5/8 완료", true),
@@ -109,7 +106,6 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
             reportType = "예정고지 납부",
             reportPeriod = "",
             deadlineFormatted = deadlineFormatted,
-            taxOffice = "역삼세무서",
             checklist = listOf(
                 ChecklistItem("고지서 수령 확인", "세무서에서 발송한 고지서 확인", false),
                 ChecklistItem("고지 금액 확인", "직전 반기 납부세액의 50%", false),
@@ -122,7 +118,6 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
             reportPeriod = if (taxName.contains("1기")) "${deadlineDate.year}.01.01 ~ ${deadlineDate.year}.06.30"
                           else "${deadlineDate.year}.07.01 ~ ${deadlineDate.year}.12.31",
             deadlineFormatted = deadlineFormatted,
-            taxOffice = "역삼세무서",
             checklist = listOf(
                 ChecklistItem("매출 내역 정리", "카드 결제 내역 확인", false),
                 ChecklistItem("매입 증빙 수집", "세금계산서 확인", false),
@@ -135,7 +130,6 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
             reportType = description.ifEmpty { "확정신고" },
             reportPeriod = "${deadlineDate.year}.05.01 ~ ${deadlineDate.year}.05.31",
             deadlineFormatted = deadlineFormatted,
-            taxOffice = "역삼세무서",
             checklist = listOf(
                 ChecklistItem("종합소득세 신고 완료", "종합소득세 먼저 신고 필요", false),
                 ChecklistItem("지방소득세 계산", "종합소득세의 10%", false),
@@ -147,7 +141,6 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
             reportType = description,
             reportPeriod = "",
             deadlineFormatted = deadlineFormatted,
-            taxOffice = "역삼세무서",
             checklist = emptyList()
         )
     }
@@ -381,8 +374,6 @@ private fun InfoCard(info: TaxDetailInfo) {
             }
             InfoDivider()
             InfoRow("마감일", info.deadlineFormatted)
-            InfoDivider()
-            InfoRow("관할 세무서", info.taxOffice)
         }
     }
 }
