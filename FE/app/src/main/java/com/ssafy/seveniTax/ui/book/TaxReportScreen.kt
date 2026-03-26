@@ -158,6 +158,15 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                                 selectFilter(if (isIncome) EntryFilter.INCOME else EntryFilter.EXPENSE)
                             }
                             navController.navigate(Route.BookEntryList.path)
+                        },
+                        onCategoryClick = { category ->
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectMonth(selectedMonth)
+                                selectFilter(EntryFilter.EXPENSE)
+                                applyFilter(setOf(category), "", false, false)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
                     )
                 }
@@ -191,6 +200,14 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                                 selectFilter(if (isIncome) EntryFilter.INCOME else EntryFilter.EXPENSE)
                             }
                             navController.navigate(Route.BookEntryList.path)
+                        },
+                        onCategoryClick = { category ->
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectFilter(EntryFilter.EXPENSE)
+                                applyFilter(setOf(category), "", false, false)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
                     )
                 }
@@ -212,7 +229,8 @@ private fun MonthlyReport(
     onPrev: () -> Unit, onNext: () -> Unit,
     onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {},
     onSavingsClick: () -> Unit = {},
-    onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> }
+    onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> },
+    onCategoryClick: (String) -> Unit = {}
 ) {
     val net = income - expense
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
@@ -239,7 +257,7 @@ private fun MonthlyReport(
     if (expenseByCategory.isNotEmpty()) {
         SectionTitle("계정과목별 비용")
         Spacer(Modifier.height(12.dp))
-        DonutChart(expenseByCategory)
+        DonutChart(expenseByCategory, onCategoryClick = onCategoryClick)
         Spacer(Modifier.height(24.dp))
     }
 
@@ -313,7 +331,8 @@ private fun AnnualReport(
     trend: List<Triple<String, Long, Long>>,
     onPrev: () -> Unit, onNext: () -> Unit,
     onSavingsClick: () -> Unit = {},
-    onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> }
+    onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> },
+    onCategoryClick: (String) -> Unit = {}
 ) {
     val net = income - expense
     val prevNet = prevIncome - prevExpense
@@ -427,7 +446,7 @@ private fun AnnualReport(
     if (expenseByCategory.isNotEmpty()) {
         SectionTitle("연간 계정과목별 비용")
         Spacer(Modifier.height(12.dp))
-        DonutChart(expenseByCategory)
+        DonutChart(expenseByCategory, onCategoryClick = onCategoryClick)
         Spacer(Modifier.height(24.dp))
     }
 
@@ -823,7 +842,7 @@ private fun TrendLineChart(
 // ─── 계정과목별 비용 도넛 차트 ────────────────────────────
 
 @Composable
-private fun DonutChart(categoryData: List<Pair<String, Long>> = emptyList()) {
+private fun DonutChart(categoryData: List<Pair<String, Long>> = emptyList(), onCategoryClick: (String) -> Unit = {}) {
     val total = categoryData.sumOf { it.second }.coerceAtLeast(1)
     val donutColors = listOf(
         Color(0xFFE8475A), Color(0xFF5655B9), Color(0xFFF5A623),
@@ -887,7 +906,13 @@ private fun DonutChart(categoryData: List<Pair<String, Long>> = emptyList()) {
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     row.forEach { (label, pct, color) ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(6.dp))
+                                .clickable { onCategoryClick(label) }
+                                .padding(horizontal = 4.dp, vertical = 2.dp)
+                        ) {
                             Box(Modifier.size(8.dp).background(color, RoundedCornerShape(2.dp)))
                             Spacer(Modifier.width(4.dp))
                             Text("$label ${pct.toInt()}%", fontSize = 11.sp, color = TextSecondary)
