@@ -113,7 +113,7 @@ class TaxCalendarViewModel @Inject constructor(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        loadMockDeadlines() // TODO: 데모용 목 데이터, 추후 loadDeadlines()로 복원
+        loadDeadlines()
         applyReminderSettings()
     }
 
