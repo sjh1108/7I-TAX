@@ -149,9 +149,9 @@ fun TaxSavingsDetailScreen(navController: NavController) {
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        LegendDot(Color(0xFF52D5BA), "여유 (~60%)")
-                        LegendDot(Color(0xFFFFAF2A), "주의 (61~80%)")
-                        LegendDot(Color(0xFFFF4267), "임박 (81%~)")
+                        LegendDot(Color(0xFFFF4267), "부족 (~60%)")
+                        LegendDot(Color(0xFFFFAF2A), "양호 (61~80%)")
+                        LegendDot(Color(0xFF52D5BA), "충분 (81%~)")
                     }
                 }
                 Spacer(Modifier.height(16.dp))
@@ -188,9 +188,9 @@ private fun SavingCard(item: SavingItem) {
     val percent = if (item.limit > 0) (item.used * 100 / item.limit).toInt() else 0
     val remaining = item.limit - item.used
     val barColor = when {
-        percent >= 81 -> Color(0xFFFF4267)
+        percent >= 81 -> Color(0xFF52D5BA)
         percent >= 61 -> Color(0xFFFFAF2A)
-        else -> Color(0xFF52D5BA)
+        else -> Color(0xFFFF4267)
     }
 
     Card(
