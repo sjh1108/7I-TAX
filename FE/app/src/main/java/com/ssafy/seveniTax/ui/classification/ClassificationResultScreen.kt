@@ -127,6 +127,7 @@ fun ClassificationResultScreen(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 28.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(15.dp)
         ) {

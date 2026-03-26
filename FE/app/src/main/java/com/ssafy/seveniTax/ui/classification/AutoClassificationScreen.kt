@@ -43,7 +43,7 @@ fun AutoClassificationScreen(
             .statusBarsPadding()
             .background(Background)
     ) {
-        TaxHeader(title = "자동 분류 알림")
+        TaxHeader(title = "자동 분류 알림", onBack = { navController.popBackStack() })
 
         Column(
             modifier = Modifier
@@ -106,6 +106,7 @@ fun AutoClassificationScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 28.dp, vertical = 20.dp)
         ) {
             Button(
@@ -122,7 +123,8 @@ fun AutoClassificationScreen(
                 Text(
                     text = "확인",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
         }

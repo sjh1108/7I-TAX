@@ -122,7 +122,7 @@ fun ClassificationCompleteScreen(
                 valueFontWeight = FontWeight.SemiBold
             )
             SummaryDivider()
-            SummaryRow(label = "메모", value = memo)
+            SummaryRow(label = "증빙 자료", value = memo)
 
             Spacer(modifier = Modifier.height(16.dp))
 
@@ -173,6 +173,7 @@ fun ClassificationCompleteScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 28.dp, vertical = 20.dp)
         ) {
             Button(
