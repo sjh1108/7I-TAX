@@ -36,6 +36,7 @@ import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
 import com.ssafy.seveniTax.viewmodel.EntryFilter
+import androidx.compose.runtime.saveable.rememberSaveable
 import java.text.NumberFormat
 import java.util.Locale
 
@@ -45,9 +46,9 @@ private enum class ReportTab(val label: String) {
 
 @Composable
 fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryViewModel? = null) {
-    var selectedTab by remember { mutableStateOf(ReportTab.MONTHLY) }
-    var selectedYear by remember { mutableIntStateOf(java.time.LocalDate.now().year) }
-    var selectedMonth by remember { mutableIntStateOf(java.time.LocalDate.now().monthValue) }
+    var selectedTab by rememberSaveable { mutableStateOf(ReportTab.MONTHLY) }
+    var selectedYear by rememberSaveable { mutableIntStateOf(java.time.LocalDate.now().year) }
+    var selectedMonth by rememberSaveable { mutableIntStateOf(java.time.LocalDate.now().monthValue) }
 
     Column(
         modifier = Modifier
