@@ -1,6 +1,7 @@
 package com.ssafy.tax7i.ai.mapper;
 
 import com.ssafy.tax7i.classification.entity.TaxCategory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -8,6 +9,7 @@ import java.util.Map;
 /**
  * AI 세목 분류 결과(20개 한글 카테고리)를 BE TaxCategory enum으로 매핑
  */
+@Slf4j
 @Component
 public class AiCategoryMapper {
 
@@ -43,7 +45,12 @@ public class AiCategoryMapper {
         if (aiCategoryName == null || aiCategoryName.isBlank()) {
             return TaxCategory.OTHER_EXPENSE;
         }
-        return MAPPING.getOrDefault(aiCategoryName.trim(), TaxCategory.OTHER_EXPENSE);
+        TaxCategory result = MAPPING.get(aiCategoryName.trim());
+        if (result == null) {
+            log.warn("AI 카테고리 매핑 실패, OTHER_EXPENSE 폴백: aiCategory={}", aiCategoryName);
+            return TaxCategory.OTHER_EXPENSE;
+        }
+        return result;
     }
 
     public String mapToName(String aiCategoryName) {

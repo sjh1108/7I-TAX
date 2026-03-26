@@ -1,6 +1,8 @@
 package com.ssafy.tax7i.bookentry.dto;
 
 import com.ssafy.tax7i.bookentry.entity.EntryType;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
@@ -28,7 +30,7 @@ public record BookEntryCreateRequest(
 
         String categoryName,
 
-        Integer confidenceScore,
+        @Min(0) @Max(100) Integer confidenceScore,
 
         String note
 ) {

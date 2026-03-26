@@ -30,7 +30,6 @@ public class ChatbotService {
     private final ChatSessionRepository chatSessionRepository;
     private final ChatMessageRepository chatMessageRepository;
 
-    @Transactional
     public ChatbotResponse sendMessage(Long userId, ChatbotRequest request) {
         try {
             AiChatRequest aiRequest = new AiChatRequest(
@@ -62,7 +61,13 @@ public class ChatbotService {
     }
 
     @Transactional(readOnly = true)
-    public ChatHistoryResponse getHistory(String sessionId) {
+    public ChatHistoryResponse getHistory(Long userId, String sessionId) {
+        chatSessionRepository.findBySessionId(sessionId).ifPresent(session -> {
+            if (!session.getUserId().equals(userId)) {
+                throw new BusinessException(ErrorCode.CHAT_SESSION_ACCESS_DENIED);
+            }
+        });
+
         try {
             AiChatHistoryResponse aiResponse = aiClient.getChatHistory(sessionId);
             List<ChatMessage> messages = aiResponse.messages().stream()
@@ -107,6 +112,7 @@ public class ChatbotService {
                     .build());
 
             session.incrementMessageCount(2);
+            chatSessionRepository.save(session);
 
             log.debug("챗봇 대화 저장: sessionId={}, userId={}, messageCount={}",
                     sessionId, userId, session.getMessageCount());

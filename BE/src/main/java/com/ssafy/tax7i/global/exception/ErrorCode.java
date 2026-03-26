@@ -34,6 +34,7 @@ public enum ErrorCode {
     USER_SUSPENDED(HttpStatus.FORBIDDEN, "정지된 계정입니다."),
     USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 계정입니다."),
     CARD_INACTIVE(HttpStatus.FORBIDDEN, "비활성 카드입니다."),
+    CHAT_SESSION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 채팅 세션에 대한 접근 권한이 없습니다."),
 
     // 404 Not Found
     NOT_FOUND(HttpStatus.NOT_FOUND, "리소스를 찾을 수 없습니다."),

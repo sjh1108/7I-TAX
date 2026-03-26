@@ -30,7 +30,7 @@ public class ChatbotController {
     public ResponseEntity<SuccessResponse<ChatHistoryResponse>> getHistory(
             @AuthenticationPrincipal Long userId,
             @PathVariable String sessionId) {
-        ChatHistoryResponse response = chatbotService.getHistory(sessionId);
+        ChatHistoryResponse response = chatbotService.getHistory(userId, sessionId);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 }

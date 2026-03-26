@@ -20,6 +20,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -78,6 +79,7 @@ class ChatbotServiceTest {
     @DisplayName("getHistory 성공 시 메시지 리스트 매핑")
     void getHistory_성공() {
         // given
+        given(chatSessionRepository.findBySessionId("session-1")).willReturn(Optional.empty());
         List<AiChatMessage> aiMessages = List.of(
                 new AiChatMessage("user", "부가세 신고 기간은?"),
                 new AiChatMessage("assistant", "부가세 신고 기간은 1월, 7월입니다.")
@@ -86,7 +88,7 @@ class ChatbotServiceTest {
         given(aiClient.getChatHistory("session-1")).willReturn(aiResponse);
 
         // when
-        ChatHistoryResponse response = chatbotService.getHistory("session-1");
+        ChatHistoryResponse response = chatbotService.getHistory(1L, "session-1");
 
         // then
         assertThat(response.sessionId()).isEqualTo("session-1");
@@ -100,13 +102,31 @@ class ChatbotServiceTest {
     @DisplayName("getHistory AI 서비스 장애 시 BusinessException 전파")
     void getHistory_AI_장애() {
         // given
+        given(chatSessionRepository.findBySessionId("session-1")).willReturn(Optional.empty());
         given(aiClient.getChatHistory("session-1"))
                 .willThrow(new BusinessException(ErrorCode.AI_SERVICE_UNAVAILABLE));
 
         // when & then
-        assertThatThrownBy(() -> chatbotService.getHistory("session-1"))
+        assertThatThrownBy(() -> chatbotService.getHistory(1L, "session-1"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
                         .isEqualTo(ErrorCode.AI_SERVICE_UNAVAILABLE));
+    }
+
+    @Test
+    @DisplayName("getHistory 다른 유저의 세션 접근 시 CHAT_SESSION_ACCESS_DENIED")
+    void getHistory_다른유저_세션접근_실패() {
+        // given - session belongs to userId=2L
+        com.ssafy.tax7i.ai.entity.ChatSession otherSession = com.ssafy.tax7i.ai.entity.ChatSession.builder()
+                .sessionId("session-1")
+                .userId(2L)
+                .build();
+        given(chatSessionRepository.findBySessionId("session-1")).willReturn(Optional.of(otherSession));
+
+        // when & then - userId=1L tries to access
+        assertThatThrownBy(() -> chatbotService.getHistory(1L, "session-1"))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(ex -> assertThat(((BusinessException) ex).getErrorCode())
+                        .isEqualTo(ErrorCode.CHAT_SESSION_ACCESS_DENIED));
     }
 }

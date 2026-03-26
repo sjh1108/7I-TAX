@@ -41,7 +41,7 @@ public class AiClassificationService {
         TaxCategory mapped = categoryMapper.map(response.category());
 
         // AI confidence(0~1) → BE score(0~100), 최대 89로 캡 (CONFIRMED 방지)
-        int score = Math.min((int) (response.confidence() * 100), 89);
+        int score = Math.min(Math.round(response.confidence() * 100), 89);
 
         String vatDeductible = "확인필요";
         String legalBasis = response.legalBasis();

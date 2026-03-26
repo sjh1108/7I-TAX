@@ -35,51 +35,66 @@ public class TaxParameterService {
                 .collect(Collectors.toMap(TaxParameter::getParamKey, TaxParameter::getParamValue));
     }
 
+    private String requireParam(Map<String, String> params, String category, String key) {
+        String value = params.get(key);
+        if (value == null) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
+                    category + " 파라미터에 " + key + " 값이 없습니다.");
+        }
+        return value;
+    }
+
     /** 지방소득세율 (지방세법 §92) */
     public double getLocalTaxRate(int year) {
-        return Double.parseDouble(getParams(year, "LOCAL_TAX").get("rate"));
+        Map<String, String> params = getParams(year, "LOCAL_TAX");
+        return Double.parseDouble(requireParam(params, "LOCAL_TAX", "rate"));
     }
 
     /** 부가가치세율 (부가가치세법 §30) */
     public double getVatRate(int year) {
-        return Double.parseDouble(getParams(year, "VAT").get("rate"));
+        Map<String, String> params = getParams(year, "VAT");
+        return Double.parseDouble(requireParam(params, "VAT", "rate"));
     }
 
     /** 기본공제 본인 (소득세법 §50) */
     public long getBasicDeduction(int year) {
-        return Long.parseLong(getParams(year, "BASIC_DEDUCTION").get("personal"));
+        Map<String, String> params = getParams(year, "BASIC_DEDUCTION");
+        return Long.parseLong(requireParam(params, "BASIC_DEDUCTION", "personal"));
     }
 
     /** 노란우산공제 한도 (소기업소상공인공제부금법) */
     public long getNoranLimit(int year, long totalRevenue) {
         Map<String, String> params = getParams(year, "NORAN_DEDUCTION");
-        long threshold = Long.parseLong(params.get("threshold"));
+        long threshold = Long.parseLong(requireParam(params, "NORAN_DEDUCTION", "threshold"));
         return totalRevenue <= threshold
-                ? Long.parseLong(params.get("limit_low"))
-                : Long.parseLong(params.get("limit_high"));
+                ? Long.parseLong(requireParam(params, "NORAN_DEDUCTION", "limit_low"))
+                : Long.parseLong(requireParam(params, "NORAN_DEDUCTION", "limit_high"));
     }
 
     /** 연금저축 세액공제율 (소득세법 §50) */
     public double getPensionCreditRate(int year, long totalRevenue) {
         Map<String, String> params = getParams(year, "PENSION_CREDIT");
-        long threshold = Long.parseLong(params.get("threshold"));
+        long threshold = Long.parseLong(requireParam(params, "PENSION_CREDIT", "threshold"));
         return totalRevenue <= threshold
-                ? Double.parseDouble(params.get("rate_low"))
-                : Double.parseDouble(params.get("rate_high"));
+                ? Double.parseDouble(requireParam(params, "PENSION_CREDIT", "rate_low"))
+                : Double.parseDouble(requireParam(params, "PENSION_CREDIT", "rate_high"));
     }
 
     /** 연금저축 연간 한도 */
     public long getPensionLimit(int year) {
-        return Long.parseLong(getParams(year, "PENSION_CREDIT").get("limit"));
+        Map<String, String> params = getParams(year, "PENSION_CREDIT");
+        return Long.parseLong(requireParam(params, "PENSION_CREDIT", "limit"));
     }
 
     /** 접대비 연간 기본한도 (소득세법 §35) */
     public long getEntertainmentLimit(int year) {
-        return Long.parseLong(getParams(year, "ENTERTAINMENT").get("annual_limit"));
+        Map<String, String> params = getParams(year, "ENTERTAINMENT");
+        return Long.parseLong(requireParam(params, "ENTERTAINMENT", "annual_limit"));
     }
 
     /** 교육훈련비 추천한도 (소득세법 §19) */
     public long getEducationLimit(int year) {
-        return Long.parseLong(getParams(year, "EDUCATION").get("recommended_limit"));
+        Map<String, String> params = getParams(year, "EDUCATION");
+        return Long.parseLong(requireParam(params, "EDUCATION", "recommended_limit"));
     }
 }
