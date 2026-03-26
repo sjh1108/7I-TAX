@@ -287,7 +287,7 @@ fun NavGraph(navController: NavHostController) {
                         }
                     } else {
                         navController.navigate(Route.Main.path) {
-                            popUpTo(Route.Main.path) { inclusive = true }
+                            popUpTo(0) { inclusive = true }
                         }
                     }
                 }
