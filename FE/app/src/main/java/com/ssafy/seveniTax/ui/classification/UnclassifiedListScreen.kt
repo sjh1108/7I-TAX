@@ -13,6 +13,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,13 +43,14 @@ fun UnclassifiedListScreen(
     navController: NavController,
     transactions: List<UnclassifiedTransaction> = sampleTransactions(),
     showFirstVisitToast: Boolean = false,
+    aiRecommendedInitial: Boolean = false,
     onBulkConfirm: () -> Unit = {},
     onAiRecommend: () -> Unit = {},
     onReviewAll: () -> Unit = {},
     onTransactionClick: (String) -> Unit = {}
 ) {
     var showToast by remember { mutableStateOf(showFirstVisitToast) }
-    var aiRecommended by remember { mutableStateOf(false) }
+    var aiRecommended by rememberSaveable { mutableStateOf(aiRecommendedInitial) }
     val totalAmount = "총 27,100원" // 실제로는 계산
 
     Box(modifier = Modifier.fillMaxSize()) {

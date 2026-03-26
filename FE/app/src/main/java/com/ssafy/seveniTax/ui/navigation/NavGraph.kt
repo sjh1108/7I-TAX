@@ -301,9 +301,11 @@ fun NavGraph(navController: NavHostController) {
             )
         }
 
-        composable(Route.UnclassifiedList.path) {
+        composable(Route.UnclassifiedList.path) { backStackEntry ->
+            val aiDone = backStackEntry.savedStateHandle.get<Boolean>("aiRecommended") ?: false
             UnclassifiedListScreen(
                 navController = navController,
+                aiRecommendedInitial = aiDone,
                 onBulkConfirm = {
                     navController.navigate(Route.ClassificationComplete.create())
                 },
@@ -325,11 +327,8 @@ fun NavGraph(navController: NavHostController) {
             BulkClassificationLoadingScreen(
                 navController = navController,
                 onComplete = {
-                    // 일괄 분석 완료 → 미분류 내역으로 복귀 (AI 추천 표시됨)
-                    // AI 추천대로 일괄 확정 또는 개별 선택 가능
-                    navController.navigate(Route.UnclassifiedList.path) {
-                        popUpTo(Route.BulkClassificationLoading.path) { inclusive = true }
-                    }
+                    navController.previousBackStackEntry?.savedStateHandle?.set("aiRecommended", true)
+                    navController.popBackStack()
                 }
             )
         }
