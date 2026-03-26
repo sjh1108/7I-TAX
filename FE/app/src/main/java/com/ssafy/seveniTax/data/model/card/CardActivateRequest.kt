@@ -5,7 +5,7 @@ data class CardActivateRequest(
 )
 
 data class CardActivateResponse(
-    val id: String,
+    val id: Long,
     val status: String,
-    val activatedAt: String
+    val activatedAt: String?
 )

@@ -5,7 +5,7 @@ data class CardPurposeRequest(
 )
 
 data class CardPurposeResponse(
-    val id: String,
+    val id: Long,
     val defaultPurpose: String,
-    val updatedAt: String
+    val updatedAt: String?
 )
