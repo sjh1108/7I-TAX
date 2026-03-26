@@ -170,4 +170,57 @@ class CardControllerTest {
                 .andExpect(jsonPath("$.data").isArray())
                 .andExpect(jsonPath("$.data[0].paymentBalance").value(50000));
     }
+
+    // ─────────── POST /api/cards/{id}/activate ───────────
+
+    @Test
+    void activateCard_200() throws Exception {
+        CardActivateResponse response = new CardActivateResponse(1L, "ACTIVE", LocalDateTime.now());
+        given(cardService.activateCard(any(), eq(1L), any())).willReturn(response);
+
+        mockMvc.perform(post("/api/cards/1/activate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("activationCode", "1234"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.status").value("ACTIVE"));
+    }
+
+    @Test
+    void activateCard_없는카드_404() throws Exception {
+        given(cardService.activateCard(any(), eq(99L), any()))
+                .willThrow(new BusinessException(ErrorCode.CARD_NOT_FOUND));
+
+        mockMvc.perform(post("/api/cards/99/activate")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("activationCode", "1234"))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("CARD_NOT_FOUND"));
+    }
+
+    // ─────────── PATCH /api/cards/{id}/purpose ───────────
+
+    @Test
+    void setCardPurpose_200() throws Exception {
+        CardPurposeResponse response = new CardPurposeResponse(1L, "BUSINESS", LocalDateTime.now());
+        given(cardService.setCardPurpose(any(), eq(1L), any())).willReturn(response);
+
+        mockMvc.perform(patch("/api/cards/1/purpose")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of("defaultPurpose", "BUSINESS"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("success"))
+                .andExpect(jsonPath("$.data.id").value(1))
+                .andExpect(jsonPath("$.data.defaultPurpose").value("BUSINESS"));
+    }
+
+    @Test
+    void setCardPurpose_필수값누락_400() throws Exception {
+        mockMvc.perform(patch("/api/cards/1/purpose")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_ARGUMENT"));
+    }
 }

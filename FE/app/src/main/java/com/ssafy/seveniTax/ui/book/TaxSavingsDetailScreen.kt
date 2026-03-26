@@ -1,14 +1,20 @@
 package com.ssafy.seveniTax.ui.book
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -58,7 +64,7 @@ fun TaxSavingsDetailScreen(navController: NavController) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기", tint = TextPrimary)
             }
             Spacer(Modifier.weight(1f))
-            Text("절세 상세", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text("공제 한도", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             Spacer(Modifier.weight(1f))
             Spacer(Modifier.size(48.dp))
         }
@@ -118,9 +124,36 @@ fun TaxSavingsDetailScreen(navController: NavController) {
 
             // 항목별 현황
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Text("항목별 현황", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Spacer(Modifier.height(4.dp))
-                Text("탭하여 상세 확인", fontSize = 12.sp, color = TextSecondary)
+                var showLegend by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("항목별 현황", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    IconButton(onClick = { showLegend = !showLegend }, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "범례",
+                            tint = if (showLegend) BrandPurple else TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
+                if (showLegend) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Surface, RoundedCornerShape(10.dp))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        LegendDot(Color(0xFFFF4267), "부족 (~60%)")
+                        LegendDot(Color(0xFFFFAF2A), "양호 (61~80%)")
+                        LegendDot(Color(0xFF52D5BA), "충분 (81%~)")
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
 
                 savingItems.forEach { item ->
@@ -132,22 +165,6 @@ fun TaxSavingsDetailScreen(navController: NavController) {
             Spacer(Modifier.height(16.dp))
         }
 
-        // 하단 버튼
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .navigationBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp)
-        ) {
-            Button(
-                onClick = { },
-                modifier = Modifier.fillMaxWidth().height(54.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = BrandPurple)
-            ) {
-                Text("더 아낄 수 있는 방법 보기", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
-            }
-        }
     }
 }
 
@@ -171,9 +188,9 @@ private fun SavingCard(item: SavingItem) {
     val percent = if (item.limit > 0) (item.used * 100 / item.limit).toInt() else 0
     val remaining = item.limit - item.used
     val barColor = when {
-        percent >= 81 -> Color(0xFFFF4267)
+        percent >= 81 -> Color(0xFF52D5BA)
         percent >= 61 -> Color(0xFFFFAF2A)
-        else -> Color(0xFF52D5BA)
+        else -> Color(0xFFFF4267)
     }
 
     Card(
@@ -232,11 +249,15 @@ private fun SavingCard(item: SavingItem) {
     }
 }
 
-private fun formatSavingsAmount(amount: Long): String {
-    return if (amount >= 10_000) {
-        val man = amount / 10_000
-        "${java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA).format(man)}만"
-    } else {
-        java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA).format(amount)
+@Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(color))
+        Spacer(Modifier.width(4.dp))
+        Text(label, fontSize = 12.sp, color = TextSecondary)
     }
+}
+
+private fun formatSavingsAmount(amount: Long): String {
+    return java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA).format(amount)
 }

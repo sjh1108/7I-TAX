@@ -17,6 +17,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -41,21 +42,21 @@ import java.io.File
 fun BookMemoAddScreen(
     navController: NavController
 ) {
-    var memoText by remember { mutableStateOf("") }
+    var memoText by rememberSaveable { mutableStateOf("") }
     var showSuccess by remember { mutableStateOf(false) }
     var showPhotoDialog by remember { mutableStateOf(false) }
-    var attachedPhotos by remember { mutableStateOf(listOf<Uri>()) }
+    var photoUriStrings by rememberSaveable { mutableStateOf(listOf<String>()) }
+    val attachedPhotos = photoUriStrings.map { Uri.parse(it) }
     val maxLength = 200
     val context = LocalContext.current
 
-    // 카메라 촬영용 임시 URI
-    var cameraUri by remember { mutableStateOf<Uri?>(null) }
+    var cameraUriString by rememberSaveable { mutableStateOf<String?>(null) }
 
     val cameraLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.TakePicture()
     ) { success ->
-        if (success && cameraUri != null) {
-            attachedPhotos = attachedPhotos + cameraUri!!
+        if (success && cameraUriString != null) {
+            photoUriStrings = photoUriStrings + cameraUriString!!
         }
     }
 
@@ -63,7 +64,7 @@ fun BookMemoAddScreen(
         contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
-            attachedPhotos = attachedPhotos + uri
+            photoUriStrings = photoUriStrings + uri.toString()
         }
     }
 
@@ -235,7 +236,7 @@ fun BookMemoAddScreen(
                                         .clip(CircleShape)
                                         .background(Color(0xFF343434))
                                         .clickable {
-                                            attachedPhotos = attachedPhotos.toMutableList().also {
+                                            photoUriStrings = photoUriStrings.toMutableList().also {
                                                 it.removeAt(index)
                                             }
                                         },
@@ -302,12 +303,13 @@ fun BookMemoAddScreen(
                     TextButton(onClick = {
                         showPhotoDialog = false
                         val file = File(context.cacheDir, "photo_${System.currentTimeMillis()}.jpg")
-                        cameraUri = FileProvider.getUriForFile(
+                        val uri = FileProvider.getUriForFile(
                             context,
                             "${context.packageName}.fileprovider",
                             file
                         )
-                        cameraLauncher.launch(cameraUri!!)
+                        cameraUriString = uri.toString()
+                        cameraLauncher.launch(uri)
                     }) {
                         Text("카메라", color = BrandPurple)
                     }
