@@ -35,7 +35,7 @@ fun ClassificationLoadingScreen(
             .background(Background)
     ) {
         TaxHeader(
-            title = "세목 분류",
+            title = "경비 분류",
             onBack = { navController.popBackStack() }
         )
 
@@ -54,7 +54,7 @@ fun ClassificationLoadingScreen(
 
             // 제목
             Text(
-                text = "AI가 세목을 분석하고 있어요",
+                text = "AI가 경비를 분석하고 있어요",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF343434)
@@ -158,9 +158,9 @@ private fun AnalysisItemsCard(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // 세목 매칭 (진행 중)
+        // 경비 매칭 (진행 중)
         AnalysisItem(
-            label = "세목 매칭 중...",
+            label = "경비 매칭 중...",
             isDone = false
         )
     }

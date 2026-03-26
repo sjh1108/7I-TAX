@@ -69,7 +69,7 @@ fun AutoClassificationScreen(
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "세목이 맞는지 확인해보세요",
+                text = "경비가 맞는지 확인해보세요",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFF898989)
@@ -157,7 +157,7 @@ private fun ClassifiedTransactionRow(
 
         Spacer(modifier = Modifier.height(4.dp))
 
-        // 세목 + 수정 버튼
+        // 경비 + 수정 버튼
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.SpaceBetween,

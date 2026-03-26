@@ -44,7 +44,7 @@ fun ClassificationResultScreen(
             .background(Background)
     ) {
         TaxHeader(
-            title = "세목 확인",
+            title = "경비 확인",
             onBack = { navController.popBackStack() }
         )
 
@@ -58,7 +58,7 @@ fun ClassificationResultScreen(
 
             // 메인 타이틀
             Text(
-                text = "AI가 세목을",
+                text = "AI가 경비를",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF343434)
@@ -101,10 +101,10 @@ fun ClassificationResultScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            // 다른 추천 세목 섹션
+            // 다른 추천 경비 섹션
             if (alternativeCategories.isNotEmpty()) {
                 Text(
-                    text = "다른 추천 세목",
+                    text = "다른 추천 경비",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF898989)
@@ -130,7 +130,7 @@ fun ClassificationResultScreen(
                 .padding(horizontal = 28.dp, vertical = 20.dp),
             horizontalArrangement = Arrangement.spacedBy(15.dp)
         ) {
-            // 세목 변경 버튼 (Secondary)
+            // 경비 변경 버튼 (Secondary)
             androidx.compose.material3.OutlinedButton(
                 onClick = onChangeCategory,
                 modifier = Modifier
@@ -143,7 +143,7 @@ fun ClassificationResultScreen(
                 )
             ) {
                 Text(
-                    text = "세목 변경",
+                    text = "경비 변경",
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold
                 )
@@ -206,7 +206,7 @@ private fun AiRecommendationCard(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // 세목명
+        // 경비명
         Text(
             text = category,
             fontSize = 24.sp,

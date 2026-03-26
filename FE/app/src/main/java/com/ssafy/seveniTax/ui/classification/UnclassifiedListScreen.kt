@@ -84,7 +84,7 @@ fun UnclassifiedListScreen(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 Text(
-                    text = "세목을 확인하면 절세에 도움이 돼요",
+                    text = "경비를 확인하면 절세에 도움이 돼요",
                     fontSize = 13.sp,
                     fontWeight = FontWeight.Normal,
                     color = Color(0xFF898989)
@@ -335,7 +335,7 @@ private fun FirstVisitToastOverlay(
 
             // 본문
             Text(
-                text = "결제 후 AI가 자동으로 세목을 추천해요.",
+                text = "결제 후 AI가 자동으로 경비를 추천해요.",
                 fontSize = 13.sp,
                 fontWeight = FontWeight.Normal,
                 color = Color(0xFFCACACA)

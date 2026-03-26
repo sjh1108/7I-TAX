@@ -68,7 +68,7 @@ fun CategorySelectScreen(
             .background(Background)
     ) {
         TaxHeader(
-            title = "세목 변경",
+            title = "경비 변경",
             onBack = { navController.popBackStack() }
         )
 
@@ -81,7 +81,7 @@ fun CategorySelectScreen(
 
             // 페이지 타이틀
             Text(
-                text = "세목을 선택해주세요",
+                text = "경비를 선택해주세요",
                 fontSize = 24.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF343434)
@@ -102,9 +102,9 @@ fun CategorySelectScreen(
                     .weight(1f)
                     .verticalScroll(rememberScrollState())
             ) {
-                // 자주 사용한 세목
+                // 자주 사용한 경비
                 Text(
-                    text = "자주 사용한 세목",
+                    text = "자주 사용한 경비",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF898989)
@@ -125,9 +125,9 @@ fun CategorySelectScreen(
 
                 Spacer(modifier = Modifier.height(20.dp))
 
-                // 전체 세목
+                // 전체 경비
                 Text(
-                    text = "전체 세목",
+                    text = "전체 경비",
                     fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold,
                     color = Color(0xFF898989)
@@ -190,7 +190,8 @@ fun CategorySelectScreen(
                 Text(
                     text = "선택 완료",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
         }
@@ -210,7 +211,7 @@ private fun SearchBar(
             .height(48.dp),
         placeholder = {
             Text(
-                text = "세목 검색",
+                text = "경비 검색",
                 fontSize = 14.sp,
                 color = Color(0xFFA8A3D7)
             )

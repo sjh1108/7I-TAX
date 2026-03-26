@@ -78,7 +78,7 @@ fun BulkClassificationLoadingScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "AI가 세목을 분석하고 있어요",
+                text = "AI가 경비를 분석하고 있어요",
                 fontSize = 22.sp,
                 fontWeight = FontWeight.SemiBold,
                 color = Color(0xFF343434)

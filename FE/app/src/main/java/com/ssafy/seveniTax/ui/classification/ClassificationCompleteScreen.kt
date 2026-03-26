@@ -76,7 +76,7 @@ fun ClassificationCompleteScreen(
 
         // 타이틀
         Text(
-            text = "세목이 확정되었어요",
+            text = "경비가 확정되었어요",
             fontSize = 22.sp,
             fontWeight = FontWeight.SemiBold,
             color = Color(0xFF343434)
@@ -116,7 +116,7 @@ fun ClassificationCompleteScreen(
             SummaryRow(label = "금액", value = amount)
             SummaryDivider()
             SummaryRow(
-                label = "세목",
+                label = "경비",
                 value = category,
                 valueColor = BrandPurple,
                 valueFontWeight = FontWeight.SemiBold
