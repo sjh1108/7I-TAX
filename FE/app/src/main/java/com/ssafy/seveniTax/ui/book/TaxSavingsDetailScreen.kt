@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -130,17 +131,14 @@ fun TaxSavingsDetailScreen(navController: NavController) {
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text("항목별 현황", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text(
-                        if (showLegend) "범례 닫기" else "범례 보기",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = LogoPurple,
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(8.dp))
-                            .background(Color(0xFFF2F1F9))
-                            .padding(horizontal = 10.dp, vertical = 4.dp)
-                            .then(Modifier.clickable { showLegend = !showLegend })
-                    )
+                    IconButton(onClick = { showLegend = !showLegend }, modifier = Modifier.size(28.dp)) {
+                        Icon(
+                            imageVector = Icons.Outlined.Info,
+                            contentDescription = "범례",
+                            tint = if (showLegend) BrandPurple else TextSecondary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
                 }
                 if (showLegend) {
                     Spacer(Modifier.height(8.dp))
