@@ -144,6 +144,9 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                                 selectFilter(EntryFilter.EXPENSE)
                             }
                             navController.navigate(Route.BookEntryList.path)
+                        },
+                        onSavingsClick = {
+                            navController.navigate(Route.TaxSavingsDetail.path)
                         }
                     )
                 }
@@ -163,7 +166,8 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                         incomeByMerchant = annualIncByMerchant,
                         trend = annualTrend,
                         onPrev = { selectedYear-- },
-                        onNext = { selectedYear++ }
+                        onNext = { selectedYear++ },
+                        onSavingsClick = { navController.navigate(Route.TaxSavingsDetail.path) }
                     )
                 }
             }
@@ -182,7 +186,8 @@ private fun MonthlyReport(
     incomeByMerchant: List<Pair<String, Long>>,
     trend: List<Triple<String, Long, Long>>,
     onPrev: () -> Unit, onNext: () -> Unit,
-    onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {}
+    onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {},
+    onSavingsClick: () -> Unit = {}
 ) {
     val net = income - expense
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
@@ -266,7 +271,8 @@ private fun MonthlyReport(
     val saveable = (unconfirmedExpense * 0.15).toLong()
     SavingsHintBox(
         unconfirmedAmount = unconfirmedExpense,
-        saveableAmount = saveable
+        saveableAmount = saveable,
+        onClick = onSavingsClick
     )
 }
 
@@ -279,7 +285,8 @@ private fun AnnualReport(
     expenseByCategory: List<Pair<String, Long>>,
     incomeByMerchant: List<Pair<String, Long>>,
     trend: List<Triple<String, Long, Long>>,
-    onPrev: () -> Unit, onNext: () -> Unit
+    onPrev: () -> Unit, onNext: () -> Unit,
+    onSavingsClick: () -> Unit = {}
 ) {
     val net = income - expense
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
@@ -393,7 +400,7 @@ private fun AnnualReport(
 
     // 9. 절세 현황 배너
     val saveable = (expense / 5 * 0.15).toLong()
-    SavingsHintBox(unconfirmedAmount = expense / 5, saveableAmount = saveable)
+    SavingsHintBox(unconfirmedAmount = expense / 5, saveableAmount = saveable, onClick = onSavingsClick)
 }
 
 // ─── 날짜 네비게이터 ─────────────────────────────────────
@@ -545,11 +552,13 @@ private fun TaxBracketCard() {
 }
 
 @Composable
-private fun SavingsHintBox(unconfirmedAmount: Long, saveableAmount: Long) {
+private fun SavingsHintBox(unconfirmedAmount: Long, saveableAmount: Long, onClick: () -> Unit = {}) {
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
     Box(
         modifier = Modifier
             .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { onClick() }
             .background(
                 Brush.horizontalGradient(listOf(Color(0xFFF6F3FF), Color(0xFFEDE8FF))),
                 RoundedCornerShape(16.dp)
