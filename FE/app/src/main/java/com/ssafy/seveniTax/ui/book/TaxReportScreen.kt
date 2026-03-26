@@ -487,34 +487,23 @@ private fun SavingsHintBox(unconfirmedAmount: Long, saveableAmount: Long) {
             )
             .padding(20.dp)
     ) {
-        Column {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Text(
-                "아직 더 아낄 수 있어요!",
-                fontSize = 16.sp,
+                "아낄 수 있는 돈",
+                fontSize = 15.sp,
+                fontWeight = FontWeight.SemiBold,
+                color = BrandPurple
+            )
+            Text(
+                "${fmt.format(saveableAmount)}원",
+                fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
                 color = BrandPurple
             )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "미확인 경비 ${fmt.format(unconfirmedAmount)}원을 세목 분류하면",
-                fontSize = 13.sp,
-                color = TextSecondary
-            )
-            Spacer(Modifier.height(4.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
-                Text(
-                    "최대 ${fmt.format(saveableAmount)}원",
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BrandPurple
-                )
-                Text(
-                    " 절세 가능",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-            }
         }
     }
 }
