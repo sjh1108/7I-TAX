@@ -257,9 +257,7 @@ fun NavGraph(navController: NavHostController) {
                             popUpTo(Route.BookEntryList.path) { inclusive = false }
                         }
                     } else {
-                        navController.navigate(Route.MemoAdd.path) {
-                            popUpTo("category_select") { inclusive = true }
-                        }
+                        navController.navigate(Route.MemoAdd.path)
                     }
                 }
             )
