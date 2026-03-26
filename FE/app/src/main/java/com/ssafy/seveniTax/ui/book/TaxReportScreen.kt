@@ -20,6 +20,8 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.nativeCanvas
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -147,6 +149,15 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                         },
                         onSavingsClick = {
                             navController.navigate(Route.TaxSavingsDetail.path)
+                        },
+                        onDotClick = { monthLabel, isIncome ->
+                            val m = monthLabel.replace("월", "").toIntOrNull() ?: return@MonthlyReport
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectMonth(m)
+                                selectFilter(if (isIncome) EntryFilter.INCOME else EntryFilter.EXPENSE)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
                     )
                 }
@@ -171,7 +182,16 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                         trend = annualTrend,
                         onPrev = { selectedYear-- },
                         onNext = { selectedYear++ },
-                        onSavingsClick = { navController.navigate(Route.TaxSavingsDetail.path) }
+                        onSavingsClick = { navController.navigate(Route.TaxSavingsDetail.path) },
+                        onDotClick = { monthLabel, isIncome ->
+                            val m = monthLabel.replace("월", "").toIntOrNull() ?: return@AnnualReport
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectMonth(m)
+                                selectFilter(if (isIncome) EntryFilter.INCOME else EntryFilter.EXPENSE)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
+                        }
                     )
                 }
             }
@@ -191,7 +211,8 @@ private fun MonthlyReport(
     trend: List<Triple<String, Long, Long>>,
     onPrev: () -> Unit, onNext: () -> Unit,
     onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {},
-    onSavingsClick: () -> Unit = {}
+    onSavingsClick: () -> Unit = {},
+    onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> }
 ) {
     val net = income - expense
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
@@ -210,7 +231,7 @@ private fun MonthlyReport(
     if (trend.isNotEmpty()) {
         SectionTitle("월별 추이")
         Spacer(Modifier.height(12.dp))
-        TrendLineChart(trend)
+        TrendLineChart(trend, onDotClick = onDotClick)
         Spacer(Modifier.height(24.dp))
     }
 
@@ -291,7 +312,8 @@ private fun AnnualReport(
     incomeByMerchant: List<Pair<String, Long>>,
     trend: List<Triple<String, Long, Long>>,
     onPrev: () -> Unit, onNext: () -> Unit,
-    onSavingsClick: () -> Unit = {}
+    onSavingsClick: () -> Unit = {},
+    onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> }
 ) {
     val net = income - expense
     val prevNet = prevIncome - prevExpense
@@ -397,7 +419,7 @@ private fun AnnualReport(
     if (trend.isNotEmpty()) {
         SectionTitle("월별 추이")
         Spacer(Modifier.height(12.dp))
-        TrendLineChart(trend)
+        TrendLineChart(trend, onDotClick = onDotClick)
         Spacer(Modifier.height(24.dp))
     }
 
@@ -672,13 +694,19 @@ private fun DeductionSummaryCard() {
 // ─── 월별 추이 꺾은선 그래프 ──────────────────────────────
 
 @Composable
-private fun TrendLineChart(trend: List<Triple<String, Long, Long>> = emptyList()) {
+private fun TrendLineChart(
+    trend: List<Triple<String, Long, Long>> = emptyList(),
+    onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> }
+) {
     val incomeData = trend.map { it.second / 10000f }
     val expenseData = trend.map { it.third / 10000f }
     val months = trend.map { it.first }
     val maxVal = (incomeData + expenseData).maxOrNull()?.times(1.2f) ?: 1f
     val purple = Color(0xFF5655B9)
     val pink = Color(0xFFFF9DAE)
+
+    // 도트 좌표 저장
+    var dotPositions by remember { mutableStateOf(listOf<Triple<Float, Float, Pair<Int, Boolean>>>()) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -691,6 +719,25 @@ private fun TrendLineChart(trend: List<Triple<String, Long, Long>> = emptyList()
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
+                    .pointerInput(trend) {
+                        detectTapGestures { tapOffset ->
+                            val hitRadius = 24.dp.toPx()
+                            dotPositions.minByOrNull { (x, y, _) ->
+                                val dx = tapOffset.x - x
+                                val dy = tapOffset.y - y
+                                dx * dx + dy * dy
+                            }?.let { (x, y, info) ->
+                                val dx = tapOffset.x - x
+                                val dy = tapOffset.y - y
+                                if (dx * dx + dy * dy < hitRadius * hitRadius) {
+                                    val (index, isIncome) = info
+                                    if (index in months.indices) {
+                                        onDotClick(months[index], isIncome)
+                                    }
+                                }
+                            }
+                        }
+                    }
             ) {
                 val w = size.width
                 val h = size.height - 24.dp.toPx()
@@ -703,6 +750,9 @@ private fun TrendLineChart(trend: List<Triple<String, Long, Long>> = emptyList()
                     drawLine(Color(0xFFF0F0F0), Offset(0f, y), Offset(w, y), 1.dp.toPx())
                 }
 
+                // 도트 좌표 수집
+                val dots = mutableListOf<Triple<Float, Float, Pair<Int, Boolean>>>()
+
                 // 수입 라인
                 val incomePath = Path()
                 incomeData.forEachIndexed { i, v ->
@@ -714,6 +764,7 @@ private fun TrendLineChart(trend: List<Triple<String, Long, Long>> = emptyList()
                 incomeData.forEachIndexed { i, v ->
                     val x = stepX * i
                     val y = h - (v / maxVal * h)
+                    dots.add(Triple(x, y, i to true))
                     drawCircle(if (i == incomeData.lastIndex) Color.White else purple, 4.dp.toPx(), Offset(x, y))
                     if (i == incomeData.lastIndex) drawCircle(purple, 4.dp.toPx(), Offset(x, y), style = Stroke(2.5.dp.toPx()))
                 }
@@ -729,9 +780,12 @@ private fun TrendLineChart(trend: List<Triple<String, Long, Long>> = emptyList()
                 expenseData.forEachIndexed { i, v ->
                     val x = stepX * i
                     val y = h - (v / maxVal * h)
+                    dots.add(Triple(x, y, i to false))
                     drawCircle(if (i == expenseData.lastIndex) Color.White else pink, 4.dp.toPx(), Offset(x, y))
                     if (i == expenseData.lastIndex) drawCircle(pink, 4.dp.toPx(), Offset(x, y), style = Stroke(2.5.dp.toPx()))
                 }
+
+                dotPositions = dots
 
                 // 월 라벨
                 val paint = android.graphics.Paint().apply {
