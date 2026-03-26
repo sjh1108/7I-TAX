@@ -149,9 +149,9 @@ fun TaxSavingsDetailScreen(navController: NavController) {
                             .padding(12.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        LegendDot(Color(0xFF52D5BA), "~60%")
-                        LegendDot(Color(0xFFFFAF2A), "61~80%")
-                        LegendDot(Color(0xFFFF4267), "81%~")
+                        LegendDot(Color(0xFF52D5BA), "여유 (~60%)")
+                        LegendDot(Color(0xFFFFAF2A), "주의 (61~80%)")
+                        LegendDot(Color(0xFFFF4267), "임박 (81%~)")
                     }
                 }
                 Spacer(Modifier.height(16.dp))
