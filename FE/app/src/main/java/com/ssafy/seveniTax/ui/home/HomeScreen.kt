@@ -41,7 +41,6 @@ import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.svg.SvgDecoder
 import com.ssafy.seveniTax.R
-import com.ssafy.seveniTax.util.NotificationHelper
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.BrandPurple
 import com.ssafy.seveniTax.ui.theme.Error
