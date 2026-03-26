@@ -1,6 +1,7 @@
 package com.ssafy.seveniTax.ui.book
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -9,6 +10,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -118,9 +123,39 @@ fun TaxSavingsDetailScreen(navController: NavController) {
 
             // 항목별 현황
             Column(modifier = Modifier.padding(horizontal = 20.dp)) {
-                Text("항목별 현황", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                Spacer(Modifier.height(4.dp))
-                Text("탭하여 상세 확인", fontSize = 12.sp, color = TextSecondary)
+                var showLegend by remember { mutableStateOf(false) }
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("항목별 현황", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(
+                        if (showLegend) "범례 닫기" else "범례 보기",
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        color = LogoPurple,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(8.dp))
+                            .background(Color(0xFFF2F1F9))
+                            .padding(horizontal = 10.dp, vertical = 4.dp)
+                            .then(Modifier.clickable { showLegend = !showLegend })
+                    )
+                }
+                if (showLegend) {
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(Surface, RoundedCornerShape(10.dp))
+                            .padding(12.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        LegendDot(Color(0xFF52D5BA), "~60%")
+                        LegendDot(Color(0xFFFFAF2A), "61~80%")
+                        LegendDot(Color(0xFFFF4267), "81%~")
+                    }
+                }
                 Spacer(Modifier.height(16.dp))
 
                 savingItems.forEach { item ->
@@ -216,11 +251,15 @@ private fun SavingCard(item: SavingItem) {
     }
 }
 
-private fun formatSavingsAmount(amount: Long): String {
-    return if (amount >= 10_000) {
-        val man = amount / 10_000
-        "${java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA).format(man)}만"
-    } else {
-        java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA).format(amount)
+@Composable
+private fun LegendDot(color: Color, label: String) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Box(Modifier.size(10.dp).clip(RoundedCornerShape(3.dp)).background(color))
+        Spacer(Modifier.width(4.dp))
+        Text(label, fontSize = 12.sp, color = TextSecondary)
     }
+}
+
+private fun formatSavingsAmount(amount: Long): String {
+    return java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA).format(amount)
 }
