@@ -160,44 +160,46 @@ fun UnclassifiedListScreen(
                     .padding(horizontal = 28.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
-                // AI로 경비 추천 받기
-                Button(
-                    onClick = { aiRecommended = true; onAiRecommend() },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = BrandPurple,
-                        contentColor = Color.White
-                    )
-                ) {
-                    Text(
-                        text = "AI로 경비 추천 받기",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
-                }
-
-                // AI 추천대로 일괄 확정
-                OutlinedButton(
-                    onClick = onBulkConfirm,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.5.dp, BrandPurple),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = BrandPurple
-                    )
-                ) {
-                    Text(
-                        text = "AI 추천대로 일괄 확정",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = BrandPurple
-                    )
+                if (!aiRecommended) {
+                    // AI 추천 전: 추천 받기 버튼만
+                    Button(
+                        onClick = { aiRecommended = true; onAiRecommend() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BrandPurple,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = "AI로 경비 추천 받기",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
+                } else {
+                    // AI 추천 후: 일괄 확정 버튼
+                    Button(
+                        onClick = onBulkConfirm,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = BrandPurple,
+                            contentColor = Color.White
+                        )
+                    ) {
+                        Text(
+                            text = "AI 추천대로 일괄 확정",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = Color.White
+                        )
+                    }
                 }
             }
         }
