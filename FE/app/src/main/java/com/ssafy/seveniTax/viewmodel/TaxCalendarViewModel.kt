@@ -112,9 +112,35 @@ class TaxCalendarViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    // 세금 추정 데이터
+    private val _estimatedVat = MutableStateFlow(0L)
+    val estimatedVat: StateFlow<Long> = _estimatedVat.asStateFlow()
+
+    private val _estimatedIncomeTax = MutableStateFlow(0L)
+    val estimatedIncomeTax: StateFlow<Long> = _estimatedIncomeTax.asStateFlow()
+
+    private val _estimatedLocalTax = MutableStateFlow(0L)
+    val estimatedLocalTax: StateFlow<Long> = _estimatedLocalTax.asStateFlow()
+
     init {
         loadDeadlines()
+        loadTaxEstimation()
         applyReminderSettings()
+    }
+
+    private fun loadTaxEstimation() {
+        viewModelScope.launch {
+            try {
+                val response = taxRepository.getEstimation(null)
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    response.body()?.data?.let { data ->
+                        _estimatedVat.value = data.estimatedVat
+                        _estimatedIncomeTax.value = data.estimatedIncomeTax
+                        _estimatedLocalTax.value = data.estimatedLocalTax
+                    }
+                }
+            } catch (_: Exception) { }
+        }
     }
 
     private fun loadMockDeadlines() {
