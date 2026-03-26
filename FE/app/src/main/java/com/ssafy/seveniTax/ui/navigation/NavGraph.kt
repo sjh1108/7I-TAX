@@ -1,6 +1,7 @@
 package com.ssafy.seveniTax.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -64,7 +65,7 @@ import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 private const val AUTH_GRAPH_ROUTE = "auth_graph"
 
 @Composable
-fun NavGraph(navController: NavHostController) {
+fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null) {
     val cardViewModel: CardViewModel = hiltViewModel()
     val taxCalendarViewModel: TaxCalendarViewModel = hiltViewModel()
     val bookEntryViewModel: BookEntryViewModel = hiltViewModel()
@@ -135,6 +136,14 @@ fun NavGraph(navController: NavHostController) {
         }
 
         composable(Route.Main.path) {
+            if (pendingNavigateTo != null) {
+                LaunchedEffect(Unit) {
+                    when (pendingNavigateTo) {
+                        "classification_result" -> navController.navigate(Route.ClassificationLoading.path)
+                        "tax_calendar" -> navController.navigate(Route.TaxCalendar.path)
+                    }
+                }
+            }
             MainScreen(navController)
         }
 

@@ -31,15 +31,20 @@ class MainActivity : ComponentActivity() {
         )
 
         val navigateTo = intent?.getStringExtra("navigate_to")
+        // savedInstanceState != null → 앱이 이미 실행 중 (내부 알림 탭)
+        val isAppAlreadyRunning = savedInstanceState != null
 
         setContent {
             SevenITaxTheme {
                 val navController = rememberNavController()
 
-                NavGraph(navController)
+                NavGraph(
+                    navController = navController,
+                    pendingNavigateTo = if (isAppAlreadyRunning) null else navigateTo
+                )
 
-                // 알림 탭으로 진입 시 해당 화면으로 이동
-                if (navigateTo != null) {
+                // 앱 내부에서 알림 탭 → PIN 없이 바로 이동
+                if (isAppAlreadyRunning && navigateTo != null) {
                     LaunchedEffect(Unit) {
                         when (navigateTo) {
                             "classification_result" -> navController.navigate(Route.ClassificationLoading.path)
