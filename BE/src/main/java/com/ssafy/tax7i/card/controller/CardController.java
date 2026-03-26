@@ -104,6 +104,30 @@ public class CardController {
     }
 
     /**
+     * 카드 활성화
+     */
+    @PostMapping("/{cardId}/activate")
+    public ResponseEntity<SuccessResponse<CardActivateResponse>> activateCard(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long cardId,
+            @RequestBody @Valid CardActivateRequest request) {
+        CardActivateResponse response = cardService.activateCard(userId, cardId, request);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    /**
+     * 카드 용도 변경
+     */
+    @PatchMapping("/{cardId}/purpose")
+    public ResponseEntity<SuccessResponse<CardPurposeResponse>> setCardPurpose(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long cardId,
+            @RequestBody @Valid CardPurposeRequest request) {
+        CardPurposeResponse response = cardService.setCardPurpose(userId, cardId, request);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    /**
      * 카드 결제
      */
     @PostMapping("/{cardId}/payment")
