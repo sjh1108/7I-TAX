@@ -147,11 +147,25 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                         }
                     )
                 }
-                ReportTab.ANNUAL -> AnnualReport(
-                    year = selectedYear,
-                    onPrev = { selectedYear-- },
-                    onNext = { selectedYear++ }
-                )
+                ReportTab.ANNUAL -> {
+                    val vm = bookEntryViewModel
+                    val annualIncome = vm?.getAnnualIncome(selectedYear) ?: 0L
+                    val annualExpense = vm?.getAnnualExpense(selectedYear) ?: 0L
+                    val annualExpByCat = vm?.getAnnualExpenseByCategory(selectedYear) ?: emptyList()
+                    val annualIncByMerchant = vm?.getAnnualIncomeByMerchant(selectedYear) ?: emptyList()
+                    val annualTrend = vm?.getAnnualMonthlyTrend(selectedYear) ?: emptyList()
+
+                    AnnualReport(
+                        year = selectedYear,
+                        income = annualIncome,
+                        expense = annualExpense,
+                        expenseByCategory = annualExpByCat,
+                        incomeByMerchant = annualIncByMerchant,
+                        trend = annualTrend,
+                        onPrev = { selectedYear-- },
+                        onNext = { selectedYear++ }
+                    )
+                }
             }
             Spacer(Modifier.height(32.dp))
         }
@@ -259,17 +273,27 @@ private fun MonthlyReport(
 // ─── 연간 리포트 ────────────────────────────────────────
 
 @Composable
-private fun AnnualReport(year: Int, onPrev: () -> Unit, onNext: () -> Unit) {
+private fun AnnualReport(
+    year: Int,
+    income: Long, expense: Long,
+    expenseByCategory: List<Pair<String, Long>>,
+    incomeByMerchant: List<Pair<String, Long>>,
+    trend: List<Triple<String, Long, Long>>,
+    onPrev: () -> Unit, onNext: () -> Unit
+) {
+    val net = income - expense
+    val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
+
     Spacer(Modifier.height(16.dp))
     DateNavigator(text = "${year}년", onPrev = onPrev, onNext = onNext)
     Spacer(Modifier.height(20.dp))
 
-    // 연간 순이익
-    ReportSummaryCard("연간 순이익", 30_000_000, 50_000_000, -20_000_000)
+    // 1. 연간 순이익
+    ReportSummaryCard("연간 순이익", net, income, -expense)
 
     Spacer(Modifier.height(24.dp))
 
-    // 전년 대비
+    // 2. 전년 대비
     SectionTitle("전년 대비")
     Spacer(Modifier.height(12.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -281,50 +305,95 @@ private fun AnnualReport(year: Int, onPrev: () -> Unit, onNext: () -> Unit) {
 
     Spacer(Modifier.height(24.dp))
 
-    // 연간 세금 예상액
+    // 3. 연간 세금 예상액
+    val vatSales = (income * 0.1).toLong()
+    val vatPurchase = (expense * 0.1).toLong()
+    val vatPayable = vatSales - vatPurchase
+    val taxableIncome = income - expense
+    val taxRate = when {
+        taxableIncome <= 14_000_000 -> 6
+        taxableIncome <= 50_000_000 -> 15
+        taxableIncome <= 88_000_000 -> 24
+        taxableIncome <= 150_000_000 -> 35
+        else -> 38
+    }
+    val incomeTax = (taxableIncome * taxRate / 100)
+    val localTax = incomeTax / 10
+    val totalTax = vatPayable + incomeTax + localTax
+
     SectionTitle("연간 세금 예상액")
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("부가가치세", listOf(
-        "납부액" to "3,000,000원",
-        "1기 (1~6월)" to "1,500,000원",
-        "2기 (7~12월)" to "—"
+        "매출세액" to "${fmt.format(vatSales)}원",
+        "매입세액" to "-${fmt.format(vatPurchase)}원",
+        "납부액" to "${fmt.format(vatPayable)}원"
     ))
 
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("종합소득세", listOf(
-        "총 수입" to "50,000,000원",
-        "필요경비" to "-20,000,000원",
-        "과세표준" to "27,000,000원",
-        "적용 세율" to "15%",
-        "예상 납부액" to "3,960,000원"
+        "총 수입" to "${fmt.format(income)}원",
+        "필요경비" to "-${fmt.format(expense)}원",
+        "과세표준" to "${fmt.format(taxableIncome)}원",
+        "적용 세율" to "${taxRate}%",
+        "예상 납부액" to "${fmt.format(incomeTax)}원"
     ))
 
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("지방소득세", listOf(
-        "금액" to "396,000원",
+        "금액" to "${fmt.format(localTax)}원",
         "비고" to "종합소득세의 10%"
     ))
 
     Spacer(Modifier.height(12.dp))
 
-    TotalTaxBox("연간 총 예상 세금", "7,356,000원")
+    TotalTaxBox("연간 총 예상 세금", "${fmt.format(totalTax)}원")
 
     Spacer(Modifier.height(24.dp))
 
-    // 세율 구간
+    // 4. 내 세율 구간
     SectionTitle("내 세율 구간")
     Spacer(Modifier.height(12.dp))
     TaxBracketCard()
 
     Spacer(Modifier.height(24.dp))
 
-    // 올해 공제 요약
+    // 5. 올해 공제 요약
     SectionTitle("올해 공제 요약")
     Spacer(Modifier.height(12.dp))
     DeductionSummaryCard()
+
+    Spacer(Modifier.height(24.dp))
+
+    // 6. 월별 추이 (12개월)
+    if (trend.isNotEmpty()) {
+        SectionTitle("월별 추이")
+        Spacer(Modifier.height(12.dp))
+        TrendLineChart(trend)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 7. 연간 계정과목별 비용
+    if (expenseByCategory.isNotEmpty()) {
+        SectionTitle("연간 계정과목별 비용")
+        Spacer(Modifier.height(12.dp))
+        DonutChart(expenseByCategory)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 8. 거래처별 수입
+    if (incomeByMerchant.isNotEmpty()) {
+        SectionTitle("거래처별 수입")
+        Spacer(Modifier.height(12.dp))
+        IncomeBarChart(incomeByMerchant)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 9. 절세 현황 배너
+    val saveable = (expense / 5 * 0.15).toLong()
+    SavingsHintBox(unconfirmedAmount = expense / 5, saveableAmount = saveable)
 }
 
 // ─── 날짜 네비게이터 ─────────────────────────────────────
