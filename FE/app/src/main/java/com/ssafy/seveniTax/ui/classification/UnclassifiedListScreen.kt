@@ -58,7 +58,7 @@ fun UnclassifiedListScreen(
                 .statusBarsPadding()
                 .background(Background)
         ) {
-            TaxHeader(title = "미분류 내역", onBack = { navController.popBackStack() })
+            TaxHeader(title = "미분류 경비 내역", onBack = { navController.popBackStack() })
 
             Column(
                 modifier = Modifier
@@ -159,41 +159,42 @@ fun UnclassifiedListScreen(
                 verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 // AI로 경비 추천 받기
-                OutlinedButton(
+                Button(
                     onClick = { aiRecommended = true; onAiRecommend() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(15.dp),
-                    border = BorderStroke(1.5.dp, LogoPurple),
-                    colors = ButtonDefaults.outlinedButtonColors(
-                        contentColor = LogoPurple
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = BrandPurple,
+                        contentColor = Color.White
                     )
                 ) {
                     Text(
                         text = "AI로 경비 추천 받기",
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold
+                        fontWeight = FontWeight.SemiBold,
+                        color = Color.White
                     )
                 }
 
                 // AI 추천대로 일괄 확정
-                Button(
+                OutlinedButton(
                     onClick = onBulkConfirm,
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(15.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = Color(0xFF1B1F3B),
-                        contentColor = Color.White
+                    border = BorderStroke(1.5.dp, BrandPurple),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = BrandPurple
                     )
                 ) {
                     Text(
                         text = "AI 추천대로 일괄 확정",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = Color.White
+                        color = BrandPurple
                     )
                 }
             }
