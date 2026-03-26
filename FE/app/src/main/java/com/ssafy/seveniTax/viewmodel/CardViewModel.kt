@@ -167,50 +167,18 @@ class CardViewModel @Inject constructor(
                 }
                 loadCards()
             } else {
-                // API 실패 시 인메모리로 폴백
-                val last4 = if (state.cardNumber.length >= 4) state.cardNumber.takeLast(4) else state.cardNumber
-                val maskedNumber = "••••  ••••  ••••  $last4"
-                val expiryDisplay = if (state.expiry.length == 4) {
-                    "${state.expiry.substring(0, 2)}/${state.expiry.substring(2)}"
-                } else state.expiry
-                val isFirst = state.cards.isEmpty()
-                val fallbackCard = RegisteredCard(
-                    id = System.currentTimeMillis().toString(),
-                    cardNumber = maskedNumber,
-                    expiry = expiryDisplay,
-                    type = state.selectedCardType.ifEmpty { "personal" },
-                    isDefault = isFirst
-                )
                 _uiState.update {
                     it.copy(
-                        cards = it.cards + fallbackCard,
-                        lastRegisteredCard = fallbackCard,
-                        registerComplete = true,
-                        isLoading = false
+                        isLoading = false,
+                        errorMessage = response.message ?: "카드 생성에 실패했습니다"
                     )
                 }
             }
         } catch (e: Exception) {
-            // 네트워크 오류 시 인메모리로 폴백
-            val last4 = if (state.cardNumber.length >= 4) state.cardNumber.takeLast(4) else state.cardNumber
-            val maskedNumber = "••••  ••••  ••••  $last4"
-            val expiryDisplay = if (state.expiry.length == 4) {
-                "${state.expiry.substring(0, 2)}/${state.expiry.substring(2)}"
-            } else state.expiry
-            val isFirst = state.cards.isEmpty()
-            val fallbackCard = RegisteredCard(
-                id = System.currentTimeMillis().toString(),
-                cardNumber = maskedNumber,
-                expiry = expiryDisplay,
-                type = state.selectedCardType.ifEmpty { "personal" },
-                isDefault = isFirst
-            )
             _uiState.update {
                 it.copy(
-                    cards = it.cards + fallbackCard,
-                    lastRegisteredCard = fallbackCard,
-                    registerComplete = true,
-                    isLoading = false
+                    isLoading = false,
+                    errorMessage = e.message ?: "카드 생성 중 오류가 발생했습니다"
                 )
             }
         }
