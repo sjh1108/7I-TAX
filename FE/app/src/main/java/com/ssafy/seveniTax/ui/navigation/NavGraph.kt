@@ -175,7 +175,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         }
 
         composable(Route.QrPayment.path) {
-            QrPaymentScreen(navController)
+            QrPaymentScreen(navController, cardViewModel)
         }
 
         composable(Route.PaymentProcessing.path) {

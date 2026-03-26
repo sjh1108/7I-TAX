@@ -15,6 +15,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -48,21 +49,9 @@ import com.ssafy.seveniTax.ui.theme.*
 import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
-private data class MockCard(
-    val name: String,
-    val last4: String,
-    val color: Color
-)
-
-private val mockCards = listOf(
-    MockCard("신한카드", "5678", Color(0xFF2196F3)),
-    MockCard("국민카드", "2342", Color(0xFF1A237E)),
-    MockCard("현대카드", "9018", Color(0xFFE53935)),
-    MockCard("삼성카드", "1234", Color(0xFF00897B)),
-)
-
 @Composable
-fun QrPaymentScreen(navController: NavController) {
+fun QrPaymentScreen(navController: NavController, cardViewModel: com.ssafy.seveniTax.viewmodel.CardViewModel) {
+    val cardUiState by cardViewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) } // 0=바코드, 1=QR스캔
     var selectedCard by remember { mutableIntStateOf(0) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
@@ -145,16 +134,22 @@ fun QrPaymentScreen(navController: NavController) {
         ) {
             if (selectedTab == 0) {
                 // ── QR코드 생성 (1분마다 갱신) ──
-                val card = mockCards[selectedCard]
+                val card = cardUiState.cards.getOrNull(selectedCard)
                 var qrTimestamp by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
+                var remainingSeconds by remember { mutableIntStateOf(60) }
                 LaunchedEffect(selectedCard) {
                     qrTimestamp = System.currentTimeMillis() / 1000
+                    remainingSeconds = 60
                     while (true) {
-                        delay(60_000L)
-                        qrTimestamp = System.currentTimeMillis() / 1000
+                        delay(1_000L)
+                        remainingSeconds--
+                        if (remainingSeconds <= 0) {
+                            qrTimestamp = System.currentTimeMillis() / 1000
+                            remainingSeconds = 60
+                        }
                     }
                 }
-                val qrData = "PAY-${card.last4}-$qrTimestamp"
+                val qrData = "PAY-${card?.cardNumber?.takeLast(4) ?: "0000"}-$qrTimestamp"
                 val qrBitmap = remember(qrData) { generateQrCode(qrData) }
 
                 if (qrBitmap != null) {
@@ -169,12 +164,18 @@ fun QrPaymentScreen(navController: NavController) {
                             modifier = Modifier
                                 .size(200.dp)
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "${card.name} ••••${card.last4}",
+                            text = card?.cardNumber ?: "카드를 등록해주세요",
                             fontSize = 13.sp,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = String.format("%02d:%02d", remainingSeconds / 60, remainingSeconds % 60),
+                            fontSize = 11.sp,
+                            color = if (remainingSeconds <= 10) Color(0xFFE53935) else TextSecondary
                         )
                     }
                 } else {
@@ -250,8 +251,8 @@ fun QrPaymentScreen(navController: NavController) {
                 .navigationBarsPadding()
                 .padding(bottom = 32.dp)
         ) {
-            items(mockCards.size) { index ->
-                val card = mockCards[index]
+            items(cardUiState.cards.size) { index ->
+                val card = cardUiState.cards[index]
                 val isSelected = index == selectedCard
                 val animatedWidth by animateDpAsState(
                     targetValue = if (isSelected) 116.dp else 100.dp,
@@ -275,14 +276,15 @@ fun QrPaymentScreen(navController: NavController) {
                             clip = false
                         )
                         .clip(RoundedCornerShape(12.dp))
-                        .background(card.color)
+                        .background(if (card.type == "personal") com.ssafy.seveniTax.ui.theme.CardGold else com.ssafy.seveniTax.ui.theme.CardBlue)
                         .clickable { selectedCard = index }
                         .padding(12.dp),
                     contentAlignment = Alignment.BottomStart
                 ) {
+                    val typeName = if (card.type == "personal") "일반 카드" else "사업자 카드"
                     Column {
-                        Text(card.name, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
-                        Text("••••${card.last4}", fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
+                        Text(typeName, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(card.cardNumber.takeLast(17), fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                     }
                 }
             }
