@@ -462,20 +462,6 @@ private fun LedgerSection(transactions: List<TransactionItem>, onClick: () -> Un
             LedgerMetricCard("고정자산", "320,000원", Modifier.weight(1f))
             LedgerMetricCard("미분류", "5건", Modifier.weight(1f))
         }
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "최근 거래",
-            fontSize = 13.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
-        Spacer(modifier = Modifier.height(12.dp))
-        transactions.forEachIndexed { index, transaction ->
-            TransactionRow(transaction)
-            if (index != transactions.lastIndex) {
-                Spacer(modifier = Modifier.height(10.dp))
-            }
-        }
     }
 }
 
