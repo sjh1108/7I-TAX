@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ssafy.seveniTax.data.model.card.CardCreateRequest
 import com.ssafy.seveniTax.data.model.card.CardResponse
+import com.ssafy.seveniTax.data.model.pay.AccountCreateRequest
 import com.ssafy.seveniTax.data.repository.CardRepository
+import com.ssafy.seveniTax.data.repository.PayRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,7 +53,8 @@ data class CardUiState(
 
 @HiltViewModel
 class CardViewModel @Inject constructor(
-    private val cardRepository: CardRepository
+    private val cardRepository: CardRepository,
+    private val payRepository: PayRepository
 ) : ViewModel() {
 
 
@@ -82,13 +85,30 @@ class CardViewModel @Inject constructor(
     }
 
     fun loadAccounts() = viewModelScope.launch {
+        _uiState.update { it.copy(isLoading = true) }
         try {
             val response = cardRepository.getMyAccounts()
             if (response.status == "success" && response.data != null) {
-                _uiState.update { it.copy(accounts = response.data) }
+                if (response.data.isEmpty()) {
+                    // 계좌 없으면 자동 생성
+                    try {
+                        payRepository.createAccount(AccountCreateRequest(accountType = "PERSONAL", bankCode = "001"))
+                        // 생성 후 다시 조회
+                        val retry = cardRepository.getMyAccounts()
+                        if (retry.status == "success" && retry.data != null) {
+                            _uiState.update { it.copy(accounts = retry.data, isLoading = false) }
+                        }
+                    } catch (_: Exception) {
+                        _uiState.update { it.copy(isLoading = false, errorMessage = "계좌 자동 생성에 실패했습니다") }
+                    }
+                } else {
+                    _uiState.update { it.copy(accounts = response.data, isLoading = false) }
+                }
             } else {
+                _uiState.update { it.copy(isLoading = false) }
             }
         } catch (e: Exception) {
+            _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "계좌 조회 실패") }
         }
     }
 
@@ -133,7 +153,7 @@ class CardViewModel @Inject constructor(
                 cardUniqueNo = state.selectedProductNo,
                 withdrawalAccountNo = state.selectedAccountNo,
                 withdrawalDate = state.expiry.ifEmpty { "15" },
-                otpToken = "SKIP" // TODO: OTP 연동 시 실제 토큰으로 교체
+                otpToken = "test-token" // TODO: OTP 연동 시 실제 토큰으로 교체
             )
             val response = cardRepository.createCard(request)
             if (response.status == "success" && response.data != null) {
