@@ -12,6 +12,7 @@ import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.bookentry.repository.BookEntrySpecification;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
@@ -31,6 +32,7 @@ import java.util.List;
 public class BookEntryService {
 
     private final BookEntryRepository bookEntryRepository;
+    private final TaxParameterService taxParameterService;
 
     @CacheEvict(value = "entertainmentUsed", key = "#userId")
     @Transactional
@@ -54,7 +56,8 @@ public class BookEntryService {
             vatAmount = 0L;
             supplyPrice = amount;
         } else {
-            vatAmount = Math.round(amount / 11.0);
+            double vatRate = taxParameterService.getVatRate(request.entryDate().getYear());
+            vatAmount = Math.round(amount * vatRate / (1 + vatRate));
             supplyPrice = amount - vatAmount;
         }
 

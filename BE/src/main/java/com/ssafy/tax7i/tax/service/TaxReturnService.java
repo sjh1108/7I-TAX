@@ -22,6 +22,8 @@ import com.ssafy.tax7i.tax.entity.TaxReturnStatus;
 import com.ssafy.tax7i.tax.repository.ExpenseDetailRepository;
 import com.ssafy.tax7i.tax.repository.TaxPaymentRepository;
 import com.ssafy.tax7i.tax.repository.TaxReturnRepository;
+import com.ssafy.tax7i.config.TaxOfficeProperties;
+import com.ssafy.tax7i.taxcalendar.repository.TaxDeadlineRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -50,8 +52,9 @@ public class TaxReturnService {
     private final UserRepository userRepository;
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, String> redisTemplate;
+    private final TaxOfficeProperties taxOfficeProperties;
+    private final TaxDeadlineRepository taxDeadlineRepository;
 
-    private static final String TAX_OFFICE_CODE = "0305";
     private final Random random = new Random();
 
     @Transactional
@@ -206,10 +209,11 @@ public class TaxReturnService {
         }
 
         // Generate receipt number using Redis atomic increment
+        String officeCode = taxOfficeProperties.getOfficeCode();
         int receiptYear = taxReturn.getTaxYear() + 1;
-        String redisKey = "receipt:seq:" + receiptYear + ":" + TAX_OFFICE_CODE;
+        String redisKey = "receipt:seq:" + receiptYear + ":" + officeCode;
         Long seq = redisTemplate.opsForValue().increment(redisKey);
-        String receiptNumber = String.format("G%d-%s-%07d", receiptYear, TAX_OFFICE_CODE, seq);
+        String receiptNumber = String.format("G%d-%s-%07d", receiptYear, officeCode, seq);
 
         // Transition DRAFT → SUBMITTED → ACCEPTED (simulation: instant acceptance)
         taxReturn.transitionTo(TaxReturnStatus.SUBMITTED);
@@ -217,7 +221,7 @@ public class TaxReturnService {
         taxReturn.assignReceiptNumber(receiptNumber);
 
         // Create NATIONAL tax payment record
-        String nationalVirtualAccount = "880-" + TAX_OFFICE_CODE + "-" + String.format("%08d", random.nextInt(100000000));
+        String nationalVirtualAccount = "880-" + officeCode + "-" + String.format("%08d", random.nextInt(100000000));
         TaxPayment nationalPayment = TaxPayment.builder()
                 .taxReturn(taxReturn)
                 .paymentType(TaxPaymentType.NATIONAL)
@@ -241,7 +245,12 @@ public class TaxReturnService {
         taxPaymentRepository.save(nationalPayment);
         taxPaymentRepository.save(localPayment);
 
-        LocalDate paymentDeadline = LocalDate.of(taxReturn.getTaxYear() + 1, 5, 31);
+        // 납부기한: DB 조회 (폴백: 5월 31일)
+        int deadlineYear = taxReturn.getTaxYear() + 1;
+        LocalDate paymentDeadline = taxDeadlineRepository.findByYearAndName(deadlineYear, "종합소득세 신고")
+                .or(() -> taxDeadlineRepository.findByYearAndName(taxReturn.getTaxYear(), "종합소득세 신고"))
+                .map(d -> LocalDate.of(deadlineYear, d.getDeadlineMonth(), d.getDeadlineDay()))
+                .orElse(LocalDate.of(deadlineYear, 5, 31));
 
         return new TaxReturnSubmitResponse(
                 receiptNumber,

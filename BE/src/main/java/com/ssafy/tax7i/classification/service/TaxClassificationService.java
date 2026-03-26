@@ -12,11 +12,13 @@ import com.ssafy.tax7i.classification.entity.TaxLimit;
 import com.ssafy.tax7i.classification.repository.MerchantKeywordMappingRepository;
 import com.ssafy.tax7i.classification.repository.MerchantRepository;
 import com.ssafy.tax7i.classification.repository.TaxLimitRepository;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,7 +39,6 @@ import java.util.Optional;
 public class TaxClassificationService {
 
     private static final String ENTERTAINMENT = "접대비";
-    private static final long DEFAULT_ENTERTAINMENT_ANNUAL_LIMIT = 12_000_000L;
 
     private final MerchantRepository merchantRepository;
     private final ClassificationCacheService classificationCacheService;
@@ -45,6 +46,7 @@ public class TaxClassificationService {
     private final EntertainmentLimitService entertainmentLimitService;
     private final TaxLimitRepository taxLimitRepository;
     private final AiClassificationService aiClassificationService;
+    private final TaxParameterService taxParameterService;
 
     public ClassificationResult classify(ClassificationRequest request) {
         log.info("세목 분류 시작: merchant={}, mcc={}, amount={}",
@@ -337,11 +339,12 @@ public class TaxClassificationService {
             return result;
         }
 
-        // tax_limit 테이블에서 접대비 연간기본한도 조회, 없으면 기본값
+        // tax_limit 테이블에서 접대비 연간기본한도 조회, 없으면 TaxParameter DB 조회
+        int currentYear = LocalDate.now().getYear();
         long annualLimit = taxLimitRepository
                 .findByTaxCategoryAndLimitType(ENTERTAINMENT, "연간기본한도")
                 .map(TaxLimit::getLimitAmount)
-                .orElse(DEFAULT_ENTERTAINMENT_ANNUAL_LIMIT);
+                .orElseGet(() -> taxParameterService.getEntertainmentLimit(currentYear));
 
         long usedAmount = entertainmentLimitService.getUsedEntertainmentAmount(
                 request.userId());

@@ -10,6 +10,8 @@ import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,8 +39,17 @@ class BookEntryServiceTest {
     @Mock
     private BookEntryRepository bookEntryRepository;
 
+    @Mock
+    private TaxParameterService taxParameterService;
+
     @InjectMocks
     private BookEntryService bookEntryService;
+
+    @BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient().when(taxParameterService.getVatRate(org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(0.10);
+    }
 
     // ───────────── create ─────────────
 

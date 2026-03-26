@@ -29,9 +29,10 @@ public class CacheConfig {
         Map<String, RedisCacheConfiguration> cacheConfigurations = Map.of(
                 "mccTaxRules", defaultConfig.entryTtl(Duration.ofHours(1)),
                 "merchants", defaultConfig.entryTtl(Duration.ofHours(1)),
-                "taxDeadlines", defaultConfig.entryTtl(Duration.ofHours(1)),
+                "taxDeadlines", defaultConfig.entryTtl(Duration.ofHours(24)),
                 "entertainmentUsed", defaultConfig.entryTtl(Duration.ofMinutes(5)),
-                "taxBrackets", defaultConfig.entryTtl(Duration.ofHours(24))
+                "taxBrackets", defaultConfig.entryTtl(Duration.ofHours(24)),
+                "taxParameters", defaultConfig.entryTtl(Duration.ofHours(24))
         );
 
         return RedisCacheManager.builder(connectionFactory)

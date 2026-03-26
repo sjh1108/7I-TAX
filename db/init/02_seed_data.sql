@@ -244,3 +244,33 @@ INSERT INTO tax_brackets (bracket_max, bracket_min, progressive_deduction, rate,
 (500000000,   300000001,  25940000, 0.40, 2025),
 (1000000000,  500000001,  35940000, 0.42, 2025),
 (9999999999,  1000000001, 65940000, 0.45, 2025);
+
+
+-- ============================================================
+-- 6. tax_parameters (세금 정책 파라미터) — 12개
+-- ============================================================
+INSERT INTO tax_parameters ("year", category, param_key, param_value, description, legal_basis, created_at, updated_at) VALUES
+(2025, 'LOCAL_TAX',        'rate',              '0.10',      '지방소득세율',             '지방세법 §92',             NOW(), NOW()),
+(2025, 'VAT',              'rate',              '0.10',      '부가가치세율',             '부가가치세법 §30',         NOW(), NOW()),
+(2025, 'BASIC_DEDUCTION',  'personal',          '1500000',   '기본공제 본인',            '소득세법 §50',             NOW(), NOW()),
+(2025, 'NORAN_DEDUCTION',  'threshold',         '40000000',  '노란우산공제 소득분기점',  '소기업소상공인공제부금법',   NOW(), NOW()),
+(2025, 'NORAN_DEDUCTION',  'limit_low',         '5000000',   '소득 이하 공제한도',       '소기업소상공인공제부금법',   NOW(), NOW()),
+(2025, 'NORAN_DEDUCTION',  'limit_high',        '3000000',   '소득 초과 공제한도',       '소기업소상공인공제부금법',   NOW(), NOW()),
+(2025, 'PENSION_CREDIT',   'threshold',         '55000000',  '연금저축 소득분기점',      '소득세법 §50',             NOW(), NOW()),
+(2025, 'PENSION_CREDIT',   'rate_low',          '0.15',      '소득 이하 세액공제율',     '소득세법 §50',             NOW(), NOW()),
+(2025, 'PENSION_CREDIT',   'rate_high',         '0.132',     '소득 초과 세액공제율',     '소득세법 §50',             NOW(), NOW()),
+(2025, 'PENSION_CREDIT',   'limit',             '6000000',   '연금저축 연간 한도',       '소득세법 §50',             NOW(), NOW()),
+(2025, 'ENTERTAINMENT',    'annual_limit',      '12000000',  '접대비 연간 기본한도',     '소득세법 §35',             NOW(), NOW()),
+(2025, 'EDUCATION',        'recommended_limit', '1500000',   '교육훈련비 추천한도',      '소득세법 §19',             NOW(), NOW());
+
+
+-- ============================================================
+-- 7. tax_deadlines (세금 신고 기한) — 6개
+-- ============================================================
+INSERT INTO tax_deadlines ("year", name, description, deadline_month, deadline_day, created_at, updated_at) VALUES
+(2025, '부가가치세 확정신고 (2기)', '7~12월 매출·매입 부가세 확정신고 및 납부',        1,  25, NOW(), NOW()),
+(2025, '부가가치세 예정신고 (1기)', '1~3월 매출·매입 부가세 예정신고 및 납부',         4,  25, NOW(), NOW()),
+(2025, '종합소득세 신고',           '전년도 사업소득 종합소득세 확정신고 및 납부',      5,  31, NOW(), NOW()),
+(2025, '지방소득세 신고',           '종합소득세 기준 지방소득세 신고 및 납부',          5,  31, NOW(), NOW()),
+(2025, '부가가치세 확정신고 (1기)', '1~6월 매출·매입 부가세 확정신고 및 납부',         7,  25, NOW(), NOW()),
+(2025, '부가가치세 예정신고 (2기)', '7~9월 매출·매입 부가세 예정신고 및 납부',         10, 25, NOW(), NOW());
