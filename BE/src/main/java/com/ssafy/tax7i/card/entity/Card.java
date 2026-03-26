@@ -49,6 +49,9 @@ public class Card extends BaseTimeEntity {
     @Column(nullable = false)
     private String cardUniqueNo;
 
+    @Column(name = "ssafy_account_no", nullable = false)
+    private String ssafyAccountNo;
+
     private String withdrawalAccountNo;
 
     private String withdrawalDate;
@@ -66,7 +69,7 @@ public class Card extends BaseTimeEntity {
 
     @Builder
     public Card(User user, String cardName, CardType cardType, String last4Digits,
-                String cardNo, String cvc, String cardUniqueNo,
+                String cardNo, String cvc, String cardUniqueNo, String ssafyAccountNo,
                 String withdrawalAccountNo, String withdrawalDate, String cardExpiryDate) {
         this.user = user;
         this.cardName = cardName;
@@ -76,6 +79,7 @@ public class Card extends BaseTimeEntity {
         this.cardNo = cardNo;
         this.cvc = cvc;
         this.cardUniqueNo = cardUniqueNo;
+        this.ssafyAccountNo = ssafyAccountNo;
         this.withdrawalAccountNo = withdrawalAccountNo;
         this.withdrawalDate = withdrawalDate;
         this.cardExpiryDate = cardExpiryDate;

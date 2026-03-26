@@ -227,6 +227,7 @@ class TransferServiceTest {
                 .cardNo("1005518816097890")
                 .cvc("725")
                 .cardUniqueNo("1003-xxx")
+                .ssafyAccountNo(withdrawalAccountNo)
                 .withdrawalAccountNo(withdrawalAccountNo)
                 .withdrawalDate("4")
                 .cardExpiryDate("20290401")

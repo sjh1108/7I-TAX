@@ -7,6 +7,7 @@ import com.ssafy.tax7i.banking.client.dto.SsafyCreateCreditCardResponse;
 import com.ssafy.tax7i.banking.client.dto.SsafyCreditCardProductListResponse;
 import com.ssafy.tax7i.banking.client.SsafyFinanceClient;
 import com.ssafy.tax7i.banking.client.dto.SsafyAccountListResponse;
+import com.ssafy.tax7i.banking.client.dto.SsafyCreateAccountResponse;
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
@@ -23,6 +24,8 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class CardDataInitializer implements CommandLineRunner {
+
+    private static final String DEFAULT_ACCOUNT_TYPE = "001-1-c7a14e921c7a44";
 
     private final UserRepository userRepository;
     private final CardRepository cardRepository;
@@ -71,14 +74,21 @@ public class CardDataInitializer implements CommandLineRunner {
                     continue;
                 }
 
-                // 사용자의 수시입출금 계좌 조회 (결제 계좌로 사용)
+                // 사용자의 수시입출금 계좌 조회 (없으면 자동 생성)
                 SsafyAccountListResponse accountList = ssafyFinanceClient.getAccountList(userKey);
+                String withdrawalAccountNo;
                 if (accountList.rec() == null || accountList.rec().isEmpty()) {
-                    log.warn("[CardDataInitializer] 유저 {}의 계좌가 없어 카드 생성을 건너뜁니다.", user.getId());
-                    continue;
+                    log.info("[CardDataInitializer] 유저 {}의 계좌가 없어 수시입출금 계좌를 생성합니다.", user.getId());
+                    SsafyCreateAccountResponse accountResponse = ssafyFinanceClient.createAccount(userKey, DEFAULT_ACCOUNT_TYPE);
+                    if (accountResponse.rec() == null) {
+                        log.error("[CardDataInitializer] 유저 {} 계좌 생성 응답이 비어있습니다.", user.getId());
+                        continue;
+                    }
+                    withdrawalAccountNo = accountResponse.rec().accountNo();
+                    log.info("[CardDataInitializer] 유저 {} 계좌 생성 완료: {}", user.getId(), withdrawalAccountNo);
+                } else {
+                    withdrawalAccountNo = accountList.rec().get(0).accountNo();
                 }
-
-                String withdrawalAccountNo = accountList.rec().get(0).accountNo();
 
                 // 첫 번째 카드 상품으로 카드 발급
                 SsafyCreditCardProductListResponse.CreditCardProductRec product = products.rec().get(0);
@@ -98,6 +108,7 @@ public class CardDataInitializer implements CommandLineRunner {
                         .cardNo(cardNo)
                         .cvc(rec.cvc())
                         .cardUniqueNo(rec.cardUniqueNo())
+                        .ssafyAccountNo(withdrawalAccountNo)
                         .withdrawalAccountNo(rec.withdrawalAccountNo())
                         .withdrawalDate(rec.withdrawalDate())
                         .cardExpiryDate(rec.cardExpiryDate())
