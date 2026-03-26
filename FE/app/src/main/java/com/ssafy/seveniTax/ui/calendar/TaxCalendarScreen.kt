@@ -1,6 +1,7 @@
 package com.ssafy.seveniTax.ui.calendar
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.data.model.tax.TaxDeadline
@@ -49,16 +51,28 @@ fun TaxCalendarScreen(
     val urgentDeadline = viewModel.getMostUrgentDeadline()
     val monthDeadlines = viewModel.getDeadlinesForMonth(currentMonth)
 
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+
+    Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
+        containerColor = Color.White
+    ) { innerPadding ->
     Column(
         modifier = modifier
             .fillMaxSize()
+            .padding(innerPadding)
             .background(Color.White)
     ) {
         // 헤더
         CalendarHeader(
             onBack = { navController.popBackStack() },
             notificationCount = 3,
-            onNotificationClick = { navController.navigate(Route.NotificationSettings.path) }
+            onNotificationClick = {
+                scope.launch {
+                    snackbarHostState.showSnackbar("알림 기능 준비 중입니다")
+                }
+            }
         )
 
         Column(
@@ -135,6 +149,7 @@ fun TaxCalendarScreen(
                 )
             }
         }
+    }
     }
 }
 
@@ -316,40 +331,15 @@ private fun FilterTabs(
                     .weight(1f)
                     .height(38.dp)
                     .clip(RoundedCornerShape(20.dp))
-                    .background(
-                        if (isSelected) BrandPurple else Color.White
-                    )
+                    .background(if (isSelected) BrandPurple else Color.White)
                     .then(
-                        if (!isSelected) Modifier.background(
-                            Color.White,
-                            RoundedCornerShape(20.dp)
-                        ) else Modifier
-                    )
-                    .then(
-                        if (!isSelected) Modifier.background(
-                            Color.Transparent
+                        if (!isSelected) Modifier.border(
+                            1.dp, Disabled, RoundedCornerShape(20.dp)
                         ) else Modifier
                     )
                     .clickable { onFilterSelected(filter) },
                 contentAlignment = Alignment.Center
             ) {
-                // 외곽선 처리
-                if (!isSelected) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clip(RoundedCornerShape(20.dp))
-                            .background(Color.White)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .padding(1.dp)
-                            .clip(RoundedCornerShape(19.dp))
-                            .background(Color.White)
-                    )
-                }
-
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
@@ -377,6 +367,44 @@ private fun FilterTabs(
 
 // ─── 캘린더 그리드 ──────────────────────────────────────
 
+private data class TaxPeriod(
+    val startDate: LocalDate,
+    val endDate: LocalDate,
+    val type: TaxType
+)
+
+private fun buildTaxPeriods(deadlines: List<TaxDeadline>): List<TaxPeriod> {
+    return deadlines.mapNotNull { deadline ->
+        val endDate = try { LocalDate.parse(deadline.deadline) } catch (_: Exception) { return@mapNotNull null }
+        val type = classifyTax(deadline)
+        val name = deadline.taxName
+        val year = endDate.year
+
+        val startDate = when {
+            name.contains("1기") && name.contains("예정") -> LocalDate.of(year, 4, 1)
+            name.contains("1기") && name.contains("확정") -> LocalDate.of(year, 7, 1)
+            name.contains("2기") && name.contains("예정") -> LocalDate.of(year, 10, 1)
+            name.contains("2기") && name.contains("확정") -> LocalDate.of(year, 1, 1)
+            name.contains("종합소득세") -> LocalDate.of(year, 5, 1)
+            name.contains("지방소득세") -> LocalDate.of(year, 5, 1)
+            name.contains("중간예납") -> LocalDate.of(year, 11, 1)
+            else -> endDate.withDayOfMonth(1)
+        }
+        TaxPeriod(startDate, endDate, type)
+    }
+}
+
+// 셀별 바 상태
+private enum class BarSegment { NONE, START, MIDDLE, END, SINGLE }
+
+private fun getBarSegment(date: LocalDate, period: TaxPeriod): BarSegment {
+    if (date < period.startDate || date > period.endDate) return BarSegment.NONE
+    if (period.startDate == period.endDate && date == period.startDate) return BarSegment.SINGLE
+    if (date == period.startDate) return BarSegment.START
+    if (date == period.endDate) return BarSegment.END
+    return BarSegment.MIDDLE
+}
+
 @Composable
 private fun CalendarGrid(
     yearMonth: YearMonth,
@@ -384,21 +412,15 @@ private fun CalendarGrid(
 ) {
     val today = LocalDate.now()
     val firstDay = yearMonth.atDay(1)
-    // 일요일=0, 월=1, ..., 토=6 으로 변환
     val startOffset = when (firstDay.dayOfWeek) {
         DayOfWeek.SUNDAY -> 0
         else -> firstDay.dayOfWeek.value
     }
     val daysInMonth = yearMonth.lengthOfMonth()
-
-    // 날짜별 세금 일정 매핑
-    val deadlinesByDate = deadlines.groupBy { deadline ->
-        try {
-            LocalDate.parse(deadline.deadline)
-        } catch (e: Exception) {
-            null
-        }
-    }.filterKeys { it != null && YearMonth.from(it) == yearMonth }
+    val taxPeriods = buildTaxPeriods(deadlines)
+    val monthStart = yearMonth.atDay(1)
+    val monthEnd = yearMonth.atEndOfMonth()
+    val visiblePeriods = taxPeriods.filter { it.startDate <= monthEnd && it.endDate >= monthStart }
 
     Column(
         modifier = Modifier
@@ -426,83 +448,132 @@ private fun CalendarGrid(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // 날짜 그리드
-        var dayCounter = 1
         val totalCells = startOffset + daysInMonth
         val rows = (totalCells + 6) / 7
 
         for (row in 0 until rows) {
-            // 세금 바 표시 (해당 주에 걸치는 기한들)
-            val weekStart = if (row == 0) 1 else (row * 7 - startOffset + 1)
-            val weekEnd = minOf((row + 1) * 7 - startOffset, daysInMonth)
-
+            // 날짜 숫자 행
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
+                    .height(36.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 for (col in 0..6) {
-                    val cellIndex = row * 7 + col
-                    val day = cellIndex - startOffset + 1
-
+                    val day = row * 7 + col - startOffset + 1
                     Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
+                        modifier = Modifier.weight(1f).fillMaxHeight(),
                         contentAlignment = Alignment.Center
                     ) {
                         if (day in 1..daysInMonth) {
                             val date = yearMonth.atDay(day)
                             val isToday = date == today
-                            val dayDeadlines = deadlinesByDate[date] ?: emptyList()
-                            val dayOfWeek = col // 0=일, 6=토
-
-                            Column(
-                                horizontalAlignment = Alignment.CenterHorizontally,
-                                verticalArrangement = Arrangement.Center
-                            ) {
-                                // 오늘 표시: 보라색 원
-                                if (isToday) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(36.dp)
-                                            .clip(CircleShape)
-                                            .background(TaxToday),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Text(
-                                            text = "$day",
-                                            fontSize = 14.sp,
-                                            fontWeight = FontWeight.Bold,
-                                            color = Color.White
-                                        )
-                                    }
-                                } else {
-                                    Text(
-                                        text = "$day",
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Normal,
-                                        color = when (dayOfWeek) {
-                                            0 -> CalendarSunday
-                                            6 -> CalendarSaturday
-                                            else -> TextPrimary
-                                        }
-                                    )
+                            if (isToday) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(TaxToday),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text("$day", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = Color.White)
                                 }
+                            } else {
+                                Text(
+                                    "$day", fontSize = 14.sp,
+                                    color = when (col) { 0 -> CalendarSunday; 6 -> CalendarSaturday; else -> TextPrimary }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
 
-                                // 세금 도트
-                                if (dayDeadlines.isNotEmpty()) {
-                                    Spacer(modifier = Modifier.height(2.dp))
-                                    Row(horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                                        dayDeadlines.take(3).forEach { dl ->
+            // 바+도트 행: 각 period를 한 줄씩 (● ─── ●)
+            val periodsInWeek = visiblePeriods.filter { period ->
+                val wfd = maxOf(row * 7 - startOffset + 1, 1)
+                val wld = minOf((row + 1) * 7 - startOffset, daysInMonth)
+                if (wfd > daysInMonth) false
+                else {
+                    val ws = yearMonth.atDay(maxOf(wfd, 1))
+                    val we = yearMonth.atDay(minOf(wld, daysInMonth))
+                    period.startDate <= we && period.endDate >= ws
+                }
+            }
+
+            if (periodsInWeek.isNotEmpty()) {
+                periodsInWeek.forEach { period ->
+                    val color = getTaxColor(period.type)
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        for (col in 0..6) {
+                            val day = row * 7 + col - startOffset + 1
+                            Box(
+                                modifier = Modifier.weight(1f).fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (day in 1..daysInMonth) {
+                                    val date = yearMonth.atDay(day)
+                                    val segment = getBarSegment(date, period)
+                                    when (segment) {
+                                        BarSegment.START -> {
+                                            // 바: 중앙→오른쪽
                                             Box(
                                                 modifier = Modifier
-                                                    .size(5.dp)
+                                                    .height(3.dp)
+                                                    .fillMaxWidth(0.5f)
+                                                    .align(Alignment.CenterEnd)
+                                                    .background(color.copy(alpha = 0.35f))
+                                            )
+                                            // 도트: 중앙
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(7.dp)
                                                     .clip(CircleShape)
-                                                    .background(getTaxColor(classifyTax(dl)))
+                                                    .background(color)
+                                                    .align(Alignment.Center)
                                             )
                                         }
+                                        BarSegment.END -> {
+                                            // 바: 왼쪽→중앙
+                                            Box(
+                                                modifier = Modifier
+                                                    .height(3.dp)
+                                                    .fillMaxWidth(0.5f)
+                                                    .align(Alignment.CenterStart)
+                                                    .background(color.copy(alpha = 0.35f))
+                                            )
+                                            // 도트: 중앙
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(7.dp)
+                                                    .clip(CircleShape)
+                                                    .background(color)
+                                                    .align(Alignment.Center)
+                                            )
+                                        }
+                                        BarSegment.MIDDLE -> {
+                                            Box(
+                                                modifier = Modifier
+                                                    .height(3.dp)
+                                                    .fillMaxWidth()
+                                                    .background(color.copy(alpha = 0.35f))
+                                            )
+                                        }
+                                        BarSegment.SINGLE -> {
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(7.dp)
+                                                    .clip(CircleShape)
+                                                    .background(color)
+                                                    .align(Alignment.Center)
+                                            )
+                                        }
+                                        BarSegment.NONE -> {}
                                     }
                                 }
                             }
@@ -511,34 +582,7 @@ private fun CalendarGrid(
                 }
             }
 
-            // 주간 세금 바 (해당 주에 기한이 있으면 바 표시)
-            if (weekStart in 1..daysInMonth) {
-                val validWeekStart = maxOf(weekStart, 1)
-                val validWeekEnd = minOf(weekEnd, daysInMonth)
-                val weekDeadlines = deadlinesByDate.filter { (date, _) ->
-                    date != null && date.dayOfMonth in validWeekStart..validWeekEnd
-                }.values.flatten()
-
-                if (weekDeadlines.isNotEmpty()) {
-                    val taxTypes = weekDeadlines.map { classifyTax(it) }.distinct()
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        taxTypes.forEach { type ->
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(3.dp)
-                                    .clip(RoundedCornerShape(2.dp))
-                                    .background(getTaxColor(type).copy(alpha = 0.3f))
-                            )
-                        }
-                    }
-                }
-            }
+            Spacer(modifier = Modifier.height(4.dp))
         }
     }
 
@@ -637,9 +681,6 @@ private fun ScheduleItem(deadline: TaxDeadline, onClick: () -> Unit) {
     }
     val ddayColor = getDdayColor(deadline.dDay)
 
-    // 신고 기간 표기
-    val filingPeriod = getFilingPeriod(deadline)
-
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -658,29 +699,14 @@ private fun ScheduleItem(deadline: TaxDeadline, onClick: () -> Unit) {
 
         Spacer(modifier = Modifier.width(16.dp))
 
-        // 세금명 + 설명 + 신고기간
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = deadline.taxName,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                text = deadline.description,
-                fontSize = 13.sp,
-                color = TextSecondary
-            )
-            if (filingPeriod != null) {
-                Spacer(modifier = Modifier.height(2.dp))
-                Text(
-                    text = "신고기간: $filingPeriod",
-                    fontSize = 11.sp,
-                    color = TextSecondary
-                )
-            }
-        }
+        // 세금명
+        Text(
+            text = deadline.taxName,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.SemiBold,
+            color = TextPrimary,
+            modifier = Modifier.weight(1f)
+        )
 
         Spacer(modifier = Modifier.width(12.dp))
 
@@ -937,7 +963,7 @@ private fun TimelineItem(
                     color = TextSecondary
                 )
             }
-        } else if (isNext && dDay != null) {
+        } else if (isNext) {
             val badgeColor = getDdayColor(dDay)
             Box(
                 modifier = Modifier

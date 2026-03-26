@@ -12,6 +12,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -20,22 +21,15 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
-
-private data class ChangeCard(
-    val id: String,
-    val name: String,
-    val cardNumber: String,
-    val isDefault: Boolean
-)
-
-private val mockChangeCards = listOf(
-    ChangeCard("1", "일반카드", "5876-8847-2283-••••", true),
-    ChangeCard("2", "사업자카드", "4120-9901-5532-••••", false)
-)
+import com.ssafy.seveniTax.viewmodel.CardViewModel
 
 @Composable
-fun CardChangeScreen(navController: NavController) {
-    var selectedCardId by remember { mutableStateOf(mockChangeCards.first { it.isDefault }.id) }
+fun CardChangeScreen(navController: NavController, viewModel: CardViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
+    val cards = uiState.cards
+    var selectedCardId by remember(cards) {
+        mutableStateOf(cards.firstOrNull { it.isDefault }?.id ?: cards.firstOrNull()?.id ?: "")
+    }
 
     Column(
         modifier = Modifier
@@ -83,7 +77,8 @@ fun CardChangeScreen(navController: NavController) {
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                items(mockChangeCards) { card ->
+                items(cards) { card ->
+                    val cardName = if (card.type == "personal") "일반카드" else "사업자카드"
                     val isSelected = card.id == selectedCardId
                     Row(
                         modifier = Modifier
@@ -131,7 +126,7 @@ fun CardChangeScreen(navController: NavController) {
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
                                 Text(
-                                    text = card.name,
+                                    text = cardName,
                                     style = Typography.titleMedium
                                 )
                                 if (isSelected) {
@@ -164,10 +159,8 @@ fun CardChangeScreen(navController: NavController) {
             TaxButton(
                 text = "변경하기",
                 onClick = {
-                    // TODO: 서버에 기본 카드 변경 요청
-                    navController.navigate(Route.Main.path) {
-                        popUpTo(Route.Main.path) { inclusive = true }
-                    }
+                    viewModel.setDefaultCard(selectedCardId)
+                    navController.popBackStack()
                 }
             )
 

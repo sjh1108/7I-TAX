@@ -18,26 +18,34 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
 
 private val categories = listOf(
     "전체", "매출", "지급수수료", "소모품비",
     "접대비", "통신비", "임차료",
-    "여비교통비", "도서인쇄비", "차량유지비",
-    "광고선전비", "세금과공과", "감가상각비"
+    "여비교통비", "차량유지비",
+    "광고선전비", "감가상각비"
 )
 
 @Composable
 fun BookFilterScreen(
-    navController: NavController
+    navController: NavController,
+    viewModel: BookEntryViewModel = hiltViewModel()
 ) {
+    val currentCategories by viewModel.filterCategories.collectAsState()
+    val currentMerchant by viewModel.filterMerchant.collectAsState()
+    val currentReceipt by viewModel.filterOnlyWithReceipt.collectAsState()
+    val currentUnclassified by viewModel.filterOnlyUnclassified.collectAsState()
+
     var startDate by remember { mutableStateOf("2025.03.01") }
     var endDate by remember { mutableStateOf("2025.03.31") }
-    var selectedCategory by remember { mutableStateOf("전체") }
-    var merchantQuery by remember { mutableStateOf("") }
-    var onlyWithReceipt by remember { mutableStateOf(false) }
-    var onlyUnclassified by remember { mutableStateOf(false) }
+    var selectedCategories by remember { mutableStateOf(currentCategories) }
+    var merchantQuery by remember { mutableStateOf(currentMerchant) }
+    var onlyWithReceipt by remember { mutableStateOf(currentReceipt) }
+    var onlyUnclassified by remember { mutableStateOf(currentUnclassified) }
 
     Column(
         modifier = Modifier
@@ -74,12 +82,13 @@ fun BookFilterScreen(
                 fontWeight = FontWeight.SemiBold,
                 color = BrandPurple,
                 modifier = Modifier.clickable {
-                    selectedCategory = "전체"
+                    selectedCategories = setOf("전체")
                     merchantQuery = ""
                     onlyWithReceipt = false
                     onlyUnclassified = false
                     startDate = "2025.03.01"
                     endDate = "2025.03.31"
+                    viewModel.resetFilter()
                 }
             )
         }
@@ -105,9 +114,17 @@ fun BookFilterScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                DateBox(date = startDate, modifier = Modifier.weight(1f))
+                DateInputBox(
+                    date = startDate,
+                    onDateChange = { startDate = it },
+                    modifier = Modifier.weight(1f)
+                )
                 Text("~", color = TextSecondary, fontSize = 14.sp)
-                DateBox(date = endDate, modifier = Modifier.weight(1f))
+                DateInputBox(
+                    date = endDate,
+                    onDateChange = { endDate = it },
+                    modifier = Modifier.weight(1f)
+                )
             }
 
             Spacer(modifier = Modifier.height(28.dp))
@@ -121,7 +138,7 @@ fun BookFilterScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
 
-            // 카테고리 칩 FlowRow
+            // 카테고리 칩 FlowRow (복수 선택)
             val chunked = categories.chunked(4)
             chunked.forEach { row ->
                 Row(
@@ -131,8 +148,19 @@ fun BookFilterScreen(
                     row.forEach { category ->
                         CategoryChip(
                             label = category,
-                            isSelected = selectedCategory == category,
-                            onClick = { selectedCategory = category }
+                            isSelected = selectedCategories.contains(category),
+                            onClick = {
+                                selectedCategories = if (category == "전체") {
+                                    setOf("전체")
+                                } else {
+                                    val updated = if (selectedCategories.contains(category)) {
+                                        selectedCategories - category
+                                    } else {
+                                        (selectedCategories - "전체") + category
+                                    }
+                                    if (updated.isEmpty()) setOf("전체") else updated
+                                }
+                            }
                         )
                     }
                 }
@@ -193,7 +221,10 @@ fun BookFilterScreen(
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             Button(
-                onClick = { navController.popBackStack() },
+                onClick = {
+                    viewModel.applyFilter(selectedCategories, merchantQuery, onlyWithReceipt, onlyUnclassified)
+                    navController.popBackStack()
+                },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -206,7 +237,8 @@ fun BookFilterScreen(
                 Text(
                     text = "필터 적용",
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.SemiBold
+                    fontWeight = FontWeight.SemiBold,
+                    color = Color.White
                 )
             }
         }
@@ -214,21 +246,39 @@ fun BookFilterScreen(
 }
 
 @Composable
-private fun DateBox(date: String, modifier: Modifier = Modifier) {
-    Box(
-        modifier = modifier
-            .height(48.dp)
-            .background(Surface, RoundedCornerShape(12.dp))
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = date,
+private fun DateInputBox(
+    date: String,
+    onDateChange: (String) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    TextField(
+        value = date,
+        onValueChange = { input ->
+            // 숫자와 점만 허용, 최대 10자 (yyyy.MM.dd)
+            val filtered = input.filter { it.isDigit() || it == '.' }.take(10)
+            onDateChange(filtered)
+        },
+        modifier = modifier.height(48.dp),
+        textStyle = androidx.compose.ui.text.TextStyle(
             fontSize = 14.sp,
             fontWeight = FontWeight.Medium,
-            color = TextPrimary
-        )
-    }
+            color = TextPrimary,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+        ),
+        placeholder = {
+            Text("yyyy.MM.dd", fontSize = 14.sp, color = Disabled,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                modifier = Modifier.fillMaxWidth())
+        },
+        colors = TextFieldDefaults.colors(
+            focusedContainerColor = Surface,
+            unfocusedContainerColor = Surface,
+            focusedIndicatorColor = Color.Transparent,
+            unfocusedIndicatorColor = Color.Transparent
+        ),
+        shape = RoundedCornerShape(12.dp),
+        singleLine = true
+    )
 }
 
 @Composable

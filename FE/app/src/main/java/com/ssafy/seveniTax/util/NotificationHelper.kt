@@ -113,9 +113,13 @@ object NotificationHelper {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val title = "$taxName D-$dDay"
+        val title = if (dDay == 0) "$taxName D-Day" else "$taxName D-$dDay"
         val body = buildString {
-            append("$deadlineDate 마감 · ${dDay}일 남았습니다")
+            if (dDay == 0) {
+                append("$deadlineDate 오늘 마감입니다!")
+            } else {
+                append("$deadlineDate 마감 · ${dDay}일 남았습니다")
+            }
             if (!additionalInfo.isNullOrEmpty()) {
                 append("\n$additionalInfo")
             }

@@ -19,10 +19,11 @@ import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.CardViewModel
 import kotlinx.coroutines.delay
 
 @Composable
-fun CardSmsScreen(navController: NavController) {
+fun CardSmsScreen(navController: NavController, viewModel: CardViewModel) {
     var smsCode by remember { mutableStateOf("") }
     var remainingSeconds by remember { mutableIntStateOf(180) }
     val focusRequester = remember { FocusRequester() }
@@ -88,6 +89,7 @@ fun CardSmsScreen(navController: NavController) {
                         if (code.length <= 6 && code.all(Char::isDigit)) {
                             smsCode = code
                             if (code.length == 6) {
+                                viewModel.completeRegistration()
                                 navController.navigate(Route.CardComplete.path)
                             }
                         }

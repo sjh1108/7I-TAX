@@ -56,6 +56,8 @@ fun BookEntryListScreen(
     val unconfirmedCount by viewModel.unconfirmedCount.collectAsState()
     val selectedFilter by viewModel.selectedFilter.collectAsState()
     val selectedTab by viewModel.selectedTab.collectAsState()
+    val selectedYear by viewModel.selectedYear.collectAsState()
+    val selectedMonth by viewModel.selectedMonth.collectAsState()
     val filteredEntries = viewModel.getFilteredEntries()
 
     Column(
@@ -75,12 +77,14 @@ fun BookEntryListScreen(
                 .verticalScroll(rememberScrollState())
         ) {
             // 요약 카드
-            SummaryCard(
-                netProfit = viewModel.getNetProfit(),
-                totalIncome = viewModel.getTotalIncome(),
-                totalExpense = viewModel.getTotalExpense(),
-                totalAsset = viewModel.getTotalAsset()
-            )
+            key(selectedYear, selectedMonth) {
+                SummaryCard(
+                    netProfit = viewModel.getNetProfit(),
+                    totalIncome = viewModel.getTotalIncome(),
+                    totalExpense = viewModel.getTotalExpense(),
+                    totalAsset = viewModel.getTotalAsset()
+                )
+            }
 
             // 미확인 배너
             if (unconfirmedCount > 0) {
@@ -94,6 +98,10 @@ fun BookEntryListScreen(
 
             // 월 드롭다운 + 필터
             MonthFilterRow(
+                selectedYear = selectedYear,
+                selectedMonth = selectedMonth,
+                onYearSelected = { viewModel.selectYear(it) },
+                onMonthSelected = { viewModel.selectMonth(it) },
                 onFilterClick = { navController.navigate(Route.BookFilter.path) }
             )
 
@@ -135,7 +143,9 @@ fun BookEntryListScreen(
                 }
             } else {
                 // 세목별 뷰
-                CategoryView(viewModel)
+                key(selectedYear, selectedMonth) {
+                    CategoryView(viewModel)
+                }
             }
 
             Spacer(modifier = Modifier.height(20.dp))
@@ -313,11 +323,15 @@ private fun UnconfirmedBanner(count: Int, onClick: () -> Unit = {}) {
 // ─── 월 드롭다운 + 필터 ────────────────────────────────
 
 @Composable
-private fun MonthFilterRow(onFilterClick: () -> Unit = {}) {
+private fun MonthFilterRow(
+    selectedYear: Int = 2025,
+    selectedMonth: Int = 3,
+    onYearSelected: (Int) -> Unit = {},
+    onMonthSelected: (Int) -> Unit = {},
+    onFilterClick: () -> Unit = {}
+) {
     var yearExpanded by remember { mutableStateOf(false) }
     var monthExpanded by remember { mutableStateOf(false) }
-    var selectedYear by remember { mutableIntStateOf(2025) }
-    var selectedMonth by remember { mutableIntStateOf(3) }
 
     Row(
         modifier = Modifier
@@ -359,7 +373,7 @@ private fun MonthFilterRow(onFilterClick: () -> Unit = {}) {
                                 )
                             },
                             onClick = {
-                                selectedYear = year
+                                onYearSelected(year)
                                 yearExpanded = false
                             }
                         )
@@ -399,7 +413,7 @@ private fun MonthFilterRow(onFilterClick: () -> Unit = {}) {
                                 )
                             },
                             onClick = {
-                                selectedMonth = month
+                                onMonthSelected(month)
                                 monthExpanded = false
                             }
                         )
@@ -671,9 +685,12 @@ private fun CategorySection(
     Spacer(modifier = Modifier.height(12.dp))
 
     // 프로그레스 바 (세그먼트)
-    val categoryColors = listOf(
+    val categoryColors = if (title == "수입") listOf(
+        Color(0xFF3DBDA2), Color(0xFF5ED4BA), Color(0xFF88E0CE),
+        Color(0xFF2A9D84), Color(0xFF1F8A73), Color(0xFF6CC9B3), Color(0xFFB0E8DA)
+    ) else listOf(
         Color(0xFFE8475A), Color(0xFFF5A623), Color(0xFF5655B9),
-        Color(0xFF3DBDA2), Color(0xFF4A90D9), Color(0xFFD4A0E8), Color(0xFFCACACA)
+        Color(0xFF4A90D9), Color(0xFFD4A0E8), Color(0xFFFF7E91), Color(0xFFCACACA)
     )
 
     Row(
