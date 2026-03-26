@@ -176,11 +176,16 @@ class CardViewModel @Inject constructor(
         }
     }
 
-    fun setDefaultCard(cardId: String) {
-        _uiState.update { state ->
-            state.copy(
-                cards = state.cards.map { it.copy(isDefault = it.id == cardId) }
-            )
+    fun setDefaultCard(cardId: String) = viewModelScope.launch {
+        try {
+            cardRepository.setDefaultCard(cardId)
+            loadCards()
+        } catch (_: Exception) {
+            _uiState.update { state ->
+                state.copy(
+                    cards = state.cards.map { it.copy(isDefault = it.id == cardId) }
+                )
+            }
         }
     }
 

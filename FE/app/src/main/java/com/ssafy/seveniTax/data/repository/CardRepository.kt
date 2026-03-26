@@ -8,5 +8,7 @@ interface CardRepository {
     suspend fun activateCard(cardId: String, request: CardActivateRequest): ApiResponse<CardActivateResponse>
     suspend fun setCardPurpose(cardId: String, request: CardPurposeRequest): ApiResponse<CardPurposeResponse>
     suspend fun getCards(): ApiResponse<List<CardResponse>>
+    suspend fun getCard(cardId: String): ApiResponse<CardResponse>
+    suspend fun setDefaultCard(cardId: String): ApiResponse<CardResponse>
     suspend fun deleteCard(cardId: String)
 }

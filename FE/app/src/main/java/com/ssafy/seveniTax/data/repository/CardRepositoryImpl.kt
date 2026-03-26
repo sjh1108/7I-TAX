@@ -31,6 +31,16 @@ class CardRepositoryImpl @Inject constructor(
         return response.body() ?: throw Exception(extractErrorMessage(response, "카드 목록 조회에 실패했습니다."))
     }
 
+    override suspend fun getCard(cardId: String): ApiResponse<CardResponse> {
+        val response = cardApi.getCard(cardId)
+        return response.body() ?: throw Exception(extractErrorMessage(response, "카드 조회에 실패했습니다."))
+    }
+
+    override suspend fun setDefaultCard(cardId: String): ApiResponse<CardResponse> {
+        val response = cardApi.setDefaultCard(cardId)
+        return response.body() ?: throw Exception(extractErrorMessage(response, "기본 카드 변경에 실패했습니다."))
+    }
+
     override suspend fun deleteCard(cardId: String) {
         val response = cardApi.deleteCard(cardId)
         if (!response.isSuccessful) {

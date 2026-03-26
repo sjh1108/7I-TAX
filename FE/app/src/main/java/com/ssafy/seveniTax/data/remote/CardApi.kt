@@ -25,6 +25,12 @@ interface CardApi {
     @GET("cards")
     suspend fun getCards(): Response<ApiResponse<List<CardResponse>>>
 
+    @GET("cards/{id}")
+    suspend fun getCard(@Path("id") id: String): Response<ApiResponse<CardResponse>>
+
+    @PATCH("cards/{id}/default")
+    suspend fun setDefaultCard(@Path("id") id: String): Response<ApiResponse<CardResponse>>
+
     @DELETE("cards/{id}")
     suspend fun deleteCard(@Path("id") id: String): Response<Unit>
 }
