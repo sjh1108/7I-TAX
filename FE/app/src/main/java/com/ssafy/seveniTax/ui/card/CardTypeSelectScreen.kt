@@ -100,10 +100,7 @@ fun CardTypeSelectScreen(navController: NavController, viewModel: CardViewModel)
                 text = "다음으로",
                 onClick = {
                     selectedType?.let { viewModel.selectCardType(it) }
-                    when (selectedType) {
-                        "personal" -> navController.navigate(Route.CardInput.create("personal"))
-                        "business" -> navController.navigate(Route.CardBusinessInfo.path)
-                    }
+                    navController.navigate(Route.CardAccountSelect.path)
                 },
                 enabled = selectedType != null
             )
