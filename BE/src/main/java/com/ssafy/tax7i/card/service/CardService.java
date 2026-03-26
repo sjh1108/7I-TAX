@@ -97,6 +97,7 @@ public class CardService {
                 .cardNo(cardNo)
                 .cvc(rec.cvc())
                 .cardUniqueNo(rec.cardUniqueNo())
+                .ssafyAccountNo(request.withdrawalAccountNo())
                 .withdrawalAccountNo(rec.withdrawalAccountNo())
                 .withdrawalDate(rec.withdrawalDate())
                 .cardExpiryDate(rec.cardExpiryDate())

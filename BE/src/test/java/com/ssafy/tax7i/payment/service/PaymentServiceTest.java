@@ -431,6 +431,7 @@ class PaymentServiceTest {
                 .cardNo("1005518816096479")
                 .cvc("725")
                 .cardUniqueNo("1003-xxx")
+                .ssafyAccountNo("0123456789012345")
                 .withdrawalAccountNo("0123456789012345")
                 .withdrawalDate("4")
                 .cardExpiryDate("20290401")
