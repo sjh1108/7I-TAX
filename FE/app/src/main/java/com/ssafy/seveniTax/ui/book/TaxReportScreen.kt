@@ -867,14 +867,33 @@ private fun DonutChart(categoryData: List<Pair<String, Long>> = emptyList(), onC
                 modifier = Modifier.size(160.dp),
                 contentAlignment = Alignment.Center
             ) {
-                Canvas(modifier = Modifier.size(160.dp)) {
+                Canvas(
+                    modifier = Modifier
+                        .size(160.dp)
+                        .pointerInput(segments) {
+                            detectTapGestures { tapOffset ->
+                                val cx = size.width / 2f
+                                val cy = size.height / 2f
+                                val dx = tapOffset.x - cx
+                                val dy = tapOffset.y - cy
+                                val dist = kotlin.math.sqrt(dx * dx + dy * dy)
+                                val strokeW = 20.dp.toPx()
+                                val r = (minOf(size.width, size.height) - strokeW) / 2f
+                                if (dist > r - strokeW && dist < r + strokeW) {
+                                    var angle = (Math.toDegrees(kotlin.math.atan2(dy.toDouble(), dx.toDouble())).toFloat() + 360 + 90) % 360
+                                    var cumAngle = 0f
+                                    for ((name, pct, _) in segments) {
+                                        cumAngle += pct / 100f * 360f
+                                        if (angle <= cumAngle) {
+                                            onCategoryClick(name)
+                                            break
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                ) {
                     val strokeW = 20.dp.toPx()
-                    val radius = (size.minDimension - strokeW) / 2
-                    val topLeft = Offset(
-                        (size.width - radius * 2) / 2 - strokeW / 2 + strokeW / 2,
-                        (size.height - radius * 2) / 2 - strokeW / 2 + strokeW / 2
-                    )
-                    val arcSize = Size(radius * 2, radius * 2)
                     var startAngle = -90f
                     segments.forEach { (_, pct, color) ->
                         val sweep = pct / 100f * 360f
