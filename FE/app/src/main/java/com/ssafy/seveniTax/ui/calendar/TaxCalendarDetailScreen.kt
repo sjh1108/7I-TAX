@@ -446,7 +446,7 @@ private fun ChecklistCard(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "준비 체크리스트",
+                        text = "세금 신고 가이드",
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
