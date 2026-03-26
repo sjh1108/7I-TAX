@@ -175,11 +175,6 @@ fun HomeScreen(
                         insights = insights,
                         onClick = { navController.navigate(Route.TaxReport.path) }
                     )
-                    PaymentSection(
-                        isPayEnrolled = viewModel.isPayEnrolled(),
-                        onCardClick = { navController.navigate(Route.CardList.path) },
-                        onQrClick = { navController.navigate(Route.QrPayment.path) }
-                    )
                     NoticeBanner()
                 }
             }
