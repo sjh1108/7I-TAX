@@ -64,16 +64,6 @@ fun CardListScreen(navController: NavController, viewModel: CardViewModel) {
                 style = Typography.titleLarge,
                 modifier = Modifier.weight(1f)
             )
-            if (!isEmpty) {
-                Text(
-                    text = "기본 카드 변경",
-                    style = Typography.bodySmall,
-                    color = TextSecondary,
-                    modifier = Modifier
-                        .clickable { navController.navigate(Route.CardChange.path) }
-                        .padding(horizontal = 12.dp, vertical = 8.dp)
-                )
-            }
         }
 
         Column(
