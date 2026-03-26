@@ -1,11 +1,12 @@
 package com.ssafy.seveniTax.data.model.card
 
 data class CardResponse(
-    val id: String,
-    val linkedAccountId: String,
+    val id: Long,
+    val cardName: String,
     val cardType: String,
-    val cardNumberLast4: String,
-    val cardAlias: String?,
-    val status: String,
-    val createdAt: String
+    val last4Digits: String,
+    val isDefault: Boolean,
+    val cardExpiryDate: String?,
+    val withdrawalDate: String?,
+    val createdAt: String?
 )
