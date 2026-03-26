@@ -577,14 +577,6 @@ private fun ChecklistItemRow(item: ChecklistItem, onToggle: () -> Unit = {}) {
             )
         }
 
-        if (item.hasNavigation) {
-            Icon(
-                imageVector = Icons.AutoMirrored.Filled.KeyboardArrowRight,
-                contentDescription = null,
-                tint = TextSecondary,
-                modifier = Modifier.size(20.dp)
-            )
-        }
     }
 
     HorizontalDivider(color = Surface, thickness = 1.dp)
