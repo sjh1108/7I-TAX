@@ -79,6 +79,18 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
     )
 
     return when {
+        taxName.contains("중간예납") -> TaxDetailInfo(
+            taxType = "종합소득세",
+            reportType = "중간예납 납부",
+            reportPeriod = "",
+            deadlineFormatted = deadlineFormatted,
+            taxOffice = "역삼세무서",
+            checklist = listOf(
+                ChecklistItem("고지서 수령 확인", "세무서에서 발송한 고지서 확인", false),
+                ChecklistItem("중간예납세액 확인", "직전 연도 소득세의 50%", false),
+                ChecklistItem("납부 완료", "홈택스 또는 은행에서 납부", false)
+            )
+        )
         taxName.contains("종합소득세") -> TaxDetailInfo(
             taxType = "종합소득세",
             reportType = "확정신고 (${deadlineDate.year - 1}년 귀속)",
@@ -92,9 +104,21 @@ private fun buildTaxDetailInfo(taxName: String, deadline: String, description: S
                 ChecklistItem("신고서 작성", "홈택스에서 제출", false)
             )
         )
+        taxName.contains("부가") && taxName.contains("예정") -> TaxDetailInfo(
+            taxType = "부가가치세",
+            reportType = "예정고지 납부",
+            reportPeriod = "",
+            deadlineFormatted = deadlineFormatted,
+            taxOffice = "역삼세무서",
+            checklist = listOf(
+                ChecklistItem("고지서 수령 확인", "세무서에서 발송한 고지서 확인", false),
+                ChecklistItem("고지 금액 확인", "직전 반기 납부세액의 50%", false),
+                ChecklistItem("납부 완료", "홈택스 또는 은행에서 납부", false)
+            )
+        )
         taxName.contains("부가") -> TaxDetailInfo(
             taxType = "부가가치세",
-            reportType = description.ifEmpty { "예정신고" },
+            reportType = description.ifEmpty { "확정신고" },
             reportPeriod = "${deadlineDate.year}.${"%02d".format(deadlineDate.monthValue)}.01 ~ $deadlineFormatted",
             deadlineFormatted = deadlineFormatted,
             taxOffice = "역삼세무서",
