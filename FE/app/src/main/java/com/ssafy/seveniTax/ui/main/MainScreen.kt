@@ -52,6 +52,7 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.ai.AiScreen
 import com.ssafy.seveniTax.ui.home.HomeScreen
 import com.ssafy.seveniTax.ui.navigation.Route
+import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
 import com.ssafy.seveniTax.ui.settings.SettingsScreen
 import com.ssafy.seveniTax.ui.theme.BrandPurple
 import com.ssafy.seveniTax.ui.theme.TextPrimary
@@ -95,7 +96,7 @@ fun MainScreen(
 
     fun openQrPayment() {
         if (viewModel.isPayEnrolled()) {
-            navController.navigate(Route.QrPayment.path)
+            selectedTab = BottomTab.QR_PAYMENT
         } else {
             navController.navigate(Route.PayIntro.path)
         }
@@ -199,8 +200,8 @@ fun MainScreen(
                     BottomTabBar(
                         selectedTab = selectedTab,
                         onTabSelected = { tab ->
-                            if (tab == BottomTab.QR_PAYMENT) {
-                                openQrPayment()
+                            if (tab == BottomTab.QR_PAYMENT && !viewModel.isPayEnrolled()) {
+                                navController.navigate(Route.PayIntro.path)
                             } else {
                                 selectedTab = tab
                             }
@@ -220,12 +221,9 @@ fun MainScreen(
                 )
                 BottomTab.SETTINGS -> SettingsScreen(navController, modifier)
                 BottomTab.AI -> AiScreen(navController, modifier)
-                BottomTab.QR_PAYMENT -> HomeScreen(
+                BottomTab.QR_PAYMENT -> QrPaymentScreen(
                     navController = navController,
-                    modifier = modifier,
-                    onNotificationClick = { isNotificationSheetOpen = true },
-                    onMenuClick = { isSideMenuOpen = true },
-                    notificationCount = notifications.size
+                    modifier = modifier
                 )
             }
         }

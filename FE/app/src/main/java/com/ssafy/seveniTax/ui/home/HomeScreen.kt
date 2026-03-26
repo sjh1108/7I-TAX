@@ -1,4 +1,4 @@
-package com.ssafy.seveniTax.ui.home
+﻿package com.ssafy.seveniTax.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable

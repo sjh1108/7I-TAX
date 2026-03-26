@@ -1,4 +1,4 @@
-package com.ssafy.seveniTax.ui.payment
+﻿package com.ssafy.seveniTax.ui.payment
 
 import android.Manifest
 import android.graphics.Bitmap
@@ -10,27 +10,49 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,7 +66,11 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.ui.theme.Background
+import com.ssafy.seveniTax.ui.theme.BrandPurple
+import com.ssafy.seveniTax.ui.theme.Divider
+import com.ssafy.seveniTax.ui.theme.TextPrimary
+import com.ssafy.seveniTax.ui.theme.TextSecondary
 import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
@@ -62,11 +88,18 @@ private val mockCards = listOf(
 )
 
 @Composable
-fun QrPaymentScreen(navController: NavController) {
-    var selectedTab by remember { mutableIntStateOf(0) } // 0=바코드, 1=QR스캔
+fun QrPaymentScreen(
+    navController: NavController,
+    modifier: Modifier = Modifier
+) {
+    var selectedTab by remember { mutableIntStateOf(0) }
     var selectedCard by remember { mutableIntStateOf(0) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
     var cameraPermissionGranted by remember { mutableStateOf(false) }
+    val cardListState = rememberLazyListState()
+    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
+    val selectedCardWidth = 150.dp
+    val cardSidePadding = ((screenWidth - selectedCardWidth) / 2).coerceAtLeast(16.dp)
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -74,45 +107,39 @@ fun QrPaymentScreen(navController: NavController) {
         cameraPermissionGranted = granted
     }
 
-    // QR스캔 탭 선택 시 카메라 권한 요청
     LaunchedEffect(selectedTab) {
         if (selectedTab == 1 && !cameraPermissionGranted) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
         }
     }
 
+    LaunchedEffect(selectedCard) {
+        centerSelectedCard(cardListState, selectedCard)
+    }
+
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .background(Background)
     ) {
-        // ── 상단 바 ──
-        Row(
+        Box(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+                .padding(horizontal = 4.dp)
         ) {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "뒤로가기",
-                    tint = TextPrimary
-                )
-            }
             Text(
                 text = "Pay 결제",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
+                color = TextPrimary,
+                modifier = Modifier.align(Alignment.Center)
             )
         }
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── 바코드 / QR스캔 탭 ──
         Row(
             modifier = Modifier
                 .padding(horizontal = 48.dp)
@@ -132,7 +159,6 @@ fun QrPaymentScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── 컨텐츠 영역 ──
         Box(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
@@ -144,7 +170,6 @@ fun QrPaymentScreen(navController: NavController) {
             contentAlignment = Alignment.Center
         ) {
             if (selectedTab == 0) {
-                // ── QR코드 생성 (1분마다 갱신) ──
                 val card = mockCards[selectedCard]
                 var qrTimestamp by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
                 LaunchedEffect(selectedCard) {
@@ -158,30 +183,17 @@ fun QrPaymentScreen(navController: NavController) {
                 val qrBitmap = remember(qrData) { generateQrCode(qrData) }
 
                 if (qrBitmap != null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
-                        Image(
-                            bitmap = qrBitmap.asImageBitmap(),
-                            contentDescription = "QR코드",
-                            modifier = Modifier
-                                .size(200.dp)
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Text(
-                            text = "${card.name} ••••${card.last4}",
-                            fontSize = 13.sp,
-                            color = TextSecondary,
-                            fontWeight = FontWeight.Medium
-                        )
-                    }
+                    Image(
+                        bitmap = qrBitmap.asImageBitmap(),
+                        contentDescription = "QR코드",
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(24.dp)
+                    )
                 } else {
                     Text("QR코드 생성 실패", color = TextSecondary, fontSize = 14.sp)
                 }
             } else {
-                // ── QR 스캔 (카메라) ──
                 if (scannedResult != null) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -242,29 +254,35 @@ fun QrPaymentScreen(navController: NavController) {
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // ── 카드 슬라이더 ──
         LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
+            state = cardListState,
+            contentPadding = PaddingValues(horizontal = cardSidePadding),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.Bottom,
             modifier = Modifier
+                .height(222.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 32.dp)
+                .padding(bottom = 16.dp)
         ) {
-            items(mockCards.size) { index ->
-                val card = mockCards[index]
+            items(mockCards) { card ->
+                val index = mockCards.indexOf(card)
                 val isSelected = index == selectedCard
                 val animatedWidth by animateDpAsState(
-                    targetValue = if (isSelected) 116.dp else 100.dp,
-                    animationSpec = tween(200), label = "cardWidth"
+                    targetValue = if (isSelected) 150.dp else 100.dp,
+                    animationSpec = tween(220),
+                    label = "cardWidth"
                 )
                 val animatedHeight by animateDpAsState(
-                    targetValue = if (isSelected) 160.dp else 140.dp,
-                    animationSpec = tween(200), label = "cardHeight"
+                    targetValue = if (isSelected) 210.dp else 140.dp,
+                    animationSpec = tween(220),
+                    label = "cardHeight"
                 )
                 val animatedElevation by animateDpAsState(
                     targetValue = if (isSelected) 12.dp else 0.dp,
-                    animationSpec = tween(200), label = "cardElevation"
+                    animationSpec = tween(220),
+                    label = "cardElevation"
                 )
+
                 Box(
                     modifier = Modifier
                         .width(animatedWidth)
@@ -287,7 +305,6 @@ fun QrPaymentScreen(navController: NavController) {
                 }
             }
 
-            // ── 카드 추가 버튼 ──
             item {
                 Box(
                     modifier = Modifier
@@ -308,6 +325,13 @@ fun QrPaymentScreen(navController: NavController) {
             }
         }
     }
+}
+
+private suspend fun centerSelectedCard(
+    listState: LazyListState,
+    selectedIndex: Int
+) {
+    listState.animateScrollToItem(selectedIndex)
 }
 
 @Composable
@@ -420,9 +444,9 @@ private fun generateQrCode(data: String): Bitmap? {
         for (x in 0 until width) {
             for (y in 0 until height) {
                 bitmap.setPixel(
-                    x, y,
-                    if (bitMatrix.get(x, y)) android.graphics.Color.BLACK
-                    else android.graphics.Color.WHITE
+                    x,
+                    y,
+                    if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                 )
             }
         }
