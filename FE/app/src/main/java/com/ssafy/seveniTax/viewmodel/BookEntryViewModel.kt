@@ -286,4 +286,44 @@ class BookEntryViewModel @Inject constructor(
             .map { (name, entries) -> name to entries.sumOf { it.incomeAmount } }
             .sortedByDescending { it.second }
     }
+
+    // ── 리포트용: 특정 년/월 기준 조회 ──
+
+    private fun getEntriesFor(year: Int, month: Int): List<BookEntryResponse> {
+        return _entries.value.filter {
+            try {
+                val date = java.time.LocalDate.parse(it.entryDate)
+                date.year == year && date.monthValue == month
+            } catch (_: Exception) { false }
+        }
+    }
+
+    fun getIncomeFor(year: Int, month: Int): Long = getEntriesFor(year, month).sumOf { it.incomeAmount }
+    fun getExpenseFor(year: Int, month: Int): Long = getEntriesFor(year, month).sumOf { it.expenseAmount }
+
+    fun getExpenseByCategoryFor(year: Int, month: Int): List<Pair<String, Long>> {
+        return getEntriesFor(year, month)
+            .filter { it.entryType == "EXPENSE" && it.categoryName != null }
+            .groupBy { it.categoryName!! }
+            .map { (name, entries) -> name to entries.sumOf { it.expenseAmount } }
+            .sortedByDescending { it.second }
+    }
+
+    fun getIncomeByMerchantFor(year: Int, month: Int): List<Pair<String, Long>> {
+        return getEntriesFor(year, month)
+            .filter { it.entryType == "INCOME" }
+            .groupBy { it.merchantName ?: it.description ?: "기타" }
+            .map { (name, entries) -> name to entries.sumOf { it.incomeAmount } }
+            .sortedByDescending { it.second }
+    }
+
+    fun getMonthlyTrend(year: Int, month: Int): List<Triple<String, Long, Long>> {
+        return (5 downTo 0).map { offset ->
+            var m = month - offset
+            var y = year
+            while (m <= 0) { m += 12; y-- }
+            val label = "${m}월"
+            Triple(label, getIncomeFor(y, m), getExpenseFor(y, m))
+        }
+    }
 }

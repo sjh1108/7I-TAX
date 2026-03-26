@@ -104,34 +104,48 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                 .padding(horizontal = 20.dp)
         ) {
             when (selectedTab) {
-                ReportTab.MONTHLY -> MonthlyReport(
-                    year = selectedYear,
-                    month = selectedMonth,
-                    onPrev = {
-                        if (selectedMonth == 1) { selectedMonth = 12; selectedYear-- }
-                        else selectedMonth--
-                    },
-                    onNext = {
-                        if (selectedMonth == 12) { selectedMonth = 1; selectedYear++ }
-                        else selectedMonth++
-                    },
-                    onIncomeClick = {
-                        bookEntryViewModel?.apply {
-                            selectYear(selectedYear)
-                            selectMonth(selectedMonth)
-                            selectFilter(EntryFilter.INCOME)
+                ReportTab.MONTHLY -> {
+                    val vm = bookEntryViewModel
+                    val income = vm?.getIncomeFor(selectedYear, selectedMonth) ?: 0L
+                    val expense = vm?.getExpenseFor(selectedYear, selectedMonth) ?: 0L
+                    val expenseByCategory = vm?.getExpenseByCategoryFor(selectedYear, selectedMonth) ?: emptyList()
+                    val incomeByMerchant = vm?.getIncomeByMerchantFor(selectedYear, selectedMonth) ?: emptyList()
+                    val trend = vm?.getMonthlyTrend(selectedYear, selectedMonth) ?: emptyList()
+
+                    MonthlyReport(
+                        year = selectedYear,
+                        month = selectedMonth,
+                        income = income,
+                        expense = expense,
+                        expenseByCategory = expenseByCategory,
+                        incomeByMerchant = incomeByMerchant,
+                        trend = trend,
+                        onPrev = {
+                            if (selectedMonth == 1) { selectedMonth = 12; selectedYear-- }
+                            else selectedMonth--
+                        },
+                        onNext = {
+                            if (selectedMonth == 12) { selectedMonth = 1; selectedYear++ }
+                            else selectedMonth++
+                        },
+                        onIncomeClick = {
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectMonth(selectedMonth)
+                                selectFilter(EntryFilter.INCOME)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
+                        },
+                        onExpenseClick = {
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectMonth(selectedMonth)
+                                selectFilter(EntryFilter.EXPENSE)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
-                        navController.navigate(Route.BookEntryList.path)
-                    },
-                    onExpenseClick = {
-                        bookEntryViewModel?.apply {
-                            selectYear(selectedYear)
-                            selectMonth(selectedMonth)
-                            selectFilter(EntryFilter.EXPENSE)
-                        }
-                        navController.navigate(Route.BookEntryList.path)
-                    }
-                )
+                    )
+                }
                 ReportTab.ANNUAL -> AnnualReport(
                     year = selectedYear,
                     onPrev = { selectedYear-- },
@@ -148,68 +162,87 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
 @Composable
 private fun MonthlyReport(
     year: Int, month: Int,
+    income: Long, expense: Long,
+    expenseByCategory: List<Pair<String, Long>>,
+    incomeByMerchant: List<Pair<String, Long>>,
+    trend: List<Triple<String, Long, Long>>,
     onPrev: () -> Unit, onNext: () -> Unit,
     onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {}
 ) {
+    val net = income - expense
+    val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
+
     Spacer(Modifier.height(16.dp))
     DateNavigator(text = "${year}년 ${month}월", onPrev = onPrev, onNext = onNext)
     Spacer(Modifier.height(20.dp))
 
     // 순이익 카드
-    ReportSummaryCard("월간 순이익", 9_448_100, 10_880_000, -1_431_900,
+    ReportSummaryCard("월간 순이익", net, income, -expense,
         onIncomeClick = onIncomeClick, onExpenseClick = onExpenseClick)
 
     Spacer(Modifier.height(24.dp))
 
     // 월별 추이
-    SectionTitle("월별 추이")
-    Spacer(Modifier.height(12.dp))
-    TrendLineChart()
-
-    Spacer(Modifier.height(24.dp))
+    if (trend.isNotEmpty()) {
+        SectionTitle("월별 추이")
+        Spacer(Modifier.height(12.dp))
+        TrendLineChart(trend)
+        Spacer(Modifier.height(24.dp))
+    }
 
     // 계정과목별 비용
-    SectionTitle("계정과목별 비용")
-    Spacer(Modifier.height(12.dp))
-    DonutChart()
-
-    Spacer(Modifier.height(24.dp))
+    if (expenseByCategory.isNotEmpty()) {
+        SectionTitle("계정과목별 비용")
+        Spacer(Modifier.height(12.dp))
+        DonutChart(expenseByCategory)
+        Spacer(Modifier.height(24.dp))
+    }
 
     // 거래처별 수입
-    SectionTitle("거래처별 수입")
-    Spacer(Modifier.height(12.dp))
-    IncomeBarChart()
+    if (incomeByMerchant.isNotEmpty()) {
+        SectionTitle("거래처별 수입")
+        Spacer(Modifier.height(12.dp))
+        IncomeBarChart(incomeByMerchant)
+    }
 
     Spacer(Modifier.height(24.dp))
 
     // 세금 추정
+    val vatSales = (income * 0.1).toLong()
+    val vatPurchase = (expense * 0.1).toLong()
+    val vatPayable = vatSales - vatPurchase
+    val taxableIncome = income - expense
+    val incomeTax = (taxableIncome * 0.15).toLong()
+    val localTax = (incomeTax * 0.1).toLong()
+    val totalTax = vatPayable + incomeTax + localTax
+
     SectionTitle("월간 세금 추정")
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("부가가치세", listOf(
-        "매출세액" to "988,000원",
-        "매입세액" to "-130,173원",
-        "예상 납부액" to "857,827원"
+        "매출세액" to "${fmt.format(vatSales)}원",
+        "매입세액" to "-${fmt.format(vatPurchase)}원",
+        "예상 납부액" to "${fmt.format(vatPayable)}원"
     ))
 
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("종합소득세", listOf(
-        "월간 수입" to "10,880,000원",
-        "월간 경비" to "-1,431,900원",
-        "월간 예상 소득세" to "1,417,215원"
+        "월간 수입" to "${fmt.format(income)}원",
+        "월간 경비" to "-${fmt.format(expense)}원",
+        "월간 예상 소득세" to "${fmt.format(incomeTax)}원"
     ))
 
     Spacer(Modifier.height(12.dp))
 
     TaxEstimateItem("지방소득세", listOf(
-        "금액" to "141,722원",
+        "금액" to "${fmt.format(localTax)}원",
         "비고" to "종합소득세의 10%"
     ))
 
     Spacer(Modifier.height(12.dp))
 
-    TotalTaxBox("월간 총 예상 세금", "2,416,764원")
+    TotalTaxBox("월간 총 예상 세금", "${fmt.format(totalTax)}원")
 }
 
 // ─── 연간 리포트 ────────────────────────────────────────
@@ -464,11 +497,11 @@ private fun DeductionSummaryCard() {
 // ─── 월별 추이 꺾은선 그래프 ──────────────────────────────
 
 @Composable
-private fun TrendLineChart() {
-    val incomeData = listOf(7.2f, 8.5f, 6.8f, 10.2f, 9.0f, 10.88f)
-    val expenseData = listOf(1.2f, 1.1f, 1.5f, 1.0f, 1.3f, 1.43f)
-    val months = listOf("10월", "11월", "12월", "1월", "2월", "3월")
-    val maxVal = 12f
+private fun TrendLineChart(trend: List<Triple<String, Long, Long>> = emptyList()) {
+    val incomeData = trend.map { it.second / 10000f }
+    val expenseData = trend.map { it.third / 10000f }
+    val months = trend.map { it.first }
+    val maxVal = (incomeData + expenseData).maxOrNull()?.times(1.2f) ?: 1f
     val purple = Color(0xFF5655B9)
     val pink = Color(0xFFFF9DAE)
 
@@ -561,14 +594,16 @@ private fun TrendLineChart() {
 // ─── 계정과목별 비용 도넛 차트 ────────────────────────────
 
 @Composable
-private fun DonutChart() {
-    val segments = listOf(
-        Triple("임차료", 52f, Color(0xFFE8475A)),
-        Triple("지급수수료", 20f, Color(0xFF5655B9)),
-        Triple("소모품비", 13f, Color(0xFFF5A623)),
-        Triple("교육훈련비", 10f, Color(0xFF3DBDA2)),
-        Triple("통신비", 8f, Color(0xFF4A90D9)),
+private fun DonutChart(categoryData: List<Pair<String, Long>> = emptyList()) {
+    val total = categoryData.sumOf { it.second }.coerceAtLeast(1)
+    val donutColors = listOf(
+        Color(0xFFE8475A), Color(0xFF5655B9), Color(0xFFF5A623),
+        Color(0xFF3DBDA2), Color(0xFF4A90D9), Color(0xFFD4A0E8)
     )
+    val segments = categoryData.mapIndexed { i, (name, amount) ->
+        Triple(name, amount.toFloat() / total * 100f, donutColors[i % donutColors.size])
+    }
+    val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -609,7 +644,7 @@ private fun DonutChart() {
                 }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text("총 비용", fontSize = 11.sp, color = TextSecondary)
-                    Text("739,500원", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text("${fmt.format(total)}원", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                 }
             }
 
@@ -639,13 +674,17 @@ private fun DonutChart() {
 // ─── 거래처별 수입 막대 그래프 ────────────────────────────
 
 @Composable
-private fun IncomeBarChart() {
-    val bars = listOf(
-        Triple("(주)스마트랩", 550f, 51),
-        Triple("프리워크", 338f, 31),
-        Triple("기타", 200f, 18)
-    )
-    val maxVal = 600f
+private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList()) {
+    val totalIncome = merchantData.sumOf { it.second }.coerceAtLeast(1)
+    val topItems = if (merchantData.size > 3) {
+        val top2 = merchantData.take(2)
+        val rest = merchantData.drop(2).sumOf { it.second }
+        top2 + listOf("기타" to rest)
+    } else merchantData
+    val bars = topItems.map { (name, amount) ->
+        Triple(name, amount / 10000f, (amount * 100 / totalIncome).toInt())
+    }
+    val maxVal = (bars.maxOfOrNull { it.second } ?: 1f) * 1.2f
     val colors = listOf(Color(0xFF281C9D), Color(0xFF5655B9), Color(0xFFA8A3D7))
 
     Card(
