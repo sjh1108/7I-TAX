@@ -399,7 +399,31 @@ private fun AnnualReport(
 
     Spacer(Modifier.height(24.dp))
 
-    // 5. 연간 세금 예상액
+    // 5. 월별 추이 (12개월)
+    if (trend.isNotEmpty()) {
+        SectionTitle("월별 추이")
+        Spacer(Modifier.height(12.dp))
+        TrendLineChart(trend, onDotClick = onDotClick)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 6. 연간 계정과목별 비용
+    if (expenseByCategory.isNotEmpty()) {
+        SectionTitle("연간 계정과목별 비용")
+        Spacer(Modifier.height(12.dp))
+        DonutChart(expenseByCategory, onCategoryClick = onCategoryClick)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 7. 거래처별 수입
+    if (incomeByMerchant.isNotEmpty()) {
+        SectionTitle("거래처별 수입")
+        Spacer(Modifier.height(12.dp))
+        IncomeBarChart(incomeByMerchant, onMerchantClick = onMerchantClick)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 8. 연간 세금 예상액
     val vatSales = (income * 0.1).toLong()
     val vatPurchase = (expense * 0.1).toLong()
     val vatPayable = vatSales - vatPurchase
@@ -451,32 +475,6 @@ private fun AnnualReport(
     SectionTitle("올해 공제 요약")
     Spacer(Modifier.height(12.dp))
     DeductionSummaryCard()
-
-    Spacer(Modifier.height(24.dp))
-
-    // 6. 월별 추이 (12개월)
-    if (trend.isNotEmpty()) {
-        SectionTitle("월별 추이")
-        Spacer(Modifier.height(12.dp))
-        TrendLineChart(trend, onDotClick = onDotClick)
-        Spacer(Modifier.height(24.dp))
-    }
-
-    // 7. 연간 계정과목별 비용
-    if (expenseByCategory.isNotEmpty()) {
-        SectionTitle("연간 계정과목별 비용")
-        Spacer(Modifier.height(12.dp))
-        DonutChart(expenseByCategory, onCategoryClick = onCategoryClick)
-        Spacer(Modifier.height(24.dp))
-    }
-
-    // 8. 거래처별 수입
-    if (incomeByMerchant.isNotEmpty()) {
-        SectionTitle("거래처별 수입")
-        Spacer(Modifier.height(12.dp))
-        IncomeBarChart(incomeByMerchant, onMerchantClick = onMerchantClick)
-        Spacer(Modifier.height(24.dp))
-    }
 
 }
 
