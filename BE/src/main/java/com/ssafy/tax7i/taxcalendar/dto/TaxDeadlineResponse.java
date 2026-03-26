@@ -4,6 +4,6 @@ public record TaxDeadlineResponse(
         String taxName,
         String description,
         String deadline,
-        long dDay
+        int dDay
 ) {
 }

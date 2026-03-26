@@ -143,6 +143,78 @@ class CardServiceTest {
         assertThat(card.isDeleted()).isTrue();
     }
 
+    // ───────────── activateCard ─────────────
+
+    @Test
+    void activateCard_성공() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user);
+        // card.status is INACTIVE by default (from builder)
+
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
+
+        CardActivateRequest request = new CardActivateRequest("1234");
+        CardActivateResponse response = cardService.activateCard(1L, 1L, request);
+
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.status()).isEqualTo("ACTIVE");
+        assertThat(card.getStatus()).isEqualTo(com.ssafy.tax7i.card.entity.CardStatus.ACTIVE);
+    }
+
+    @Test
+    void activateCard_이미활성_예외() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user);
+        card.activate(); // force ACTIVE status
+
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
+
+        CardActivateRequest request = new CardActivateRequest("1234");
+        assertThatThrownBy(() -> cardService.activateCard(1L, 1L, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.CONFLICT));
+    }
+
+    @Test
+    void activateCard_소유권불일치_예외() {
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(99L, 1L)).willReturn(Optional.empty());
+
+        CardActivateRequest request = new CardActivateRequest("1234");
+        assertThatThrownBy(() -> cardService.activateCard(1L, 99L, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.CARD_NOT_FOUND));
+    }
+
+    // ───────────── setCardPurpose ─────────────
+
+    @Test
+    void setCardPurpose_성공() {
+        User user = createUser(1L, "user-key");
+        Card card = createCard(1L, user);
+
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(1L, 1L)).willReturn(Optional.of(card));
+
+        CardPurposeRequest request = new CardPurposeRequest("BUSINESS");
+        CardPurposeResponse response = cardService.setCardPurpose(1L, 1L, request);
+
+        assertThat(response.id()).isEqualTo(1L);
+        assertThat(response.defaultPurpose()).isEqualTo("BUSINESS");
+        assertThat(card.getDefaultPurpose()).isEqualTo("BUSINESS");
+    }
+
+    @Test
+    void setCardPurpose_소유권불일치_예외() {
+        given(cardRepository.findByIdAndUser_IdAndDeletedFalse(99L, 1L)).willReturn(Optional.empty());
+
+        CardPurposeRequest request = new CardPurposeRequest("BUSINESS");
+        assertThatThrownBy(() -> cardService.setCardPurpose(1L, 99L, request))
+                .isInstanceOf(BusinessException.class)
+                .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
+                        .isEqualTo(ErrorCode.CARD_NOT_FOUND));
+    }
+
     // ───────────── helpers ─────────────
 
     private User createUser(Long id, String userKey) {

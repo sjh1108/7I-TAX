@@ -4,9 +4,11 @@ import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyCreditCardClient;
 import com.ssafy.tax7i.banking.client.dto.*;
+import com.ssafy.tax7i.bookentry.service.BookEntryService;
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
+import com.ssafy.tax7i.classification.service.TaxClassificationService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -20,6 +22,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -45,11 +48,11 @@ class PaymentServiceTest {
     @Mock private CardRepository cardRepository;
     @Mock private UserRepository userRepository;
     @Mock private SsafyCreditCardClient ssafyCreditCardClient;
+    @Mock private BookEntryService bookEntryService;
+    @Mock private TaxClassificationService taxClassificationService;
     @Mock private RedisTemplate<String, String> redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
-    @Mock private com.ssafy.tax7i.bookentry.service.BookEntryService bookEntryService;
-    @Mock private com.ssafy.tax7i.classification.service.TaxClassificationService taxClassificationService;
-    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
+    @Mock private ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private PaymentService paymentService;
