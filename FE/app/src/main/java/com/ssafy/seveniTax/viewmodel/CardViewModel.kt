@@ -1,5 +1,6 @@
 package com.ssafy.seveniTax.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ssafy.seveniTax.data.model.card.CardCreateRequest
@@ -58,6 +59,10 @@ class CardViewModel @Inject constructor(
 ) : ViewModel() {
 
 
+    companion object {
+        private const val TAG = "CardVM"
+    }
+
     private val _uiState = MutableStateFlow(CardUiState())
     val uiState: StateFlow<CardUiState> = _uiState.asStateFlow()
 
@@ -66,9 +71,11 @@ class CardViewModel @Inject constructor(
     }
 
     fun loadCards() = viewModelScope.launch {
+        Log.d(TAG, "▶ loadCards()")
         _uiState.update { it.copy(isLoading = true) }
         try {
             val response = cardRepository.getCards()
+            Log.d(TAG, "  loadCards 응답: status=${response.status}, cards=${response.data?.size}")
             if (response.status == "success" && response.data != null) {
                 _uiState.update {
                     it.copy(
@@ -85,41 +92,50 @@ class CardViewModel @Inject constructor(
     }
 
     fun loadAccounts() = viewModelScope.launch {
+        Log.d(TAG, "▶ loadAccounts()")
         _uiState.update { it.copy(isLoading = true) }
         try {
             val response = cardRepository.getMyAccounts()
+            Log.d(TAG, "  loadAccounts 응답: status=${response.status}, accounts=${response.data?.size}")
             if (response.status == "success" && response.data != null) {
                 if (response.data.isEmpty()) {
-                    // 계좌 없으면 자동 생성
+                    Log.d(TAG, "  계좌 없음 → 자동 생성 시도")
                     try {
                         payRepository.createAccount(AccountCreateRequest(accountType = "PERSONAL", bankCode = "001"))
-                        // 생성 후 다시 조회
                         val retry = cardRepository.getMyAccounts()
+                        Log.d(TAG, "  계좌 생성 후 재조회: ${retry.data?.size}")
                         if (retry.status == "success" && retry.data != null) {
                             _uiState.update { it.copy(accounts = retry.data, isLoading = false) }
                         }
-                    } catch (_: Exception) {
+                    } catch (e: Exception) {
+                        Log.e(TAG, "  계좌 자동 생성 실패: ${e.message}", e)
                         _uiState.update { it.copy(isLoading = false, errorMessage = "계좌 자동 생성에 실패했습니다") }
                     }
                 } else {
                     _uiState.update { it.copy(accounts = response.data, isLoading = false) }
                 }
             } else {
+                Log.e(TAG, "  loadAccounts 실패: ${response.message}")
                 _uiState.update { it.copy(isLoading = false) }
             }
         } catch (e: Exception) {
+            Log.e(TAG, "  loadAccounts 에러: ${e.message}", e)
             _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "계좌 조회 실패") }
         }
     }
 
     fun loadProducts() = viewModelScope.launch {
+        Log.d(TAG, "▶ loadProducts()")
         try {
             val response = cardRepository.getCardProducts()
+            Log.d(TAG, "  loadProducts 응답: status=${response.status}, products=${response.data?.size}")
             if (response.status == "success" && response.data != null) {
                 _uiState.update { it.copy(products = response.data) }
             } else {
+                Log.e(TAG, "  loadProducts 실패: ${response.message}")
             }
         } catch (e: Exception) {
+            Log.e(TAG, "  loadProducts 에러: ${e.message}", e)
         }
     }
 
@@ -145,6 +161,7 @@ class CardViewModel @Inject constructor(
 
     fun completeRegistration() = viewModelScope.launch {
         val state = _uiState.value
+        Log.d(TAG, "▶ completeRegistration() type=${state.selectedCardType}, account=${state.selectedAccountNo}, product=${state.selectedProductNo}")
         _uiState.update { it.copy(isLoading = true) }
         try {
             val request = CardCreateRequest(
@@ -152,10 +169,12 @@ class CardViewModel @Inject constructor(
                 cardType = if (state.selectedCardType == "business") "BUSINESS" else "PERSONAL",
                 cardUniqueNo = state.selectedProductNo,
                 withdrawalAccountNo = state.selectedAccountNo,
-                withdrawalDate = state.expiry.ifEmpty { "15" },
+                withdrawalDate = "4",
                 otpToken = "test-token" // TODO: OTP 연동 시 실제 토큰으로 교체
             )
+            Log.d(TAG, "  createCard 요청: $request")
             val response = cardRepository.createCard(request)
+            Log.d(TAG, "  createCard 응답: status=${response.status}, data=${response.data}")
             if (response.status == "success" && response.data != null) {
                 val newCard = RegisteredCard.from(response.data)
                 _uiState.update {
@@ -167,6 +186,7 @@ class CardViewModel @Inject constructor(
                 }
                 loadCards()
             } else {
+                Log.e(TAG, "  createCard 실패: ${response.message}")
                 _uiState.update {
                     it.copy(
                         isLoading = false,
@@ -175,6 +195,7 @@ class CardViewModel @Inject constructor(
                 }
             }
         } catch (e: Exception) {
+            Log.e(TAG, "  createCard 에러: ${e.message}", e)
             _uiState.update {
                 it.copy(
                     isLoading = false,

@@ -632,11 +632,28 @@ private fun TaxBracketCard(income: Long = 0, expense: Long = 0) {
                 Text("${currentRate}% 구간", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrandPurple)
             }
             Spacer(Modifier.height(12.dp))
-            // 프로그레스 바 (최대 1억 5천)
-            Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
+            // 프로그레스 바 (최대 1억 5천) + 세율 구간 표기
+            Box(Modifier.fillMaxWidth().height(24.dp)) {
+                // 바 배경
+                Box(Modifier.fillMaxWidth().height(8.dp).align(Alignment.BottomStart).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
+                }
+                // 세율 구간 마커
+                brackets.forEach { bracket ->
+                    val pos = (bracket.limit.toFloat() / maxLimit).coerceIn(0f, 1f)
+                    Text(
+                        text = "${bracket.rate}%",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (currentRate == bracket.rate) BrandPurple else TextSecondary,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth(pos)
+                            .wrapContentWidth(Alignment.End)
+                    )
+                }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("0원", fontSize = 10.sp, color = TextSecondary)
                 Text("1억 5,000만원", fontSize = 10.sp, color = TextSecondary)
