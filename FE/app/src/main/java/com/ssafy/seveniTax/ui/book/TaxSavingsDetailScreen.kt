@@ -58,7 +58,7 @@ fun TaxSavingsDetailScreen(navController: NavController) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, "뒤로가기", tint = TextPrimary)
             }
             Spacer(Modifier.weight(1f))
-            Text("절세 상세", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Text("공제 한도", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             Spacer(Modifier.weight(1f))
             Spacer(Modifier.size(48.dp))
         }
