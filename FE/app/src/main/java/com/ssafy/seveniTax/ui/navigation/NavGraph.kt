@@ -2,6 +2,8 @@ package com.ssafy.seveniTax.ui.navigation
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -324,8 +326,34 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
 
         composable(Route.UnclassifiedList.path) { backStackEntry ->
             val aiDone = backStackEntry.savedStateHandle.get<Boolean>("aiRecommended") ?: false
+            val entries by bookEntryViewModel.entries.collectAsState()
+            val unclassified = entries.filter { !it.confirmed }.map { entry ->
+                val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+                val amount = when (entry.entryType) {
+                    "INCOME" -> entry.incomeAmount
+                    "EXPENSE" -> entry.expenseAmount
+                    "ASSET" -> entry.fixedAssetAmount
+                    else -> 0L
+                }
+                val dateTime = try {
+                    val dt = entry.createdAt.take(16).replace("T", " ")
+                    dt
+                } catch (_: Exception) { entry.createdAt }
+                com.ssafy.seveniTax.ui.classification.UnclassifiedTransaction(
+                    id = entry.id.toString(),
+                    merchantName = entry.merchantName ?: entry.description ?: "거래",
+                    amount = "${fmt.format(amount)}원",
+                    dateTime = dateTime,
+                    aiCategory = entry.categoryName ?: "미분류"
+                )
+            }
+
+            // 서버에서 장부 데이터 로드
+            LaunchedEffect(Unit) { bookEntryViewModel.loadEntries() }
+
             UnclassifiedListScreen(
                 navController = navController,
+                transactions = unclassified,
                 aiRecommendedInitial = aiDone,
                 onBulkConfirm = {
                     navController.navigate(Route.ClassificationComplete.create())
