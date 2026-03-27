@@ -31,6 +31,7 @@ object ApiClient {
             .addInterceptor { chain ->
                 val originalRequest = chain.request()
                 val requestBuilder = originalRequest.newBuilder()
+                    .header("Content-Type", "application/json; charset=UTF-8")
                 val isPublicAuthRequest = originalRequest.url.encodedPath in publicAuthPaths
 
                 if (!isPublicAuthRequest) {

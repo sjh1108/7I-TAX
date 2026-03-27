@@ -14,6 +14,13 @@ interface BookEntryApi {
     @GET("book-entries")
     suspend fun getEntries(
         @Query("confirmed") confirmed: Boolean? = null,
+        @Query("entryType") entryType: String? = null,
+        @Query("startDate") startDate: String? = null,
+        @Query("endDate") endDate: String? = null,
+        @Query("categoryCode") categoryCode: String? = null,
+        @Query("keyword") keyword: String? = null,
+        @Query("hasEvidence") hasEvidence: Boolean? = null,
+        @Query("unclassified") unclassified: Boolean? = null,
         @Query("page") page: Int = 0,
         @Query("size") size: Int = 20,
         @Query("sort") sort: String? = null

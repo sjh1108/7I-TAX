@@ -27,6 +27,8 @@ sealed class Route(val path: String) {
     object CardInput : Route("card_input/{cardType}") {
         fun create(cardType: String) = "card_input/$cardType"
     }
+    object CardAccountSelect : Route("card_account_select")
+    object CardProductSelect : Route("card_product_select")
     object CardBusinessInfo : Route("card_business_info")
     object CardOwnerVerify : Route("card_owner_verify")
     object CardSms : Route("card_sms")

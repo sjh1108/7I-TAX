@@ -11,7 +11,18 @@ class BookEntryRepositoryImpl @Inject constructor(
     private val api: BookEntryApi
 ) : BookEntryRepository {
     override suspend fun createEntry(body: BookEntryRequest) = api.createEntry(body)
-    override suspend fun getEntries(confirmed: Boolean?, page: Int, size: Int) = api.getEntries(confirmed, page, size)
+    override suspend fun getEntries(
+        confirmed: Boolean?,
+        entryType: String?,
+        startDate: String?,
+        endDate: String?,
+        categoryCode: String?,
+        keyword: String?,
+        hasEvidence: Boolean?,
+        unclassified: Boolean?,
+        page: Int,
+        size: Int
+    ) = api.getEntries(confirmed, entryType, startDate, endDate, categoryCode, keyword, hasEvidence, unclassified, page, size)
     override suspend fun getEntry(entryId: Long) = api.getEntry(entryId)
     override suspend fun getUnconfirmedCount() = api.getUnconfirmedCount()
     override suspend fun confirmEntry(entryId: Long) = api.confirmEntry(entryId)

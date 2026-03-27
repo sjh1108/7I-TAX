@@ -7,7 +7,18 @@ import retrofit2.Response
 
 interface BookEntryRepository {
     suspend fun createEntry(body: BookEntryRequest): Response<ApiResponse<BookEntryResponse>>
-    suspend fun getEntries(confirmed: Boolean?, page: Int, size: Int): Response<ApiResponse<PageResponse<BookEntryResponse>>>
+    suspend fun getEntries(
+        confirmed: Boolean? = null,
+        entryType: String? = null,
+        startDate: String? = null,
+        endDate: String? = null,
+        categoryCode: String? = null,
+        keyword: String? = null,
+        hasEvidence: Boolean? = null,
+        unclassified: Boolean? = null,
+        page: Int = 0,
+        size: Int = 20
+    ): Response<ApiResponse<PageResponse<BookEntryResponse>>>
     suspend fun getEntry(entryId: Long): Response<ApiResponse<BookEntryResponse>>
     suspend fun getUnconfirmedCount(): Response<ApiResponse<Int>>
     suspend fun confirmEntry(entryId: Long): Response<ApiResponse<BookEntryResponse>>

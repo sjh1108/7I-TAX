@@ -17,7 +17,9 @@ import com.ssafy.seveniTax.ui.auth.PinLoginScreen
 import com.ssafy.seveniTax.ui.auth.PinSetupScreen
 import com.ssafy.seveniTax.ui.auth.SmsAuthScreen
 import com.ssafy.seveniTax.ui.auth.SplashScreen
+import com.ssafy.seveniTax.ui.card.CardAccountSelectScreen
 import com.ssafy.seveniTax.ui.card.CardBusinessInfoScreen
+import com.ssafy.seveniTax.ui.card.CardProductSelectScreen
 import com.ssafy.seveniTax.ui.card.CardChangeScreen
 import com.ssafy.seveniTax.ui.card.CardCompleteScreen
 import com.ssafy.seveniTax.ui.card.CardDetailScreen
@@ -175,7 +177,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         }
 
         composable(Route.QrPayment.path) {
-            QrPaymentScreen(navController)
+            QrPaymentScreen(navController, cardViewModel)
         }
 
         composable(Route.PaymentProcessing.path) {
@@ -200,6 +202,14 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         ) { backStackEntry ->
             val cardType = backStackEntry.arguments?.getString("cardType") ?: "personal"
             CardInputScreen(navController, cardViewModel, cardType)
+        }
+
+        composable(Route.CardAccountSelect.path) {
+            CardAccountSelectScreen(navController, cardViewModel)
+        }
+
+        composable(Route.CardProductSelect.path) {
+            CardProductSelectScreen(navController, cardViewModel)
         }
 
         composable(Route.CardBusinessInfo.path) {
@@ -433,3 +443,4 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         }
     }
 }
+
