@@ -174,6 +174,7 @@ fun CategorySelectScreen(
         Box(
             modifier = Modifier
                 .fillMaxWidth()
+                .navigationBarsPadding()
                 .padding(horizontal = 28.dp, vertical = 20.dp)
         ) {
             Button(
