@@ -65,6 +65,10 @@ ai:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
+fcm:
+  enabled: ${FCM_ENABLED:false}
+  service-account-path: ${FCM_SERVICE_ACCOUNT_PATH:}
+
 solapi:
   api-key: ${SOLAPI_API_KEY}
   api-secret: ${SOLAPI_API_SECRET}
