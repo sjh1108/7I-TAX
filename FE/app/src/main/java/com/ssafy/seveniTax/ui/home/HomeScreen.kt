@@ -109,9 +109,6 @@ fun HomeScreen(
         },
         HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
             it.navigate(Route.QrPayment.path)
-        },
-        HomeActionItem("송금", "home/icon_transfer.svg") {
-            it.navigate(Route.ServerTest.path)
         }
     )
 

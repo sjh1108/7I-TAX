@@ -42,9 +42,7 @@ fun BottomTabBar(
         horizontalArrangement = Arrangement.spacedBy(4.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        BottomTab.entries
-            .filter { it != BottomTab.DASHBOARD }
-            .forEach { tab ->
+        BottomTab.entries.forEach { tab ->
             TabItem(
                 tab = tab,
                 isSelected = tab == selectedTab,
