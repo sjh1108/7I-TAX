@@ -19,7 +19,7 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class TaxCalendarScheduler {
 
-    private static final Set<Long> ALERT_DAYS = Set.of(0L, 3L, 7L);
+    private static final Set<Integer> ALERT_DAYS = Set.of(0, 3, 7);
 
     private final TaxCalendarService taxCalendarService;
     private final FcmService fcmService;
