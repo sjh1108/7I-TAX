@@ -1,5 +1,6 @@
 package com.ssafy.seveniTax.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ssafy.seveniTax.data.model.card.CardCreateRequest
@@ -67,9 +68,11 @@ class CardViewModel @Inject constructor(
     }
 
     fun loadCards() = viewModelScope.launch {
+        Log.d("CardVM", "▶ loadCards() 호출")
         _uiState.update { it.copy(isLoading = true) }
         try {
             val response = cardRepository.getCards()
+            Log.d("CardVM", "  loadCards 응답: status=${response.status}, data=${response.data?.size}, message=${response.message}")
             if (response.status == "success" && response.data != null) {
                 _uiState.update {
                     it.copy(
@@ -78,9 +81,11 @@ class CardViewModel @Inject constructor(
                     )
                 }
             } else {
+                Log.e("CardVM", "  loadCards 실패: ${response.message}")
                 _uiState.update { it.copy(isLoading = false, errorMessage = response.message ?: "카드 목록 조회 실패") }
             }
         } catch (e: Exception) {
+            Log.e("CardVM", "  loadCards 에러: ${e.message}", e)
             _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "네트워크 오류") }
         }
     }
