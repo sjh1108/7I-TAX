@@ -87,6 +87,8 @@ fun QrPaymentScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedCard by remember { mutableIntStateOf(0) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
+    var showPayConfirmDialog by remember { mutableStateOf(false) }
+    var scannedToken by remember { mutableStateOf("") }
     var showResultDialog by remember { mutableStateOf(false) }
     var dialogTitle by remember { mutableStateOf("") }
     var dialogMessage by remember { mutableStateOf("") }
@@ -111,6 +113,38 @@ fun QrPaymentScreen(
             showResultDialog = true
             paymentViewModel.clearError()
         }
+    }
+
+    // 결제 확인 다이얼로그
+    if (showPayConfirmDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = { showPayConfirmDialog = false },
+            title = { Text("결제 확인", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("아래 결제를 진행하시겠습니까?", fontSize = 14.sp, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text("가맹점: ${paymentState.payerName}", fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Text("금액: ${java.text.NumberFormat.getNumberInstance().format(paymentState.amount)}원", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = BrandPurple)
+                }
+            },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showPayConfirmDialog = false
+                    paymentViewModel.confirmQrPayment(scannedToken)
+                }) {
+                    Text("결제하기", color = BrandPurple, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showPayConfirmDialog = false
+                    scannedResult = null
+                }) {
+                    Text("취소", color = TextSecondary)
+                }
+            }
+        )
     }
 
     if (showResultDialog) {
@@ -280,33 +314,59 @@ fun QrPaymentScreen(
                         verticalArrangement = Arrangement.Center,
                         modifier = Modifier.padding(24.dp)
                     ) {
-                        Text(
-                            text = "스캔 완료",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = scannedResult!!,
-                            fontSize = 14.sp,
-                            color = TextSecondary
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Box(
-                            modifier = Modifier
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(BrandPurple)
-                                .clickable { scannedResult = null }
-                                .padding(horizontal = 24.dp, vertical = 10.dp)
-                        ) {
-                            Text("다시 스캔", color = Color.White, fontSize = 14.sp)
+                        if (paymentState.isLoading) {
+                            androidx.compose.material3.CircularProgressIndicator(color = BrandPurple)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text("결제 정보 조회 중...", fontSize = 14.sp, color = TextSecondary)
+                        } else if (paymentState.amount > 0) {
+                            Text("결제 정보", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            Spacer(modifier = Modifier.height(12.dp))
+                            Text(paymentState.payerName, fontSize = 14.sp, color = TextSecondary)
+                            Text(
+                                "${java.text.NumberFormat.getNumberInstance().format(paymentState.amount)}원",
+                                fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(BrandPurple)
+                                    .clickable { showPayConfirmDialog = true }
+                                    .padding(vertical = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text("결제하기", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                "다시 스캔",
+                                fontSize = 13.sp, color = TextSecondary,
+                                modifier = Modifier.clickable { scannedResult = null; paymentViewModel.resetPayment() }
+                            )
+                        } else {
+                            Text("스캔 완료", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(scannedResult!!, fontSize = 14.sp, color = TextSecondary)
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(BrandPurple)
+                                    .clickable { scannedResult = null }
+                                    .padding(horizontal = 24.dp, vertical = 10.dp)
+                            ) {
+                                Text("다시 스캔", color = Color.White, fontSize = 14.sp)
+                            }
                         }
                     }
                 } else if (cameraPermissionGranted) {
                     QrScannerView(
                         onQrScanned = { result ->
                             scannedResult = result
+                            scannedToken = result
+                            // 스캔한 토큰으로 결제 정보 조회
+                            paymentViewModel.lookupQrPayment(result)
                         }
                     )
                 } else {

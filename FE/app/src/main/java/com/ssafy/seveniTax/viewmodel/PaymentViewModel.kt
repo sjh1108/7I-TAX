@@ -95,6 +95,57 @@ class PaymentViewModel @Inject constructor(
         }
     }
 
+    fun lookupQrPayment(token: String) = viewModelScope.launch {
+        Log.d(TAG, "▶ lookupQrPayment() token=$token")
+        _uiState.update { it.copy(isLoading = true, errorMessage = "") }
+        try {
+            val response = paymentApi.getQrPaymentInfo(token)
+            val body = response.body()
+            Log.d(TAG, "  조회 응답: ${body?.data}")
+            if (response.isSuccessful && body?.status == "success" && body.data != null) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        qrToken = token,
+                        amount = body.data.amount,
+                        payerName = body.data.merchantName
+                    )
+                }
+            } else {
+                Log.e(TAG, "  조회 실패: ${body?.message}")
+                _uiState.update { it.copy(isLoading = false, errorMessage = body?.message ?: "결제 정보 조회 실패") }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "  조회 에러: ${e.message}", e)
+            _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "네트워크 오류") }
+        }
+    }
+
+    fun confirmQrPayment(token: String) = viewModelScope.launch {
+        Log.d(TAG, "▶ confirmQrPayment() token=$token")
+        _uiState.update { it.copy(isLoading = true, errorMessage = "") }
+        try {
+            val response = paymentApi.confirmQrPayment(token)
+            val body = response.body()
+            Log.d(TAG, "  결제 응답: ${body?.data}")
+            if (response.isSuccessful && body?.status == "success" && body.data != null) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        paymentComplete = true,
+                        paymentStatus = body.data.status
+                    )
+                }
+            } else {
+                Log.e(TAG, "  결제 실패: ${body?.message}")
+                _uiState.update { it.copy(isLoading = false, errorMessage = body?.message ?: "결제 승인 실패") }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "  결제 에러: ${e.message}", e)
+            _uiState.update { it.copy(isLoading = false, errorMessage = e.message ?: "네트워크 오류") }
+        }
+    }
+
     fun resetPayment() {
         _uiState.update { PaymentUiState() }
     }
