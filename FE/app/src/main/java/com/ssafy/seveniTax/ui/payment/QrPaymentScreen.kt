@@ -10,22 +10,44 @@ import androidx.camera.core.ImageAnalysis
 import androidx.camera.core.Preview
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
-import androidx.compose.animation.core.animateDpAsState
-import androidx.compose.animation.core.tween
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -38,6 +60,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.navigation.NavController
 import com.google.mlkit.vision.barcode.BarcodeScanning
@@ -46,6 +69,7 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.CardViewModel
 import com.ssafy.seveniTax.viewmodel.PaymentViewModel
 import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
@@ -53,12 +77,14 @@ import java.util.concurrent.Executors
 @Composable
 fun QrPaymentScreen(
     navController: NavController,
-    cardViewModel: com.ssafy.seveniTax.viewmodel.CardViewModel,
-    paymentViewModel: PaymentViewModel
+    cardViewModel: CardViewModel = hiltViewModel(),
+    paymentViewModel: PaymentViewModel,
+    showBackButton: Boolean = true,
+    modifier: Modifier = Modifier
 ) {
     val cardUiState by cardViewModel.uiState.collectAsState()
     val paymentState by paymentViewModel.uiState.collectAsState()
-    var selectedTab by remember { mutableIntStateOf(0) } // 0=바코드, 1=QR스캔
+    var selectedTab by remember { mutableIntStateOf(0) }
     var selectedCard by remember { mutableIntStateOf(0) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
     var cameraPermissionGranted by remember { mutableStateOf(false) }
@@ -69,7 +95,6 @@ fun QrPaymentScreen(
         cameraPermissionGranted = granted
     }
 
-    // QR스캔 탭 선택 시 카메라 권한 요청
     LaunchedEffect(selectedTab) {
         if (selectedTab == 1 && !cameraPermissionGranted) {
             permissionLauncher.launch(Manifest.permission.CAMERA)
@@ -77,12 +102,11 @@ fun QrPaymentScreen(
     }
 
     Column(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .background(Background)
     ) {
-        // ── 상단 바 ──
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -90,12 +114,14 @@ fun QrPaymentScreen(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = { navController.popBackStack() }) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = "뒤로가기",
-                    tint = TextPrimary
-                )
+            if (showBackButton) {
+                IconButton(onClick = { navController.popBackStack() }) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "뒤로가기",
+                        tint = TextPrimary
+                    )
+                }
             }
             Text(
                 text = "Pay 결제",
@@ -107,7 +133,6 @@ fun QrPaymentScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // ── 바코드 / QR스캔 탭 ──
         Row(
             modifier = Modifier
                 .padding(horizontal = 48.dp)
@@ -127,7 +152,6 @@ fun QrPaymentScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // ── 컨텐츠 영역 ──
         Box(
             modifier = Modifier
                 .padding(horizontal = 24.dp)
@@ -139,7 +163,6 @@ fun QrPaymentScreen(
             contentAlignment = Alignment.Center
         ) {
             if (selectedTab == 0) {
-                // ── QR코드 생성 (1분마다 갱신) ──
                 val card = cardUiState.cards.getOrNull(selectedCard)
 
                 // 카드 선택 시 QR 토큰 생성
@@ -181,8 +204,7 @@ fun QrPaymentScreen(
                         Image(
                             bitmap = qrBitmap.asImageBitmap(),
                             contentDescription = "QR코드",
-                            modifier = Modifier
-                                .size(200.dp)
+                            modifier = Modifier.width(200.dp).height(200.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
@@ -202,7 +224,6 @@ fun QrPaymentScreen(
                     Text("QR코드 생성 실패", color = TextSecondary, fontSize = 14.sp)
                 }
             } else {
-                // ── QR 스캔 (카메라) ──
                 if (scannedResult != null) {
                     Column(
                         horizontalAlignment = Alignment.CenterHorizontally,
@@ -263,7 +284,6 @@ fun QrPaymentScreen(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        // ── 카드 슬라이더 ──
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
@@ -276,15 +296,18 @@ fun QrPaymentScreen(
                 val isSelected = index == selectedCard
                 val animatedWidth by animateDpAsState(
                     targetValue = if (isSelected) 116.dp else 100.dp,
-                    animationSpec = tween(200), label = "cardWidth"
+                    animationSpec = tween(200),
+                    label = "cardWidth"
                 )
                 val animatedHeight by animateDpAsState(
                     targetValue = if (isSelected) 160.dp else 140.dp,
-                    animationSpec = tween(200), label = "cardHeight"
+                    animationSpec = tween(200),
+                    label = "cardHeight"
                 )
                 val animatedElevation by animateDpAsState(
                     targetValue = if (isSelected) 12.dp else 0.dp,
-                    animationSpec = tween(200), label = "cardElevation"
+                    animationSpec = tween(200),
+                    label = "cardElevation"
                 )
                 Box(
                     modifier = Modifier
@@ -296,7 +319,7 @@ fun QrPaymentScreen(
                             clip = false
                         )
                         .clip(RoundedCornerShape(12.dp))
-                        .background(if (card.type == "personal") com.ssafy.seveniTax.ui.theme.CardGold else com.ssafy.seveniTax.ui.theme.CardBlue)
+                        .background(if (card.type == "personal") CardGold else CardBlue)
                         .clickable { selectedCard = index }
                         .padding(12.dp),
                     contentAlignment = Alignment.BottomStart
@@ -309,7 +332,6 @@ fun QrPaymentScreen(
                 }
             }
 
-            // ── 카드 추가 버튼 ──
             item {
                 Box(
                     modifier = Modifier
@@ -442,9 +464,9 @@ private fun generateQrCode(data: String): Bitmap? {
         for (x in 0 until width) {
             for (y in 0 until height) {
                 bitmap.setPixel(
-                    x, y,
-                    if (bitMatrix.get(x, y)) android.graphics.Color.BLACK
-                    else android.graphics.Color.WHITE
+                    x,
+                    y,
+                    if (bitMatrix.get(x, y)) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                 )
             }
         }

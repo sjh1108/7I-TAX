@@ -1,4 +1,4 @@
-package com.ssafy.seveniTax.ui.home
+﻿package com.ssafy.seveniTax.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,13 +12,16 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -85,24 +88,27 @@ private data class InsightItem(
 fun HomeScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel(),
+    onNotificationClick: () -> Unit = {},
+    onMenuClick: () -> Unit = {},
+    notificationCount: Int = 0
 ) {
     val userName = viewModel.getUserName().ifBlank { "이름" }
     val actions = listOf(
         HomeActionItem("세금 일정", "home/icon_tax_calendar.svg") {
             it.navigate(Route.TaxCalendar.path)
         },
-        HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
-            it.navigate(Route.QrPayment.path)
-        },
-        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
-            it.navigate(Route.CardList.path)
+        HomeActionItem("장부 보기", "home/icon_book_entries.svg") {
+            it.navigate(Route.BookEntryList.path)
         },
         HomeActionItem("리포트 보기", "home/icon_report.svg") {
             it.navigate(Route.TaxReport.path)
         },
-        HomeActionItem("장부 보기", "home/icon_book_entries.svg") {
-            it.navigate(Route.BookEntryList.path)
+        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
+            it.navigate(Route.CardList.path)
+        },
+        HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
+            it.navigate(Route.QrPayment.path)
         },
         HomeActionItem("송금", "home/icon_transfer.svg") {
             it.navigate(Route.ServerTest.path)
@@ -155,7 +161,12 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                 ) {
-                    HomeHeader(userName = userName)
+                    HomeHeader(
+                        userName = userName,
+                        notificationCount = notificationCount,
+                        onNotificationClick = onNotificationClick,
+                        onMenuClick = onMenuClick
+                    )
                     Spacer(modifier = Modifier.height(20.dp))
                 }
             }
@@ -202,7 +213,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(userName: String) {
+private fun HomeHeader(
+    userName: String,
+    notificationCount: Int,
+    onNotificationClick: () -> Unit,
+    onMenuClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -216,31 +232,47 @@ private fun HomeHeader(userName: String) {
             modifier = Modifier.weight(1f)
         )
 
-        Box {
+        Box(
+            modifier = Modifier.clickable { onNotificationClick() }
+        ) {
             Icon(
-                painter = painterResource(R.drawable.ic_34),
+                imageVector = Icons.Default.NotificationsNone,
                 contentDescription = "알림",
                 tint = Color.White,
                 modifier = Modifier
                     .padding(top = 6.dp)
                     .size(24.dp)
             )
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(Error)
-                    .align(Alignment.TopEnd),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "3",
-                    fontSize = 9.sp,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
+            if (notificationCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(Error)
+                        .align(Alignment.TopEnd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = notificationCount.toString(),
+                        fontSize = 9.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Icon(
+            imageVector = Icons.Default.Menu,
+            contentDescription = "전체 메뉴",
+            tint = Color.White,
+            modifier = Modifier
+                .padding(top = 6.dp)
+                .size(24.dp)
+                .clickable { onMenuClick() }
+        )
     }
 }
 

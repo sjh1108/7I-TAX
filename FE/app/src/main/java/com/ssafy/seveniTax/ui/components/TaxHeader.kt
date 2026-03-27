@@ -23,7 +23,7 @@ fun TaxHeader(
         modifier = Modifier
             .fillMaxWidth()
             .height(56.dp)
-            .background(Primary),
+            .background(Background),
         contentAlignment = Alignment.Center
     ) {
         if (onBack != null) {
@@ -34,11 +34,11 @@ fun TaxHeader(
                 Icon(
                     imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                     contentDescription = "뒤로가기",
-                    tint = Background
+                    tint = TextPrimary
                 )
             }
         }
-        Text(text = title, style = Typography.titleLarge, color = Background)
+        Text(text = title, style = Typography.titleLarge, color = TextPrimary)
     }
 }
 

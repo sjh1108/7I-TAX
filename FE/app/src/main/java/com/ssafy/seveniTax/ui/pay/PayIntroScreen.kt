@@ -3,7 +3,19 @@ package com.ssafy.seveniTax.ui.pay
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -25,7 +37,9 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.R
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.ui.theme.Background
+import com.ssafy.seveniTax.ui.theme.TextPrimary
+import com.ssafy.seveniTax.ui.theme.TextSecondary
 
 private data class PayFeature(
     val title: String,
@@ -48,7 +62,6 @@ fun PayIntroScreen(navController: NavController) {
             .statusBarsPadding()
             .background(Background)
     ) {
-        // 상단 바
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -71,7 +84,6 @@ fun PayIntroScreen(navController: NavController) {
             )
         }
 
-        // 카드 목록
         Column(
             modifier = Modifier
                 .weight(1f)
@@ -86,7 +98,6 @@ fun PayIntroScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(4.dp))
         }
 
-        // 하단 버튼
         Box(
             modifier = Modifier
                 .navigationBarsPadding()
@@ -110,7 +121,6 @@ private fun FeatureCard(feature: PayFeature) {
             .padding(20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        // 텍스트
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = feature.title,
@@ -129,7 +139,6 @@ private fun FeatureCard(feature: PayFeature) {
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        // 일러스트
         Image(
             painter = painterResource(feature.illustRes),
             contentDescription = feature.title,
