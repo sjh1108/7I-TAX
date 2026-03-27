@@ -1,9 +1,9 @@
 package com.ssafy.seveniTax.viewmodel
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.ssafy.seveniTax.data.model.payment.QrTokenCreateRequest
-import com.ssafy.seveniTax.data.model.payment.QrTokenCreateResponse
 import com.ssafy.seveniTax.data.remote.PaymentApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,10 +29,15 @@ class PaymentViewModel @Inject constructor(
     private val paymentApi: PaymentApi
 ) : ViewModel() {
 
+    companion object {
+        private const val TAG = "PaymentVM"
+    }
+
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
 
     fun createQrToken(cardId: Long, amount: Long, merchantId: Long, merchantName: String) = viewModelScope.launch {
+        Log.d(TAG, "▶ createQrToken() cardId=$cardId, amount=$amount, merchantId=$merchantId, merchant=$merchantName")
         _uiState.update { it.copy(isLoading = true, errorMessage = "") }
         try {
             val request = QrTokenCreateRequest(
@@ -42,8 +47,10 @@ class PaymentViewModel @Inject constructor(
                 merchantName = merchantName,
                 purpose = "BUSINESS"
             )
+            Log.d(TAG, "  요청: $request")
             val response = paymentApi.createQrToken(request)
             val body = response.body()
+            Log.d(TAG, "  응답: code=${response.code()}, status=${body?.status}, token=${body?.data?.token}")
             if (response.isSuccessful && body?.status == "success" && body.data != null) {
                 _uiState.update {
                     it.copy(
@@ -55,11 +62,14 @@ class PaymentViewModel @Inject constructor(
                     )
                 }
             } else {
+                val errMsg = body?.message ?: "QR 토큰 생성 실패 (${response.code()})"
+                Log.e(TAG, "  createQrToken 실패: $errMsg")
                 _uiState.update {
-                    it.copy(isLoading = false, errorMessage = body?.message ?: "QR 토큰 생성 실패")
+                    it.copy(isLoading = false, errorMessage = errMsg)
                 }
             }
         } catch (e: Exception) {
+            Log.e(TAG, "  createQrToken 에러: ${e.message}", e)
             _uiState.update {
                 it.copy(isLoading = false, errorMessage = e.message ?: "네트워크 오류")
             }
@@ -67,9 +77,11 @@ class PaymentViewModel @Inject constructor(
     }
 
     fun checkPaymentStatus(token: String) = viewModelScope.launch {
+        Log.d(TAG, "▶ checkPaymentStatus() token=$token")
         try {
             val response = paymentApi.getQrPaymentStatus(token)
             val body = response.body()
+            Log.d(TAG, "  상태: ${body?.data?.status}")
             if (response.isSuccessful && body?.status == "success" && body.data != null) {
                 _uiState.update {
                     it.copy(
@@ -78,7 +90,9 @@ class PaymentViewModel @Inject constructor(
                     )
                 }
             }
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.e(TAG, "  checkPaymentStatus 에러: ${e.message}", e)
+        }
     }
 
     fun resetPayment() {
