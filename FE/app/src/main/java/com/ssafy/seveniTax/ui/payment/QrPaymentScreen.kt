@@ -151,7 +151,8 @@ fun QrPaymentScreen(
         androidx.compose.material3.AlertDialog(
             onDismissRequest = {
                 showResultDialog = false
-                if (dialogIsSuccess) paymentViewModel.resetPayment()
+                scannedResult = null
+                paymentViewModel.resetPayment()
             },
             title = {
                 Text(
@@ -164,7 +165,8 @@ fun QrPaymentScreen(
             confirmButton = {
                 androidx.compose.material3.TextButton(onClick = {
                     showResultDialog = false
-                    if (dialogIsSuccess) paymentViewModel.resetPayment()
+                    scannedResult = null
+                    paymentViewModel.resetPayment()
                 }) {
                     Text("확인", color = BrandPurple)
                 }

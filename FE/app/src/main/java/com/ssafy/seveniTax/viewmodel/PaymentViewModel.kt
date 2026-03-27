@@ -127,7 +127,8 @@ class PaymentViewModel @Inject constructor(
         try {
             val response = paymentApi.confirmQrPayment(token)
             val body = response.body()
-            Log.d(TAG, "  결제 응답: ${body?.data}")
+            val errorBody = response.errorBody()?.string()
+            Log.d(TAG, "  결제 응답: code=${response.code()}, body=${body}, errorBody=$errorBody")
             if (response.isSuccessful && body?.status == "success" && body.data != null) {
                 _uiState.update {
                     it.copy(
@@ -137,8 +138,9 @@ class PaymentViewModel @Inject constructor(
                     )
                 }
             } else {
-                Log.e(TAG, "  결제 실패: ${body?.message}")
-                _uiState.update { it.copy(isLoading = false, errorMessage = body?.message ?: "결제 승인 실패") }
+                val errMsg = body?.message ?: errorBody ?: "결제 승인 실패 (${response.code()})"
+                Log.e(TAG, "  결제 실패: $errMsg")
+                _uiState.update { it.copy(isLoading = false, errorMessage = errMsg) }
             }
         } catch (e: Exception) {
             Log.e(TAG, "  결제 에러: ${e.message}", e)
