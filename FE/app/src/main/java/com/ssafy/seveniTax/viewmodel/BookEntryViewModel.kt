@@ -62,7 +62,7 @@ class BookEntryViewModel @Inject constructor(
     val error: StateFlow<String?> = _error.asStateFlow()
 
     init {
-        loadMockEntries() // TODO: 데모용 목 데이터, 추후 loadEntries()로 복원
+        loadEntries()
     }
 
     private fun loadMockEntries() {
