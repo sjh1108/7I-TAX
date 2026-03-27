@@ -11,8 +11,11 @@ import com.ssafy.tax7i.classification.dto.ClassificationRequest;
 import com.ssafy.tax7i.classification.dto.ClassificationResult;
 import com.ssafy.tax7i.classification.service.TaxClassificationService;
 import com.ssafy.tax7i.card.entity.Card;
+import com.ssafy.tax7i.card.entity.CardTransaction;
+import com.ssafy.tax7i.card.entity.CardTransactionType;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
+import com.ssafy.tax7i.card.repository.CardTransactionRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -57,6 +60,7 @@ public class PaymentService {
     private final TaxClassificationService taxClassificationService;
     private final RedisTemplate<String, String> redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final CardTransactionRepository cardTransactionRepository;
 
     private final Map<String, SseEmitter> qrEmitters = new ConcurrentHashMap<>();
 
@@ -122,6 +126,8 @@ public class PaymentService {
 
         payment.capture();
         payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
+        saveCardTransaction(card, CardTransactionType.PAYMENT, payment.getAmount(),
+                "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
 
@@ -153,6 +159,8 @@ public class PaymentService {
         }
 
         payment.cancel(cancelAmount, request.reason());
+        saveCardTransaction(card, CardTransactionType.REFUND, cancelAmount,
+                "환불: " + payment.getMerchantName(), null);
 
         return PaymentCancelResponse.from(payment);
     }
@@ -216,6 +224,8 @@ public class PaymentService {
 
         payment.capture();
         payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
+        saveCardTransaction(ctx.card(), CardTransactionType.PAYMENT, request.amount(),
+                "결제: " + request.merchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
 
@@ -295,6 +305,8 @@ public class PaymentService {
 
         payment.capture();
         payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
+        saveCardTransaction(card, CardTransactionType.PAYMENT, payment.getAmount(),
+                "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
 
@@ -467,6 +479,22 @@ public class PaymentService {
             case "미분류" -> "99";
             default -> "18"; // 기타 경비
         };
+    }
+
+    private void saveCardTransaction(Card card, CardTransactionType type, Long amount, String description, Long paymentBalance) {
+        try {
+            CardTransaction tx = CardTransaction.builder()
+                    .card(card)
+                    .transactionType(type)
+                    .amount(amount)
+                    .balanceAfter(paymentBalance != null ? paymentBalance : 0L)
+                    .description(description)
+                    .build();
+            cardTransactionRepository.save(tx);
+            log.info("카드 거래 기록 저장: cardId={}, type={}, amount={}", card.getId(), type, amount);
+        } catch (Exception e) {
+            log.warn("카드 거래 기록 저장 실패 (결제는 정상): cardId={}, error={}", card.getId(), e.getMessage());
+        }
     }
 
     private String getUserKey(User user) {
