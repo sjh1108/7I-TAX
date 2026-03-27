@@ -57,6 +57,9 @@ ssafy:
 cors:
   allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000}
 
+otp:
+  bypass-code: ${OTP_BYPASS_CODE:}
+
 solapi:
   api-key: ${SOLAPI_API_KEY}
   api-secret: ${SOLAPI_API_SECRET}
