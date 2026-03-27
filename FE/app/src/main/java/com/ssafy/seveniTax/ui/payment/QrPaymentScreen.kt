@@ -263,6 +263,13 @@ fun QrPaymentScreen(
                     }
                 }
 
+                // QR 토큰 생성 후 결제 상태 폴링
+                LaunchedEffect(paymentState.qrToken) {
+                    if (paymentState.qrToken.isNotEmpty()) {
+                        paymentViewModel.startPollingStatus(paymentState.qrToken)
+                    }
+                }
+
                 var qrTimestamp by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
                 var remainingSeconds by remember { mutableIntStateOf(60) }
                 LaunchedEffect(selectedCard) {

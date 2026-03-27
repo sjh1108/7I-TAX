@@ -23,6 +23,7 @@ class TaxFirebaseMessagingService : FirebaseMessagingService() {
         when (type) {
             "classification" -> handleClassificationNotification(data)
             "tax_calendar" -> handleTaxCalendarNotification(data)
+            "payment" -> handlePaymentNotification(data)
             else -> handleDefaultNotification(message)
         }
     }
@@ -56,6 +57,21 @@ class TaxFirebaseMessagingService : FirebaseMessagingService() {
             deadlineDate = deadlineDate,
             dDay = dDay,
             additionalInfo = additionalInfo
+        )
+    }
+
+    private fun handlePaymentNotification(data: Map<String, String>) {
+        val paymentId = data["paymentId"] ?: return
+        val merchantName = data["merchantName"] ?: "가맹점"
+        val amount = data["amount"] ?: "0"
+        val status = data["status"] ?: "CAPTURED"
+
+        NotificationHelper.showPaymentNotification(
+            context = this,
+            paymentId = paymentId,
+            merchantName = merchantName,
+            amount = amount,
+            isSuccess = status == "CAPTURED"
         )
     }
 

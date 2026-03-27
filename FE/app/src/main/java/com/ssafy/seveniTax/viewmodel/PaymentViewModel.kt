@@ -148,6 +148,30 @@ class PaymentViewModel @Inject constructor(
         }
     }
 
+    fun startPollingStatus(token: String) = viewModelScope.launch {
+        Log.d(TAG, "▶ startPollingStatus() token=$token")
+        while (true) {
+            kotlinx.coroutines.delay(2000L)
+            try {
+                val response = paymentApi.getQrPaymentStatus(token)
+                val body = response.body()
+                if (response.isSuccessful && body?.status == "success" && body.data != null) {
+                    val status = body.data.status
+                    Log.d(TAG, "  폴링 상태: $status")
+                    if (status == "CAPTURED" || status == "CANCELLED") {
+                        _uiState.update {
+                            it.copy(
+                                paymentStatus = status,
+                                paymentComplete = status == "CAPTURED"
+                            )
+                        }
+                        break
+                    }
+                }
+            } catch (_: Exception) { }
+        }
+    }
+
     fun resetPayment() {
         _uiState.update { PaymentUiState() }
     }
