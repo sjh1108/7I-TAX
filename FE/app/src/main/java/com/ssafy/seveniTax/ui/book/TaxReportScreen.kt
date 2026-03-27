@@ -465,10 +465,6 @@ private fun AnnualReport(
         "비고" to "종합소득세의 10%"
     ))
 
-    Spacer(Modifier.height(12.dp))
-
-    TotalTaxBox("연간 총 예상 세금", "${fmt.format(totalTax)}원")
-
     Spacer(Modifier.height(24.dp))
 
     // 올해 공제 요약
@@ -476,6 +472,9 @@ private fun AnnualReport(
     Spacer(Modifier.height(12.dp))
     DeductionSummaryCard()
 
+    Spacer(Modifier.height(24.dp))
+
+    TotalTaxBox("연간 총 예상 세금", "${fmt.format(totalTax)}원")
 }
 
 // ─── 날짜 네비게이터 ─────────────────────────────────────
