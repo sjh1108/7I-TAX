@@ -1005,6 +1005,19 @@ private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList(),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
+                    .pointerInput(bars) {
+                        detectTapGestures { tapOffset ->
+                            val w = size.width.toFloat()
+                            val barCount = bars.size
+                            val barWidth = w / (barCount * 2 + 1)
+                            bars.forEachIndexed { i, (name, _, _) ->
+                                val x = barWidth * (i * 2 + 1)
+                                if (tapOffset.x in x..(x + barWidth)) {
+                                    onMerchantClick(name)
+                                }
+                            }
+                        }
+                    }
             ) {
                 val w = size.width
                 val h = size.height
