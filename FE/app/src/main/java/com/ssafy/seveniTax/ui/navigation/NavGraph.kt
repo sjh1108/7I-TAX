@@ -63,7 +63,9 @@ import com.ssafy.seveniTax.ui.calendar.TaxCalendarScreen
 import com.ssafy.seveniTax.ui.test.ServerTestScreen
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
+import com.ssafy.seveniTax.viewmodel.BulkEntryInput
 import com.ssafy.seveniTax.viewmodel.CardViewModel
+import com.ssafy.seveniTax.viewmodel.ClassificationViewModel
 import com.ssafy.seveniTax.viewmodel.PaymentViewModel
 import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 
@@ -75,6 +77,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
     val taxCalendarViewModel: TaxCalendarViewModel = hiltViewModel()
     val bookEntryViewModel: BookEntryViewModel = hiltViewModel()
     val paymentViewModel: PaymentViewModel = hiltViewModel()
+    val classificationViewModel: ClassificationViewModel = hiltViewModel()
 
     NavHost(
         navController = navController,
@@ -247,6 +250,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         composable(Route.ClassificationLoading.path) {
             ClassificationLoadingScreen(
                 navController = navController,
+                classificationViewModel = classificationViewModel,
                 onComplete = {
                     navController.navigate(Route.ClassificationResult.path) {
                         popUpTo(Route.ClassificationLoading.path) { inclusive = true }
@@ -256,15 +260,24 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         }
 
         composable(Route.ClassificationResult.path) {
+            val uiState by classificationViewModel.uiState.collectAsState()
             ClassificationResultScreen(
                 navController = navController,
+                classificationViewModel = classificationViewModel,
                 onConfirm = {
-                    // 확인 → 바로 세목 저장 완료
+                    // AI 추천 경비로 확정 → API 호출
+                    val result = uiState.result
+                    if (result != null) {
+                        classificationViewModel.setSelectedCategory(result.taxCategory)
+                    }
+                    if (uiState.entryId > 0 && result != null) {
+                        bookEntryViewModel.updateEntryCategory(uiState.entryId, result.taxCategory)
+                    }
                     navController.navigate(Route.ClassificationComplete.create())
                 },
                 onChangeCategory = {
-                    // 세목 변경 → 카테고리 선택 페이지
-                    navController.navigate(Route.CategorySelect.create())
+                    // 세목 변경 → 카테고리 선택 페이지 (entryId 전달)
+                    navController.navigate(Route.CategorySelect.create("classify", uiState.entryId))
                 }
             )
         }
@@ -281,10 +294,33 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
             CategorySelectScreen(
                 navController = navController,
                 onCategorySelected = { category ->
-                    if (returnTo == "book" && entryId > 0) {
+                    if (entryId > 0) {
+                        // 완료 화면에 표시할 정보 세팅
+                        val entry = bookEntryViewModel.entries.value.find { it.id == entryId }
+                        if (entry != null) {
+                            val amt = when (entry.entryType) {
+                                "INCOME" -> entry.incomeAmount
+                                "EXPENSE" -> entry.expenseAmount
+                                "ASSET" -> entry.fixedAssetAmount
+                                else -> 0L
+                            }
+                            classificationViewModel.setEntryInfo(
+                                entryId = entryId,
+                                merchantName = entry.merchantName ?: entry.description ?: "거래",
+                                amount = amt,
+                                dateTime = entry.createdAt.take(16).replace("T", " ")
+                            )
+                        }
+                        classificationViewModel.setSelectedCategory(category)
                         bookEntryViewModel.updateEntryCategory(entryId, category)
-                        navController.navigate(Route.ClassificationComplete.create("book")) {
-                            popUpTo(Route.BookEntryList.path) { inclusive = false }
+                        if (returnTo == "book") {
+                            navController.navigate(Route.ClassificationComplete.create("book")) {
+                                popUpTo(Route.BookEntryList.path) { inclusive = false }
+                            }
+                        } else {
+                            navController.navigate(Route.ClassificationComplete.create()) {
+                                popUpTo(Route.UnclassifiedList.path) { inclusive = false }
+                            }
                         }
                     } else {
                         navController.navigate(Route.MemoAdd.path)
@@ -310,12 +346,16 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
             val returnTo = backStackEntry.arguments?.getString("returnTo") ?: ""
             ClassificationCompleteScreen(
                 navController = navController,
+                classificationViewModel = classificationViewModel,
                 onConfirm = {
+                    classificationViewModel.reset()
                     if (returnTo == "book") {
                         navController.navigate(Route.BookEntryList.path) {
                             popUpTo(Route.BookEntryList.path) { inclusive = false }
                         }
                     } else {
+                        bookEntryViewModel.loadEntries()
+                        bookEntryViewModel.loadUnconfirmedCount()
                         navController.navigate(Route.Main.path) {
                             popUpTo(0) { inclusive = true }
                         }
@@ -356,18 +396,55 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                 transactions = unclassified,
                 aiRecommendedInitial = aiDone,
                 onBulkConfirm = {
+                    // 미분류 항목 일괄 확정
+                    val unconfirmedIds = entries.filter { !it.confirmed }.map { it.id }
+                    unconfirmedIds.forEach { id ->
+                        bookEntryViewModel.confirmEntry(id)
+                    }
                     navController.navigate(Route.ClassificationComplete.create())
                 },
                 onAiRecommend = {
-                    // AI로 경비 추천 받기 → 일괄 분석 로딩
+                    // 미분류 항목으로 일괄 AI 분류 시작
+                    val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+                    val bulkInputs = entries.filter { !it.confirmed }.map { entry ->
+                        val amt = when (entry.entryType) {
+                            "INCOME" -> entry.incomeAmount
+                            "EXPENSE" -> entry.expenseAmount
+                            "ASSET" -> entry.fixedAssetAmount
+                            else -> 0L
+                        }
+                        BulkEntryInput(
+                            entryId = entry.id,
+                            merchantName = entry.merchantName ?: entry.description ?: "거래",
+                            amount = "${fmt.format(amt)}원",
+                            amountLong = amt
+                        )
+                    }
+                    classificationViewModel.classifyBulk(bulkInputs)
                     navController.navigate(Route.BulkClassificationLoading.path)
                 },
                 onReviewAll = {
-                    // 항목 한개씩 개별 분류 → 세목 변경 플로우
-                    navController.navigate(Route.ClassificationResult.path)
+                    // 첫 번째 미분류 항목으로 개별 분류 시작
+                    val firstUnconfirmed = entries.firstOrNull { !it.confirmed }
+                    if (firstUnconfirmed != null) {
+                        val amt = when (firstUnconfirmed.entryType) {
+                            "INCOME" -> firstUnconfirmed.incomeAmount
+                            "EXPENSE" -> firstUnconfirmed.expenseAmount
+                            "ASSET" -> firstUnconfirmed.fixedAssetAmount
+                            else -> 0L
+                        }
+                        classificationViewModel.setEntryInfo(
+                            entryId = firstUnconfirmed.id,
+                            merchantName = firstUnconfirmed.merchantName ?: firstUnconfirmed.description ?: "거래",
+                            amount = amt,
+                            dateTime = firstUnconfirmed.createdAt.take(16).replace("T", " ")
+                        )
+                        navController.navigate(Route.ClassificationLoading.path)
+                    }
                 },
-                onTransactionClick = {
-                    navController.navigate(Route.CategorySelect.create())
+                onTransactionClick = { transactionId ->
+                    val entryId = transactionId.toLongOrNull() ?: -1L
+                    navController.navigate(Route.CategorySelect.create("unclassified", entryId))
                 }
             )
         }
@@ -375,7 +452,14 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         composable(Route.BulkClassificationLoading.path) {
             BulkClassificationLoadingScreen(
                 navController = navController,
+                classificationViewModel = classificationViewModel,
                 onComplete = {
+                    // 일괄 분류 결과로 각 항목 경비 업데이트
+                    val results = classificationViewModel.bulkResults.value
+                    results.filter { it.isDone && it.aiCategory != null && it.aiCategory != "미분류" }.forEach { item ->
+                        bookEntryViewModel.updateEntryCategory(item.entryId, item.aiCategory!!)
+                    }
+                    classificationViewModel.reset()
                     navController.previousBackStackEntry?.savedStateHandle?.set("aiRecommended", true)
                     navController.popBackStack()
                 }
