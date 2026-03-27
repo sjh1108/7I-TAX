@@ -170,7 +170,7 @@ fun QrPaymentScreen(
                     card?.let {
                         paymentViewModel.createQrToken(
                             cardId = it.id.toLongOrNull() ?: 0,
-                            amount = 0, // QR 표시용 — 가맹점에서 금액 입력
+                            amount = 1000, // 테스트용 최소 금액
                             merchantId = 1,
                             merchantName = "7iTAX QR 결제"
                         )
