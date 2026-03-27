@@ -62,6 +62,7 @@ import com.ssafy.seveniTax.ui.test.ServerTestScreen
 import com.ssafy.seveniTax.viewmodel.AuthViewModel
 import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
 import com.ssafy.seveniTax.viewmodel.CardViewModel
+import com.ssafy.seveniTax.viewmodel.PaymentViewModel
 import com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel
 
 private const val AUTH_GRAPH_ROUTE = "auth_graph"
@@ -71,6 +72,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
     val cardViewModel: CardViewModel = hiltViewModel()
     val taxCalendarViewModel: TaxCalendarViewModel = hiltViewModel()
     val bookEntryViewModel: BookEntryViewModel = hiltViewModel()
+    val paymentViewModel: PaymentViewModel = hiltViewModel()
 
     NavHost(
         navController = navController,
@@ -177,7 +179,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         }
 
         composable(Route.QrPayment.path) {
-            QrPaymentScreen(navController, cardViewModel)
+            QrPaymentScreen(navController, cardViewModel, paymentViewModel)
         }
 
         composable(Route.PaymentProcessing.path) {

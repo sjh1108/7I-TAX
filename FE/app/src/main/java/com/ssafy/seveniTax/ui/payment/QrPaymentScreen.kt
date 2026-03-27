@@ -46,12 +46,18 @@ import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.PaymentViewModel
 import kotlinx.coroutines.delay
 import java.util.concurrent.Executors
 
 @Composable
-fun QrPaymentScreen(navController: NavController, cardViewModel: com.ssafy.seveniTax.viewmodel.CardViewModel) {
+fun QrPaymentScreen(
+    navController: NavController,
+    cardViewModel: com.ssafy.seveniTax.viewmodel.CardViewModel,
+    paymentViewModel: PaymentViewModel
+) {
     val cardUiState by cardViewModel.uiState.collectAsState()
+    val paymentState by paymentViewModel.uiState.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) } // 0=바코드, 1=QR스캔
     var selectedCard by remember { mutableIntStateOf(0) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
@@ -135,6 +141,19 @@ fun QrPaymentScreen(navController: NavController, cardViewModel: com.ssafy.seven
             if (selectedTab == 0) {
                 // ── QR코드 생성 (1분마다 갱신) ──
                 val card = cardUiState.cards.getOrNull(selectedCard)
+
+                // 카드 선택 시 QR 토큰 생성
+                LaunchedEffect(selectedCard, card) {
+                    card?.let {
+                        paymentViewModel.createQrToken(
+                            cardId = it.id.toLongOrNull() ?: 0,
+                            amount = 0, // QR 표시용 — 가맹점에서 금액 입력
+                            merchantId = 1,
+                            merchantName = "7iTAX QR 결제"
+                        )
+                    }
+                }
+
                 var qrTimestamp by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
                 var remainingSeconds by remember { mutableIntStateOf(60) }
                 LaunchedEffect(selectedCard) {
@@ -149,7 +168,8 @@ fun QrPaymentScreen(navController: NavController, cardViewModel: com.ssafy.seven
                         }
                     }
                 }
-                val qrData = "PAY-${card?.cardNumber?.takeLast(4) ?: "0000"}-$qrTimestamp"
+                val qrData = if (paymentState.qrToken.isNotEmpty()) paymentState.qrToken
+                    else "PAY-${card?.cardNumber?.takeLast(4) ?: "0000"}-$qrTimestamp"
                 val qrBitmap = remember(qrData) { generateQrCode(qrData) }
 
                 if (qrBitmap != null) {

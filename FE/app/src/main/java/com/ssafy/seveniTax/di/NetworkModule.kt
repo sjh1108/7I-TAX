@@ -2,6 +2,7 @@ package com.ssafy.seveniTax.di
 
 import com.ssafy.seveniTax.data.local.SecureStorage
 import com.ssafy.seveniTax.data.remote.*
+import com.ssafy.seveniTax.data.remote.PaymentApi
 import com.ssafy.seveniTax.util.Constants
 import dagger.Module
 import dagger.Provides
@@ -53,4 +54,7 @@ object NetworkModule {
 
     @Provides @Singleton
     fun provideExportApi(retrofit: Retrofit): ExportApi = retrofit.create(ExportApi::class.java)
+
+    @Provides @Singleton
+    fun providePaymentApi(retrofit: Retrofit): PaymentApi = retrofit.create(PaymentApi::class.java)
 }
