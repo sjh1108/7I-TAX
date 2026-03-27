@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7iTAX 가맹점 테스트</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: -apple-system, sans-serif; background: #f5f5f5; min-height: 100vh; display: flex; align-items: center; justify-content: center; }
+  .container { background: white; border-radius: 20px; padding: 32px; max-width: 400px; width: 90%; box-shadow: 0 4px 30px rgba(54,41,183,0.07); }
+  h1 { font-size: 20px; color: #281C9D; margin-bottom: 4px; }
+  .subtitle { font-size: 13px; color: #898989; margin-bottom: 24px; }
+  label { font-size: 13px; color: #898989; display: block; margin-bottom: 6px; }
+  input, select { width: 100%; padding: 14px 16px; border: 1.5px solid #E0E0E0; border-radius: 12px; font-size: 15px; outline: none; margin-bottom: 16px; }
+  input:focus { border-color: #281C9D; }
+  .btn { width: 100%; padding: 16px; border: none; border-radius: 15px; font-size: 16px; font-weight: 600; cursor: pointer; margin-bottom: 10px; }
+  .btn-primary { background: #281C9D; color: white; }
+  .btn-primary:hover { background: #1f1578; }
+  .btn-primary:disabled { background: #A8A3D7; cursor: not-allowed; }
+  .btn-scan { background: #5655B9; color: white; }
+  .btn-scan:hover { background: #4544a0; }
+  .result { margin-top: 20px; padding: 16px; border-radius: 12px; font-size: 14px; display: none; }
+  .result.success { background: #EDF8F6; color: #3DBDA2; display: block; }
+  .result.error { background: #FFF0F3; color: #E8475A; display: block; }
+  .result.info { background: #F2F1F9; color: #5655B9; display: block; }
+  .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #F0F0F0; font-size: 14px; }
+  .info-row:last-child { border: none; }
+  .info-label { color: #898989; }
+  .info-value { color: #343434; font-weight: 600; }
+  .divider { height: 1px; background: #F0F0F0; margin: 20px 0; }
+  #scanSection { display: none; }
+  video { width: 100%; border-radius: 12px; margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🏪 가맹점 결제 테스트</h1>
+  <p class="subtitle">7iTAX QR 결제 시뮬레이션</p>
+
+  <!-- 토큰 직접 입력 -->
+  <label>QR 토큰 (앱 Logcat에서 확인)</label>
+  <input type="text" id="tokenInput" placeholder="QR 토큰 입력...">
+
+  <div class="divider"></div>
+
+  <!-- 결제 정보 조회 -->
+  <button class="btn btn-scan" id="lookupBtn" onclick="lookupPayment()">결제 정보 조회</button>
+
+  <div id="paymentInfo" style="display:none; margin-bottom: 16px;">
+    <div class="info-row"><span class="info-label">결제자</span><span class="info-value" id="infoPayerName">-</span></div>
+    <div class="info-row"><span class="info-label">금액</span><span class="info-value" id="infoAmount">-</span></div>
+    <div class="info-row"><span class="info-label">가맹점</span><span class="info-value" id="infoMerchant">-</span></div>
+    <div class="info-row"><span class="info-label">상태</span><span class="info-value" id="infoStatus">-</span></div>
+  </div>
+
+  <!-- 결제 승인 -->
+  <button class="btn btn-primary" id="confirmBtn" onclick="confirmPayment()" disabled>결제 승인</button>
+
+  <!-- 상태 확인 -->
+  <button class="btn btn-scan" onclick="checkStatus()">결제 상태 확인</button>
+
+  <!-- 결과 -->
+  <div id="result" class="result"></div>
+
+  <div class="divider"></div>
+
+  <!-- 설정 -->
+  <label>서버 URL</label>
+  <input type="text" id="serverUrl" value="https://j14c203.p.ssafy.io/api">
+
+  <label>인증 토큰 (Bearer)</label>
+  <input type="text" id="authToken" placeholder="JWT 토큰 입력...">
+</div>
+
+<script>
+const API = () => document.getElementById('serverUrl').value;
+const TOKEN = () => document.getElementById('authToken').value;
+const QR_TOKEN = () => document.getElementById('tokenInput').value.trim();
+
+function headers() {
+  const h = { 'Content-Type': 'application/json; charset=UTF-8' };
+  if (TOKEN()) h['Authorization'] = 'Bearer ' + TOKEN();
+  return h;
+}
+
+function showResult(msg, type) {
+  const el = document.getElementById('result');
+  el.textContent = msg;
+  el.className = 'result ' + type;
+}
+
+async function lookupPayment() {
+  const token = QR_TOKEN();
+  if (!token) { showResult('토큰을 입력하세요', 'error'); return; }
+
+  try {
+    showResult('조회 중...', 'info');
+    const res = await fetch(`${API()}/payments/qr/token/${token}`, { headers: headers() });
+    const data = await res.json();
+
+    if (data.status === 'success' && data.data) {
+      const d = data.data;
+      document.getElementById('infoPayerName').textContent = d.payerName || '-';
+      document.getElementById('infoAmount').textContent = d.amount ? d.amount.toLocaleString() + '원' : '-';
+      document.getElementById('infoMerchant').textContent = d.merchantName || '-';
+      document.getElementById('infoStatus').textContent = d.status || '-';
+      document.getElementById('paymentInfo').style.display = 'block';
+      document.getElementById('confirmBtn').disabled = false;
+      showResult('결제 정보 조회 성공', 'success');
+    } else {
+      showResult('조회 실패: ' + (data.message || res.status), 'error');
+    }
+  } catch (e) {
+    showResult('네트워크 오류: ' + e.message, 'error');
+  }
+}
+
+async function confirmPayment() {
+  const token = QR_TOKEN();
+  if (!token) { showResult('토큰을 입력하세요', 'error'); return; }
+
+  try {
+    showResult('결제 승인 중...', 'info');
+    document.getElementById('confirmBtn').disabled = true;
+
+    const res = await fetch(`${API()}/payments/qr/token/${token}/confirm`, {
+      method: 'POST',
+      headers: headers()
+    });
+    const data = await res.json();
+
+    if (data.status === 'success' && data.data) {
+      const d = data.data;
+      showResult(`✅ 결제 완료!\n승인번호: ${d.authorizationCode}\n금액: ${d.amount?.toLocaleString()}원\n가맹점: ${d.merchantName}`, 'success');
+    } else {
+      showResult('결제 실패: ' + (data.message || res.status), 'error');
+      document.getElementById('confirmBtn').disabled = false;
+    }
+  } catch (e) {
+    showResult('네트워크 오류: ' + e.message, 'error');
+    document.getElementById('confirmBtn').disabled = false;
+  }
+}
+
+async function checkStatus() {
+  const token = QR_TOKEN();
+  if (!token) { showResult('토큰을 입력하세요', 'error'); return; }
+
+  try {
+    const res = await fetch(`${API()}/payments/qr/token/${token}/status`, { headers: headers() });
+    const data = await res.json();
+
+    if (data.status === 'success' && data.data) {
+      const d = data.data;
+      const statusText = {
+        'AUTHORIZED': '승인 대기',
+        'CAPTURED': '결제 완료',
+        'CANCELLED': '취소됨',
+        'PENDING': '대기 중'
+      };
+      showResult(`상태: ${statusText[d.status] || d.status}\nPayment ID: ${d.paymentId || '-'}`, 'info');
+    } else {
+      showResult('상태 조회 실패: ' + (data.message || res.status), 'error');
+    }
+  } catch (e) {
+    showResult('네트워크 오류: ' + e.message, 'error');
+  }
+}
+</script>
+</body>
+</html>
