@@ -6,6 +6,9 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -86,12 +89,24 @@ fun MainScreen(
     var isSideMenuOpen by remember { mutableStateOf(false) }
     var isNotificationSheetOpen by remember { mutableStateOf(false) }
 
-    val notifications = remember {
-        listOf(
-            NotificationItem("미분류 거래 3건", "방금 들어온 거래를 분류하면 장부 정확도가 올라갑니다.", "방금 전"),
-            NotificationItem("부가세 일정 임박", "3월 31일 신고 마감 전에 확인이 필요합니다.", "12분 전"),
-            NotificationItem("QR 결제 등록 확인", "결제용 QR 코드가 정상적으로 갱신되었습니다.", "1시간 전")
-        )
+    // 실제 데이터 기반 알림 생성
+    val bookEntryVm: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
+    val taxCalendarVm: com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel = hiltViewModel()
+    val unconfirmedCount by bookEntryVm.unconfirmedCount.collectAsState()
+    val deadlines by taxCalendarVm.deadlines.collectAsState()
+
+    LaunchedEffect(Unit) { bookEntryVm.loadUnconfirmedCount() }
+
+    val notifications = remember(unconfirmedCount, deadlines) {
+        buildList {
+            if (unconfirmedCount > 0) {
+                add(NotificationItem("미분류 거래 ${unconfirmedCount}건", "거래를 분류하면 장부 정확도가 올라갑니다.", ""))
+            }
+            deadlines.filter { it.dDay in 0..7 }.sortedBy { it.dDay }.forEach { d ->
+                val dText = if (d.dDay == 0) "D-Day" else "D-${d.dDay}"
+                add(NotificationItem("${d.taxName} $dText", d.description, ""))
+            }
+        }
     }
 
     fun openQrPayment() {
