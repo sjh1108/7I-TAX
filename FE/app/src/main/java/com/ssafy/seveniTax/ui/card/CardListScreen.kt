@@ -162,7 +162,7 @@ private fun CardWidget(
     onClick: () -> Unit
 ) {
     val bgColor = if (card.type == "personal") CardGold else CardBlue
-    val typeName = if (card.type == "personal") "일반 카드" else "사업자 카드"
+    val typeName = if (card.type == "personal") "개인 카드" else "사업자 카드"
     val displayName = if (card.isDefault) "$typeName (기본)" else typeName
 
     Box(

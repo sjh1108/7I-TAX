@@ -147,31 +147,31 @@ class TaxCalendarViewModel @Inject constructor(
         val today = LocalDate.now()
         _deadlines.value = listOf(
             TaxDeadline(
-                taxName = "부가가치세 1기 예정신고",
+                taxName = "부가가치세 1기 예정 신고 및 납부",
                 description = "1~3월 매출·매입 부가세 예정신고 및 납부",
                 deadline = "2026-04-25",
                 dDay = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.of(2026, 4, 25)).toInt()
             ),
             TaxDeadline(
-                taxName = "종합소득세 확정신고",
+                taxName = "종합소득세 확정 신고 및 납부",
                 description = "2025년 귀속 종합소득세 확정신고 및 납부",
                 deadline = "2026-05-31",
                 dDay = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.of(2026, 5, 31)).toInt()
             ),
             TaxDeadline(
-                taxName = "지방소득세 신고",
+                taxName = "지방소득세 신고 및 납부",
                 description = "종합소득세 신고분 지방소득세 납부",
                 deadline = "2026-05-31",
                 dDay = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.of(2026, 5, 31)).toInt()
             ),
             TaxDeadline(
-                taxName = "부가가치세 1기 확정신고",
+                taxName = "부가가치세 1기 확정 신고 및 납부",
                 description = "1~6월 매출·매입 부가세 확정신고 및 납부",
                 deadline = "2026-07-25",
                 dDay = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.of(2026, 7, 25)).toInt()
             ),
             TaxDeadline(
-                taxName = "부가가치세 2기 예정신고",
+                taxName = "부가가치세 2기 예정 신고 및 납부",
                 description = "7~9월 매출·매입 부가세 예정신고 및 납부",
                 deadline = "2026-10-25",
                 dDay = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.of(2026, 10, 25)).toInt()
@@ -183,7 +183,7 @@ class TaxCalendarViewModel @Inject constructor(
                 dDay = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.of(2026, 11, 30)).toInt()
             ),
             TaxDeadline(
-                taxName = "부가가치세 2기 확정신고",
+                taxName = "부가가치세 2기 확정 신고 및 납부",
                 description = "7~12월 매출·매입 부가세 확정신고 및 납부",
                 deadline = "2027-01-25",
                 dDay = java.time.temporal.ChronoUnit.DAYS.between(today, LocalDate.of(2027, 1, 25)).toInt()

@@ -443,7 +443,7 @@ fun QrPaymentScreen(
                         .padding(12.dp),
                     contentAlignment = Alignment.BottomStart
                 ) {
-                    val typeName = if (card.type == "personal") "일반 카드" else "사업자 카드"
+                    val typeName = if (card.type == "personal") "개인 카드" else "사업자 카드"
                     Column {
                         Text(typeName, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
                         Text(card.cardNumber.takeLast(17), fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))

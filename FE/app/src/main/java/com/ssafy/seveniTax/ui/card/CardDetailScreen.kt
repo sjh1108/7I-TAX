@@ -22,7 +22,7 @@ fun CardDetailScreen(
     cardId: String
 ) {
     val card = viewModel.getCardById(cardId)
-    val cardName = if (card?.type == "personal") "일반카드" else "사업자카드"
+    val cardName = if (card?.type == "personal") "개인 카드" else "사업자 카드"
     val cardNumber = card?.cardNumber ?: ""
     val cardExpiry = card?.expiry ?: ""
 

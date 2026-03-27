@@ -819,19 +819,25 @@ private fun AnnualTimelineView(
                 dDay = item.dDay,
                 dotColor = taxColor,
                 onClick = {
+                    // 서버 deadlines에서 매칭 시도, 없으면 타임라인 데이터로 직접 이동
                     val matchingDeadline = deadlines.find {
                         it.taxName.contains(item.title) || item.title.contains(it.taxName.take(4))
                     }
-                    if (matchingDeadline != null) {
-                        navController.navigate(
-                            Route.TaxCalendarDetail.create(
-                                taxName = matchingDeadline.taxName,
-                                deadline = matchingDeadline.deadline,
-                                dDay = matchingDeadline.dDay,
-                                description = matchingDeadline.description
-                            )
+                    val taxName = matchingDeadline?.taxName
+                        ?: "${filter.label} ${item.title}"
+                    val deadline = matchingDeadline?.deadline ?: item.date
+                    val dDay = matchingDeadline?.dDay
+                        ?: item.dDay ?: 0
+                    val description = matchingDeadline?.description ?: item.subtitle
+
+                    navController.navigate(
+                        Route.TaxCalendarDetail.create(
+                            taxName = taxName,
+                            deadline = deadline,
+                            dDay = dDay,
+                            description = description
                         )
-                    }
+                    )
                 }
             )
         }
@@ -864,13 +870,13 @@ private fun getAnnualSchedule(filter: TaxFilter, year: Int): List<AnnualSchedule
                 daysBetween(today, LocalDate.of(year, 10, 25)))
         )
         TaxFilter.INCOME -> listOf(
-            AnnualScheduleItem("$year-05-31", "종합소득세 확정신고", "${year - 1}년 귀속",
+            AnnualScheduleItem("$year-05-31", "종합소득세 확정 신고 및 납부", "${year - 1}년 귀속",
                 daysBetween(today, LocalDate.of(year, 5, 31))),
             AnnualScheduleItem("$year-11-30", "중간예납", "중간예납세액 납부",
                 daysBetween(today, LocalDate.of(year, 11, 30)))
         )
         TaxFilter.LOCAL -> listOf(
-            AnnualScheduleItem("$year-05-31", "지방소득세 신고", "종합소득분",
+            AnnualScheduleItem("$year-05-31", "지방소득세 신고 및 납부", "종합소득분",
                 daysBetween(today, LocalDate.of(year, 5, 31))),
             AnnualScheduleItem("$year-08-31", "주민세 납부", "균등분 납부",
                 daysBetween(today, LocalDate.of(year, 8, 31)))

@@ -48,7 +48,7 @@ private data class PayFeature(
 )
 
 private val features = listOf(
-    PayFeature("카드 등록", "일반 카드 및 사업자 카드를\n등록하고 관리하세요", R.drawable.ill_01),
+    PayFeature("카드 등록", "개인 카드 및 사업자 카드를\n등록하고 관리하세요", R.drawable.ill_01),
     PayFeature("간편 결제", "QR 또는 온라인으로 빠르게\n결제하세요", R.drawable.ill_02),
     PayFeature("결제 내역", "기간별, 카드별로 내역을\n조회할 수 있어요", R.drawable.ill_03),
     PayFeature("세무 자동화", "간편 장부를 기반으로\n세무 자동화 기능까지 한번에", R.drawable.ill_04),

@@ -152,7 +152,7 @@ class CardViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true) }
         try {
             val request = CardCreateRequest(
-                cardName = if (state.selectedCardType == "business") "사업자 카드" else "일반 카드",
+                cardName = if (state.selectedCardType == "business") "사업자 카드" else "개인 카드",
                 cardType = if (state.selectedCardType == "business") "BUSINESS" else "PERSONAL",
                 cardUniqueNo = state.selectedProductNo,
                 withdrawalAccountNo = state.selectedAccountNo,

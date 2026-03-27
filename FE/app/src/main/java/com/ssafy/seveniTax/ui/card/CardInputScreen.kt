@@ -56,7 +56,7 @@ fun CardInputScreen(
             && birthDate.length == 6
 
     val previewCardColor = if (cardType == "personal") CardGold else CardBlue
-    val cardTypeLabel = if (cardType == "personal") "일반 카드" else "사업자 카드"
+    val cardTypeLabel = if (cardType == "personal") "개인 카드" else "사업자 카드"
 
     // 카드번호 표시 포맷: 5876 8847 2283 1234
     val displayCardNumber = buildString {
