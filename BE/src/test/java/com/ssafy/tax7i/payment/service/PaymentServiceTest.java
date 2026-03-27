@@ -10,6 +10,7 @@ import com.ssafy.tax7i.card.entity.CardTransaction;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.card.repository.CardTransactionRepository;
+import com.ssafy.tax7i.fcm.service.FcmService;
 import com.ssafy.tax7i.classification.service.TaxClassificationService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -57,6 +58,7 @@ class PaymentServiceTest {
     @Mock private ValueOperations<String, String> valueOperations;
     @Mock private ApplicationEventPublisher eventPublisher;
     @Mock private CardTransactionRepository cardTransactionRepository;
+    @Mock private FcmService fcmService;
 
     @InjectMocks
     private PaymentService paymentService;

@@ -16,6 +16,7 @@ import com.ssafy.tax7i.card.entity.CardTransactionType;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.card.repository.CardTransactionRepository;
+import com.ssafy.tax7i.fcm.service.FcmService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -61,6 +62,7 @@ public class PaymentService {
     private final RedisTemplate<String, String> redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final CardTransactionRepository cardTransactionRepository;
+    private final FcmService fcmService;
 
     private final Map<String, SseEmitter> qrEmitters = new ConcurrentHashMap<>();
 
@@ -130,6 +132,7 @@ public class PaymentService {
                 "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
+        sendPaymentNotification(payment, "payment");
 
         return PaymentCaptureResponse.of(payment);
     }
@@ -161,6 +164,7 @@ public class PaymentService {
         payment.cancel(cancelAmount, request.reason());
         saveCardTransaction(card, CardTransactionType.REFUND, cancelAmount,
                 "환불: " + payment.getMerchantName(), null);
+        sendPaymentNotification(payment, "payment_cancel");
 
         return PaymentCancelResponse.from(payment);
     }
@@ -228,6 +232,7 @@ public class PaymentService {
                 "결제: " + request.merchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
+        sendPaymentNotification(payment, "payment");
 
         return QrPaymentResponse.of(payment);
     }
@@ -309,6 +314,7 @@ public class PaymentService {
                 "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
+        sendPaymentNotification(payment, "payment");
 
         notifyQrPaymentResult(token, payment);
         return QrPaymentResponse.of(payment);
@@ -374,6 +380,23 @@ public class PaymentService {
             throw new BusinessException(ErrorCode.QR_TOKEN_EXPIRED);
         }
         return Long.parseLong(paymentIdStr);
+    }
+
+    private void sendPaymentNotification(Payment payment, String type) {
+        try {
+            String title = "payment".equals(type) ? "결제 완료" : "결제 취소";
+            String body = String.format("%s %,d원 %s",
+                    payment.getMerchantName(), payment.getAmount(),
+                    "payment".equals(type) ? "결제가 완료되었습니다." : "결제가 취소되었습니다.");
+            Map<String, String> data = Map.of(
+                    "type", type,
+                    "paymentId", String.valueOf(payment.getId()),
+                    "amount", String.valueOf(payment.getAmount()),
+                    "merchantName", payment.getMerchantName());
+            fcmService.sendNotification(payment.getUser().getId(), title, body, data);
+        } catch (Exception e) {
+            log.warn("결제 FCM 알림 실패: paymentId={}, error={}", payment.getId(), e.getMessage());
+        }
     }
 
     private void autoCreateBookEntry(Payment payment) {
