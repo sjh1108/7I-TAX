@@ -39,6 +39,11 @@ public class FcmConfig {
 
     @Bean
     public FirebaseMessaging firebaseMessaging() {
+        if (serviceAccountPath == null || serviceAccountPath.isBlank()
+                || FirebaseApp.getApps().isEmpty()) {
+            log.warn("Firebase가 초기화되지 않아 FirebaseMessaging 빈을 생성하지 않습니다.");
+            return null;
+        }
         return FirebaseMessaging.getInstance();
     }
 }
