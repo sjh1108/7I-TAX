@@ -11,8 +11,11 @@ import com.ssafy.tax7i.classification.dto.ClassificationRequest;
 import com.ssafy.tax7i.classification.dto.ClassificationResult;
 import com.ssafy.tax7i.classification.service.TaxClassificationService;
 import com.ssafy.tax7i.card.entity.Card;
+import com.ssafy.tax7i.card.entity.CardTransactionType;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
+import com.ssafy.tax7i.card.service.CardTransactionSaveService;
+import com.ssafy.tax7i.fcm.service.FcmService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -57,6 +60,8 @@ public class PaymentService {
     private final TaxClassificationService taxClassificationService;
     private final RedisTemplate<String, String> redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
+    private final CardTransactionSaveService cardTransactionSaveService;
+    private final FcmService fcmService;
 
     private final Map<String, SseEmitter> qrEmitters = new ConcurrentHashMap<>();
 
@@ -122,8 +127,11 @@ public class PaymentService {
 
         payment.capture();
         payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
+        saveCardTransaction(card, CardTransactionType.PAYMENT, payment.getAmount(),
+                "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
+        sendPaymentNotification(payment, "payment");
 
         return PaymentCaptureResponse.of(payment);
     }
@@ -153,6 +161,9 @@ public class PaymentService {
         }
 
         payment.cancel(cancelAmount, request.reason());
+        saveCardTransaction(card, CardTransactionType.REFUND, cancelAmount,
+                "환불: " + payment.getMerchantName(), null);
+        sendPaymentNotification(payment, "payment_cancel");
 
         return PaymentCancelResponse.from(payment);
     }
@@ -216,8 +227,11 @@ public class PaymentService {
 
         payment.capture();
         payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
+        saveCardTransaction(ctx.card(), CardTransactionType.PAYMENT, request.amount(),
+                "결제: " + request.merchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
+        sendPaymentNotification(payment, "payment");
 
         return QrPaymentResponse.of(payment);
     }
@@ -295,8 +309,11 @@ public class PaymentService {
 
         payment.capture();
         payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
+        saveCardTransaction(card, CardTransactionType.PAYMENT, payment.getAmount(),
+                "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
         autoCreateBookEntry(payment);
+        sendPaymentNotification(payment, "payment");
 
         notifyQrPaymentResult(token, payment);
         return QrPaymentResponse.of(payment);
@@ -364,6 +381,23 @@ public class PaymentService {
         return Long.parseLong(paymentIdStr);
     }
 
+    private void sendPaymentNotification(Payment payment, String type) {
+        try {
+            String title = "payment".equals(type) ? "결제 완료" : "결제 취소";
+            String body = String.format("%s %,d원 %s",
+                    payment.getMerchantName(), payment.getAmount(),
+                    "payment".equals(type) ? "결제가 완료되었습니다." : "결제가 취소되었습니다.");
+            Map<String, String> data = Map.of(
+                    "type", type,
+                    "paymentId", String.valueOf(payment.getId()),
+                    "amount", String.valueOf(payment.getAmount()),
+                    "merchantName", payment.getMerchantName());
+            fcmService.sendNotification(payment.getUser().getId(), title, body, data);
+        } catch (Exception e) {
+            log.warn("결제 FCM 알림 실패: paymentId={}, error={}", payment.getId(), e.getMessage());
+        }
+    }
+
     private void autoCreateBookEntry(Payment payment) {
         if (payment.getCard().getCardType() != CardType.BUSINESS) return;
 
@@ -371,6 +405,7 @@ public class PaymentService {
             // 세목 자동분류
             String categoryCode = null;
             String categoryName = null;
+            int confidenceScore = 0;
             boolean isConfirmed = false;
 
             try {
@@ -393,11 +428,13 @@ public class PaymentService {
                 // taxCategory에서 categoryCode 추출
                 categoryCode = resolveCategoryCode(categoryName);
 
+                confidenceScore = result.confidenceScore();
+
                 // CONFIRMED → 자동 확정, 나머지 → 미확인 (사용자 확인 필요)
                 isConfirmed = result.confidence() == ClassificationResult.Confidence.CONFIRMED;
 
-                log.info("세목 자동분류: merchant={}, category={} ({}), confidence={}",
-                        payment.getMerchantName(), categoryName, categoryCode, result.confidence());
+                log.info("세목 자동분류: merchant={}, category={} ({}), confidence={}, score={}",
+                        payment.getMerchantName(), categoryName, categoryCode, result.confidence(), confidenceScore);
             } catch (Exception e) {
                 log.warn("세목 분류 실패, 미분류로 장부 생성: {}", e.getMessage());
             }
@@ -412,6 +449,7 @@ public class PaymentService {
                     false,
                     categoryCode,
                     categoryName,
+                    confidenceScore,
                     null
             );
             var entry = bookEntryService.create(payment.getUser().getId(), bookRequest);
@@ -463,6 +501,14 @@ public class PaymentService {
             case "미분류" -> "99";
             default -> "18"; // 기타 경비
         };
+    }
+
+    private void saveCardTransaction(Card card, CardTransactionType type, Long amount, String description, Long paymentBalance) {
+        try {
+            cardTransactionSaveService.save(card, type, amount, description, paymentBalance);
+        } catch (Exception e) {
+            log.warn("카드 거래 기록 저장 실패 (결제는 정상): cardId={}, error={}", card.getId(), e.getMessage());
+        }
     }
 
     private String getUserKey(User user) {

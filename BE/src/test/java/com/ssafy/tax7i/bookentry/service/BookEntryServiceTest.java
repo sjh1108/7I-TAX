@@ -10,6 +10,8 @@ import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,8 +39,17 @@ class BookEntryServiceTest {
     @Mock
     private BookEntryRepository bookEntryRepository;
 
+    @Mock
+    private TaxParameterService taxParameterService;
+
     @InjectMocks
     private BookEntryService bookEntryService;
+
+    @BeforeEach
+    void setUp() {
+        org.mockito.Mockito.lenient().when(taxParameterService.getVatRate(org.mockito.ArgumentMatchers.anyInt()))
+                .thenReturn(0.10);
+    }
 
     // ───────────── create ─────────────
 
@@ -46,7 +57,7 @@ class BookEntryServiceTest {
     void create_과세거래_부가세자동분리() {
         BookEntryCreateRequest request = new BookEntryCreateRequest(
                 1L, LocalDate.of(2026, 3, 16), "스타벅스 결제", "스타벅스",
-                EntryType.EXPENSE, 55000L, false, null, null, null);
+                EntryType.EXPENSE, 55000L, false, null, null, null, null);
 
         given(bookEntryRepository.save(any(BookEntry.class))).willAnswer(invocation -> {
             BookEntry entry = invocation.getArgument(0);
@@ -67,7 +78,7 @@ class BookEntryServiceTest {
     void create_면세거래_부가세0원() {
         BookEntryCreateRequest request = new BookEntryCreateRequest(
                 2L, LocalDate.of(2026, 3, 16), "병원 진료", "서울대병원",
-                EntryType.EXPENSE, 30000L, true, null, null, null);
+                EntryType.EXPENSE, 30000L, true, null, null, null, null);
 
         given(bookEntryRepository.save(any(BookEntry.class))).willAnswer(invocation -> {
             BookEntry entry = invocation.getArgument(0);
@@ -86,7 +97,7 @@ class BookEntryServiceTest {
     void create_수입거래_incomeAmount설정() {
         BookEntryCreateRequest request = new BookEntryCreateRequest(
                 null, LocalDate.of(2026, 3, 16), "외주 대금", "클라이언트A",
-                EntryType.INCOME, 1100000L, false, null, null, null);
+                EntryType.INCOME, 1100000L, false, null, null, null, null);
 
         given(bookEntryRepository.save(any(BookEntry.class))).willAnswer(invocation -> {
             BookEntry entry = invocation.getArgument(0);
@@ -105,7 +116,7 @@ class BookEntryServiceTest {
     void create_고정자산_fixedAssetAmount설정() {
         BookEntryCreateRequest request = new BookEntryCreateRequest(
                 null, LocalDate.of(2026, 3, 16), "맥북프로 구매", "애플스토어",
-                EntryType.ASSET, 3300000L, false, null, null, null);
+                EntryType.ASSET, 3300000L, false, null, null, null, null);
 
         given(bookEntryRepository.save(any(BookEntry.class))).willAnswer(invocation -> {
             BookEntry entry = invocation.getArgument(0);
@@ -129,7 +140,7 @@ class BookEntryServiceTest {
 
         BookEntryCreateRequest request = new BookEntryCreateRequest(
                 1L, LocalDate.of(2026, 3, 16), "중복 테스트", "스타벅스",
-                EntryType.EXPENSE, 55000L, false, null, null, null);
+                EntryType.EXPENSE, 55000L, false, null, null, null, null);
 
         assertThatThrownBy(() -> bookEntryService.create(1L, request))
                 .isInstanceOf(BusinessException.class)
@@ -141,7 +152,7 @@ class BookEntryServiceTest {
     void create_금액0이하_예외() {
         BookEntryCreateRequest request = new BookEntryCreateRequest(
                 null, LocalDate.of(2026, 3, 16), "테스트", "테스트",
-                EntryType.EXPENSE, 0L, false, null, null, null);
+                EntryType.EXPENSE, 0L, false, null, null, null, null);
 
         assertThatThrownBy(() -> bookEntryService.create(1L, request))
                 .isInstanceOf(BusinessException.class)

@@ -9,7 +9,6 @@ import com.ssafy.tax7i.global.exception.ErrorCode;
 import io.hypersistence.tsid.TSID;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 
@@ -35,24 +34,11 @@ public class SmsOtpService {
     private final SmsSender smsSender;
     private final UserRepository userRepository;
 
-    @Value("${otp.bypass-code:}")
-    private String bypassCode;
-
     public OtpSendResponse sendOtp(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
         String phoneNumber = user.getPhoneNumber();
-
-        if (!bypassCode.isEmpty()) {
-            redisTemplate.opsForValue().set(
-                    OTP_PREFIX + userId,
-                    bypassCode,
-                    OTP_TTL_MINUTES, TimeUnit.MINUTES
-            );
-            log.warn("OTP 바이패스 모드: userId={}, maskedPhone={}", userId, smsSender.maskPhone(phoneNumber));
-            return new OtpSendResponse(smsSender.maskPhone(phoneNumber), OTP_TTL_MINUTES * 60);
-        }
 
         String sendKey = OTP_SEND_PREFIX + userId;
         String sendCount = redisTemplate.opsForValue().get(sendKey);

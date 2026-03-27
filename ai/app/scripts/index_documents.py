@@ -26,6 +26,24 @@ def run_indexing(vectorstore_service: VectorStoreService) -> None:
     Args:
         vectorstore_service: 초기화된 VectorStoreService 인스턴스.
     """
+    parser = argparse.ArgumentParser(
+        description="세법 PDF 문서를 ChromaDB에 인덱싱합니다."
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="기존 컬렉션을 삭제하고 재인덱싱합니다.",
+    )
+    args = parser.parse_args()
+
+    vectorstore_service = VectorStoreService(settings)
+
+    if args.force:
+        logger.info("--force 옵션 감지: 기존 컬렉션을 삭제합니다.")
+        vectorstore_service.delete_collection()
+        logger.info("컬렉션 삭제 완료.")
+        vectorstore_service = VectorStoreService(settings)  # 컬렉션 재초기화
+
     logger.info("문서 처리를 시작합니다.")
     start_time = time.time()
 

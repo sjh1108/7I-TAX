@@ -26,6 +26,7 @@ class TaxSavingServiceTest {
 
     @Mock private BookEntryRepository bookEntryRepository;
     @Mock private TaxCalculationEngine taxCalculationEngine;
+    @Mock private TaxParameterService taxParameterService;
     @InjectMocks private TaxSavingService taxSavingService;
 
     @Test
@@ -104,6 +105,23 @@ class TaxSavingServiceTest {
                         1_500_000L, income - expense - 1_500_000L,
                         taxRate, 1_000_000L, 1_000_000L,
                         0L, 1_000_000L, 100_000L, false));
+
+        // TaxParameterService 모킹
+        given(taxParameterService.getBasicDeduction(anyInt())).willReturn(1_500_000L);
+        given(taxParameterService.getLocalTaxRate(anyInt())).willReturn(0.10);
+        given(taxParameterService.getNoranLimit(anyInt(), anyLong()))
+                .willAnswer(inv -> {
+                    long revenue = inv.getArgument(1);
+                    return revenue <= 40_000_000L ? 5_000_000L : 3_000_000L;
+                });
+        given(taxParameterService.getPensionCreditRate(anyInt(), anyLong()))
+                .willAnswer(inv -> {
+                    long revenue = inv.getArgument(1);
+                    return revenue <= 55_000_000L ? 0.15 : 0.132;
+                });
+        given(taxParameterService.getPensionLimit(anyInt())).willReturn(6_000_000L);
+        given(taxParameterService.getEntertainmentLimit(anyInt())).willReturn(12_000_000L);
+        given(taxParameterService.getEducationLimit(anyInt())).willReturn(1_500_000L);
 
         // 기본: 사용금액 0 (테스트별 오버라이드 가능하도록 lenient)
         lenient().when(bookEntryRepository.sumAmountByUserIdAndCategoryNameAndYear(eq(1L), eq("접대비"), anyInt()))

@@ -127,6 +127,7 @@ Content-Type: application/json
 {
   "description": "사무용 복사용지 및 토너 구매"
 }
+# > 응답 기대: reason="사무용품 등 소모성 자재 구입", legal_basis="소득세법 제33조"
 
 ###
 

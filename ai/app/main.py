@@ -63,15 +63,6 @@ async def ai_service_error_handler(request: Request, exc: AIServiceError) -> JSO
 
 @app.exception_handler(RequestValidationError)
 async def validation_error_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-    """요청 검증 실패를 처리하고 JSON 응답을 반환한다.
-
-    Args:
-        request: HTTP 요청 객체.
-        exc: RequestValidationError 예외.
-
-    Returns:
-        JSONResponse: 상태 코드 422와 검증 오류 목록을 포함한 JSON 응답.
-    """
     return JSONResponse(
         status_code=422,
         content={"detail": exc.errors()},
@@ -80,15 +71,6 @@ async def validation_error_handler(request: Request, exc: RequestValidationError
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
-    """처리되지 않은 예외를 처리하고 JSON 응답을 반환한다.
-
-    Args:
-        request: HTTP 요청 객체.
-        exc: Exception 예외.
-
-    Returns:
-        JSONResponse: 상태 코드 500을 포함한 JSON 응답.
-    """
     logger.error("처리되지 않은 예외 발생: %s", exc, exc_info=True)
     return JSONResponse(
         status_code=500,
