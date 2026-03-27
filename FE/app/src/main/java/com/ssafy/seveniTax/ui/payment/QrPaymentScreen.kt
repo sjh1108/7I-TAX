@@ -87,6 +87,56 @@ fun QrPaymentScreen(
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedCard by remember { mutableIntStateOf(0) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
+    var showResultDialog by remember { mutableStateOf(false) }
+    var dialogTitle by remember { mutableStateOf("") }
+    var dialogMessage by remember { mutableStateOf("") }
+    var dialogIsSuccess by remember { mutableStateOf(false) }
+
+    // 결제 완료 감지
+    LaunchedEffect(paymentState.paymentComplete) {
+        if (paymentState.paymentComplete) {
+            dialogTitle = "결제 완료"
+            dialogMessage = "결제가 성공적으로 처리되었습니다."
+            dialogIsSuccess = true
+            showResultDialog = true
+        }
+    }
+
+    // 에러 감지
+    LaunchedEffect(paymentState.errorMessage) {
+        if (paymentState.errorMessage.isNotEmpty()) {
+            dialogTitle = "결제 실패"
+            dialogMessage = paymentState.errorMessage
+            dialogIsSuccess = false
+            showResultDialog = true
+            paymentViewModel.clearError()
+        }
+    }
+
+    if (showResultDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                showResultDialog = false
+                if (dialogIsSuccess) paymentViewModel.resetPayment()
+            },
+            title = {
+                Text(
+                    dialogTitle,
+                    fontWeight = FontWeight.Bold,
+                    color = if (dialogIsSuccess) Color(0xFF3DBDA2) else Color(0xFFE8475A)
+                )
+            },
+            text = { Text(dialogMessage) },
+            confirmButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    showResultDialog = false
+                    if (dialogIsSuccess) paymentViewModel.resetPayment()
+                }) {
+                    Text("확인", color = BrandPurple)
+                }
+            }
+        )
+    }
     var cameraPermissionGranted by remember { mutableStateOf(false) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
