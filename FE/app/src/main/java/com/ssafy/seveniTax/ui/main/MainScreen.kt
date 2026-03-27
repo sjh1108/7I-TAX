@@ -65,7 +65,8 @@ import com.ssafy.seveniTax.viewmodel.MainViewModel
 private data class NotificationItem(
     val title: String,
     val message: String,
-    val time: String
+    val time: String,
+    val route: String? = null
 )
 
 private data class DrawerItem(
@@ -100,11 +101,11 @@ fun MainScreen(
     val notifications = remember(unconfirmedCount, deadlines) {
         buildList {
             if (unconfirmedCount > 0) {
-                add(NotificationItem("미분류 거래 ${unconfirmedCount}건", "거래를 분류하면 장부 정확도가 올라갑니다.", ""))
+                add(NotificationItem("미분류 거래 ${unconfirmedCount}건", "거래를 분류하면 장부 정확도가 올라갑니다.", "", Route.UnclassifiedList.path))
             }
             deadlines.filter { it.dDay in 0..7 }.sortedBy { it.dDay }.forEach { d ->
                 val dText = if (d.dDay == 0) "D-Day" else "D-${d.dDay}"
-                add(NotificationItem("${d.taxName} $dText", d.description, ""))
+                add(NotificationItem("${d.taxName} $dText", d.description, "", Route.TaxCalendar.path))
             }
         }
     }
@@ -280,13 +281,19 @@ fun MainScreen(
             sheetState = sheetState,
             containerColor = Color.White
         ) {
-            NotificationSheetContent(notifications = notifications)
+            NotificationSheetContent(
+                notifications = notifications,
+                onItemClick = { route ->
+                    isNotificationSheetOpen = false
+                    navController.navigate(route)
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun NotificationSheetContent(notifications: List<NotificationItem>) {
+private fun NotificationSheetContent(notifications: List<NotificationItem>, onItemClick: (String) -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -312,6 +319,7 @@ private fun NotificationSheetContent(notifications: List<NotificationItem>) {
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .background(Color(0xFFF8F8FB))
+                    .then(if (item.route != null) Modifier.clickable { onItemClick(item.route) } else Modifier)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(
