@@ -50,6 +50,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.ai.AiScreen
+import com.ssafy.seveniTax.ui.dashboard.DashboardScreen
 import com.ssafy.seveniTax.ui.home.HomeScreen
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
@@ -109,6 +110,10 @@ fun MainScreen(
                 items = listOf(
                     DrawerItem("메인 홈") {
                         selectedTab = BottomTab.HOME
+                        isSideMenuOpen = false
+                    },
+                    DrawerItem("대시보드") {
+                        selectedTab = BottomTab.DASHBOARD
                         isSideMenuOpen = false
                     },
                     DrawerItem("AI 세무 도우미") {
@@ -219,10 +224,12 @@ fun MainScreen(
                     onMenuClick = { isSideMenuOpen = true },
                     notificationCount = notifications.size
                 )
+                BottomTab.DASHBOARD -> DashboardScreen(navController, modifier)
                 BottomTab.SETTINGS -> SettingsScreen(navController, modifier)
                 BottomTab.AI -> AiScreen(navController, modifier)
                 BottomTab.QR_PAYMENT -> QrPaymentScreen(
                     navController = navController,
+                    showBackButton = false,
                     modifier = modifier
                 )
             }

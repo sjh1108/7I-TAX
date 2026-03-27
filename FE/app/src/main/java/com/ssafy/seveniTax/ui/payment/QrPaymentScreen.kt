@@ -36,6 +36,10 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -83,6 +87,7 @@ import java.util.concurrent.Executors
 fun QrPaymentScreen(
     navController: NavController,
     cardViewModel: CardViewModel = hiltViewModel(),
+    showBackButton: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val cardUiState by cardViewModel.uiState.collectAsState()
@@ -133,6 +138,18 @@ fun QrPaymentScreen(
                 .height(56.dp)
                 .padding(horizontal = 4.dp)
         ) {
+            if (showBackButton) {
+                IconButton(
+                    onClick = { navController.popBackStack() },
+                    modifier = Modifier.align(Alignment.CenterStart)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "뒤로가기",
+                        tint = TextPrimary
+                    )
+                }
+            }
             Text(
                 text = "Pay 결제",
                 fontSize = 18.sp,
