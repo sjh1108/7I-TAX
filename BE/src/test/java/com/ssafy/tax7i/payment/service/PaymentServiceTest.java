@@ -6,10 +6,9 @@ import com.ssafy.tax7i.banking.client.SsafyCreditCardClient;
 import com.ssafy.tax7i.banking.client.dto.*;
 import com.ssafy.tax7i.bookentry.service.BookEntryService;
 import com.ssafy.tax7i.card.entity.Card;
-import com.ssafy.tax7i.card.entity.CardTransaction;
 import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
-import com.ssafy.tax7i.card.repository.CardTransactionRepository;
+import com.ssafy.tax7i.card.service.CardTransactionSaveService;
 import com.ssafy.tax7i.fcm.service.FcmService;
 import com.ssafy.tax7i.classification.service.TaxClassificationService;
 import com.ssafy.tax7i.global.exception.BusinessException;
@@ -57,7 +56,7 @@ class PaymentServiceTest {
     @Mock private RedisTemplate<String, String> redisTemplate;
     @Mock private ValueOperations<String, String> valueOperations;
     @Mock private ApplicationEventPublisher eventPublisher;
-    @Mock private CardTransactionRepository cardTransactionRepository;
+    @Mock private CardTransactionSaveService cardTransactionSaveService;
     @Mock private FcmService fcmService;
 
     @InjectMocks
@@ -129,7 +128,7 @@ class PaymentServiceTest {
 
         assertThat(response.status()).isEqualTo(PaymentStatus.CAPTURED);
         assertThat(response.amount()).isEqualTo(10000L);
-        verify(cardTransactionRepository).save(any(CardTransaction.class));
+        verify(cardTransactionSaveService).save(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -176,7 +175,7 @@ class PaymentServiceTest {
 
         assertThat(response.status()).isEqualTo(PaymentStatus.CANCELLED);
         assertThat(response.cancelledAmount()).isEqualTo(10000L);
-        verify(cardTransactionRepository).save(any(CardTransaction.class));
+        verify(cardTransactionSaveService).save(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -244,7 +243,7 @@ class PaymentServiceTest {
 
         assertThat(response.status()).isEqualTo(PaymentStatus.CAPTURED);
         assertThat(response.amount()).isEqualTo(10000L);
-        verify(cardTransactionRepository).save(any(CardTransaction.class));
+        verify(cardTransactionSaveService).save(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -396,7 +395,7 @@ class PaymentServiceTest {
 
         assertThat(response.status()).isEqualTo(PaymentStatus.CAPTURED);
         assertThat(response.amount()).isEqualTo(10000L);
-        verify(cardTransactionRepository).save(any(CardTransaction.class));
+        verify(cardTransactionSaveService).save(any(), any(), any(), any(), any());
     }
 
     @Test

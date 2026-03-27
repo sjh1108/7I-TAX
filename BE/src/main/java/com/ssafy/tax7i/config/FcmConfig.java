@@ -24,6 +24,10 @@ public class FcmConfig {
 
     @PostConstruct
     public void init() throws IOException {
+        if (serviceAccountPath == null || serviceAccountPath.isBlank()) {
+            log.warn("FCM service account path가 설정되지 않았습니다. Firebase 초기화를 건너뜁니다.");
+            return;
+        }
         if (FirebaseApp.getApps().isEmpty()) {
             FirebaseOptions options = FirebaseOptions.builder()
                     .setCredentials(GoogleCredentials.fromStream(new FileInputStream(serviceAccountPath)))

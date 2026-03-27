@@ -28,7 +28,7 @@ public class FcmTokenController {
     public ResponseEntity<SuccessResponse<Void>> removeToken(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody FcmTokenRequest request) {
-        fcmService.removeToken(request.token());
+        fcmService.removeToken(userId, request.token());
         return ResponseEntity.ok(SuccessResponse.ok("FCM 토큰이 삭제되었습니다."));
     }
 }

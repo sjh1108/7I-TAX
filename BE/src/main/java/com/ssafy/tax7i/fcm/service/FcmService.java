@@ -49,9 +49,14 @@ public class FcmService {
     }
 
     @Transactional
-    public void removeToken(String token) {
+    public void removeToken(Long userId, String token) {
+        FcmToken fcmToken = fcmTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND));
+        if (!fcmToken.getUser().getId().equals(userId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
         fcmTokenRepository.deleteByToken(token);
-        log.info("FCM 토큰 삭제: token={}...", token.substring(0, Math.min(token.length(), 20)));
+        log.info("FCM 토큰 삭제: userId={}", userId);
     }
 
     public void sendNotification(Long userId, String title, String body, Map<String, String> data) {
@@ -80,7 +85,7 @@ public class FcmService {
                 log.debug("FCM 발송 성공: userId={}, title={}", userId, title);
             } catch (FirebaseMessagingException e) {
                 if (e.getMessagingErrorCode() == MessagingErrorCode.UNREGISTERED) {
-                    fcmTokenRepository.delete(fcmToken);
+                    fcmTokenRepository.deleteByToken(fcmToken.getToken());
                     log.info("만료된 FCM 토큰 삭제: userId={}", userId);
                 } else {
                     log.warn("FCM 발송 실패: userId={}, error={}", userId, e.getMessage());
