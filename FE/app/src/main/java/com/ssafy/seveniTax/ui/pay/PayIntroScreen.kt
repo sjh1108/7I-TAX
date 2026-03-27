@@ -48,10 +48,10 @@ private data class PayFeature(
 )
 
 private val features = listOf(
-    PayFeature("카드 등록", "사업용 카드와 개인 카드를 등록해 결제 수단을 쉽게 관리할 수 있습니다.", R.drawable.ill_01),
-    PayFeature("간편 결제", "QR 또는 온라인으로 빠르게 결제할 수 있습니다.", R.drawable.ill_02),
-    PayFeature("결제 내역", "기간별 결제 기록을 확인하고 정리할 수 있습니다.", R.drawable.ill_03),
-    PayFeature("자동 분류", "결제 내역을 장부와 연결해 자동 분류를 도와줍니다.", R.drawable.ill_04),
+    PayFeature("카드 등록", "일반 카드 및 사업자 카드를\n등록하고 관리하세요", R.drawable.ill_01),
+    PayFeature("간편 결제", "QR 또는 온라인으로 빠르게\n결제하세요", R.drawable.ill_02),
+    PayFeature("결제 내역", "기간별, 카드별로 내역을\n조회할 수 있어요", R.drawable.ill_03),
+    PayFeature("세무 자동화", "간편 장부를 기반으로\n세무 자동화 기능까지 한번에", R.drawable.ill_04),
 )
 
 @Composable
@@ -104,7 +104,7 @@ fun PayIntroScreen(navController: NavController) {
                 .padding(horizontal = 24.dp, vertical = 16.dp)
         ) {
             TaxButton(
-                text = "페이 서비스 시작",
+                text = "가입 시작하기",
                 onClick = { navController.navigate(Route.PayTerms.path) }
             )
         }

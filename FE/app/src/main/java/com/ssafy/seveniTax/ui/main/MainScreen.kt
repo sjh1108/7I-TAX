@@ -149,10 +149,6 @@ fun MainScreen(
                     DrawerItem("미분류 거래") {
                         isSideMenuOpen = false
                         navController.navigate(Route.UnclassifiedList.path)
-                    },
-                    DrawerItem("내보내기") {
-                        isSideMenuOpen = false
-                        navController.navigate(Route.ExportPurpose.path)
                     }
                 )
             ),

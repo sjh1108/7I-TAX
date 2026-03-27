@@ -28,13 +28,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -57,7 +54,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -95,18 +91,6 @@ fun QrPaymentScreen(
     var selectedCard by remember { mutableIntStateOf(0) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
     var cameraPermissionGranted by remember { mutableStateOf(false) }
-    val cardListState = rememberLazyListState()
-    val screenWidth = LocalConfiguration.current.screenWidthDp.dp
-    val selectedCardWidth = 150.dp
-    val cardSidePadding = ((screenWidth - selectedCardWidth) / 2).coerceAtLeast(16.dp)
-
-    LaunchedEffect(cardUiState.cards.size) {
-        if (cardUiState.cards.isEmpty()) {
-            selectedCard = 0
-        } else if (selectedCard > cardUiState.cards.lastIndex) {
-            selectedCard = cardUiState.cards.lastIndex
-        }
-    }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestPermission()
@@ -120,29 +104,21 @@ fun QrPaymentScreen(
         }
     }
 
-    LaunchedEffect(selectedCard, cardUiState.cards.size) {
-        if (cardUiState.cards.isNotEmpty() && selectedCard <= cardUiState.cards.lastIndex) {
-            centerSelectedCard(cardListState, selectedCard)
-        }
-    }
-
     Column(
         modifier = modifier
             .fillMaxSize()
             .statusBarsPadding()
             .background(Background)
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .padding(horizontal = 4.dp)
+                .padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
             if (showBackButton) {
-                IconButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier.align(Alignment.CenterStart)
-                ) {
+                IconButton(onClick = { navController.popBackStack() }) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                         contentDescription = "뒤로가기",
@@ -154,8 +130,7 @@ fun QrPaymentScreen(
                 text = "Pay 결제",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.SemiBold,
-                color = TextPrimary,
-                modifier = Modifier.align(Alignment.Center)
+                color = TextPrimary
             )
         }
 
@@ -192,9 +167,8 @@ fun QrPaymentScreen(
         ) {
             if (selectedTab == 0) {
                 val card = cardUiState.cards.getOrNull(selectedCard)
-                var qrTimestamp by remember(selectedCard) { mutableLongStateOf(System.currentTimeMillis() / 1000) }
-                var remainingSeconds by remember(selectedCard) { mutableIntStateOf(60) }
-
+                var qrTimestamp by remember { mutableLongStateOf(System.currentTimeMillis() / 1000) }
+                var remainingSeconds by remember { mutableIntStateOf(60) }
                 LaunchedEffect(selectedCard) {
                     qrTimestamp = System.currentTimeMillis() / 1000
                     remainingSeconds = 60
@@ -207,7 +181,6 @@ fun QrPaymentScreen(
                         }
                     }
                 }
-
                 val qrData = "PAY-${card?.cardNumber?.takeLast(4) ?: "0000"}-$qrTimestamp"
                 val qrBitmap = remember(qrData) { generateQrCode(qrData) }
 
@@ -220,11 +193,11 @@ fun QrPaymentScreen(
                         Image(
                             bitmap = qrBitmap.asImageBitmap(),
                             contentDescription = "QR코드",
-                            modifier = Modifier.size(200.dp)
+                            modifier = Modifier.width(200.dp).height(200.dp)
                         )
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = card?.cardNumber ?: "카드를 등록해 주세요",
+                            text = card?.cardNumber ?: "카드를 등록해주세요",
                             fontSize = 13.sp,
                             color = TextSecondary,
                             fontWeight = FontWeight.Medium
@@ -301,34 +274,30 @@ fun QrPaymentScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         LazyRow(
-            state = cardListState,
-            contentPadding = PaddingValues(horizontal = cardSidePadding),
+            contentPadding = PaddingValues(horizontal = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
-            verticalAlignment = Alignment.Bottom,
             modifier = Modifier
-                .height(222.dp)
                 .navigationBarsPadding()
-                .padding(bottom = 16.dp)
+                .padding(bottom = 32.dp)
         ) {
             items(cardUiState.cards.size) { index ->
                 val card = cardUiState.cards[index]
                 val isSelected = index == selectedCard
                 val animatedWidth by animateDpAsState(
-                    targetValue = if (isSelected) 150.dp else 100.dp,
-                    animationSpec = tween(220),
+                    targetValue = if (isSelected) 116.dp else 100.dp,
+                    animationSpec = tween(200),
                     label = "cardWidth"
                 )
                 val animatedHeight by animateDpAsState(
-                    targetValue = if (isSelected) 210.dp else 140.dp,
-                    animationSpec = tween(220),
+                    targetValue = if (isSelected) 160.dp else 140.dp,
+                    animationSpec = tween(200),
                     label = "cardHeight"
                 )
                 val animatedElevation by animateDpAsState(
                     targetValue = if (isSelected) 12.dp else 0.dp,
-                    animationSpec = tween(220),
+                    animationSpec = tween(200),
                     label = "cardElevation"
                 )
-
                 Box(
                     modifier = Modifier
                         .width(animatedWidth)
@@ -346,17 +315,8 @@ fun QrPaymentScreen(
                 ) {
                     val typeName = if (card.type == "personal") "일반 카드" else "사업자 카드"
                     Column {
-                        Text(
-                            text = typeName,
-                            fontSize = 11.sp,
-                            color = Color.White,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = card.cardNumber.takeLast(17),
-                            fontSize = 10.sp,
-                            color = Color.White.copy(alpha = 0.7f)
-                        )
+                        Text(typeName, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
+                        Text(card.cardNumber.takeLast(17), fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))
                     }
                 }
             }
@@ -381,13 +341,6 @@ fun QrPaymentScreen(
             }
         }
     }
-}
-
-private suspend fun centerSelectedCard(
-    listState: LazyListState,
-    selectedIndex: Int
-) {
-    listState.animateScrollToItem(selectedIndex)
 }
 
 @Composable
