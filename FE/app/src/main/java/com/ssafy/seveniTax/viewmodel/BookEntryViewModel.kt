@@ -175,6 +175,16 @@ class BookEntryViewModel @Inject constructor(
                         Log.d("BookEntryVM", "    [${e.id}] ${e.entryDate} ${e.merchantName} ${e.entryType} income=${e.incomeAmount} expense=${e.expenseAmount}")
                     }
                     _entries.value = entries
+
+                    // 최신 데이터의 연/월로 자동 설정
+                    val latestDate = entries.mapNotNull {
+                        try { java.time.LocalDate.parse(it.entryDate) } catch (_: Exception) { null }
+                    }.maxOrNull()
+                    if (latestDate != null) {
+                        _selectedYear.value = latestDate.year
+                        _selectedMonth.value = latestDate.monthValue
+                        Log.d("BookEntryVM", "  자동 설정: ${latestDate.year}년 ${latestDate.monthValue}월")
+                    }
                 } else {
                     val errMsg = body?.message ?: errorBody?.take(200) ?: "데이터를 불러올 수 없습니다 (HTTP $code)"
                     Log.e("BookEntryVM", "  실패: $errMsg")
