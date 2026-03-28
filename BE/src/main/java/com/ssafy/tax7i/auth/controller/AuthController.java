@@ -8,6 +8,7 @@ import com.ssafy.tax7i.global.response.SuccessResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -62,6 +63,7 @@ public class AuthController {
         return ResponseEntity.ok(SuccessResponse.ok());
     }
 
+    @Profile("!prod")
     @PostMapping("/test-login")
     public ResponseEntity<SuccessResponse<LoginResponse>> testLogin(
             @RequestParam(value = "email", required = false) String email) {

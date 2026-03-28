@@ -59,9 +59,20 @@ public class SsafyFinanceClient {
         try {
             SsafyDepositResponse depositResponse = deposit(receiverUserKey, toAccountNo, amount, depositSummary);
             return new SsafyTransferResult(withdrawResponse, depositResponse);
-        } catch (Exception e) {
-            log.error("이체 중 입금 실패, 환불 처리: {}", e.getMessage());
-            deposit(senderUserKey, fromAccountNo, amount, "이체 실패 환불");
+        } catch (Exception depositEx) {
+            log.error("이체 중 입금 실패, 환불 처리 시도: fromAccount={}, amount={}, error={}",
+                    fromAccountNo, amount, depositEx.getMessage());
+            try {
+                deposit(senderUserKey, fromAccountNo, amount, "이체 실패 환불");
+                log.info("이체 실패 환불 성공: fromAccount={}, amount={}", fromAccountNo, amount);
+            } catch (Exception compensationEx) {
+                // 환불 실패 — 수동 조치 필요
+                log.error("[CRITICAL] 이체 실패 후 환불도 실패 — 수동 조치 필요: " +
+                        "senderAccount={}, amount={}, 원인={}, 환불실패원인={}",
+                        fromAccountNo, amount, depositEx.getMessage(), compensationEx.getMessage());
+                throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE,
+                        "이체 실패 및 환불 처리 실패 — 관리자에게 문의하세요.");
+            }
             throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE, "이체 중 입금에 실패하여 환불 처리되었습니다.");
         }
     }

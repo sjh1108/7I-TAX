@@ -16,11 +16,13 @@ import com.ssafy.tax7i.transfer.entity.Transfer;
 import com.ssafy.tax7i.transfer.entity.TransferType;
 import com.ssafy.tax7i.transfer.repository.TransferRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -51,10 +53,29 @@ public class TransferService {
 
         String description = request.description() != null ? request.description() : "P2P 송금";
 
-        SsafyTransferResult result = ssafyFinanceClient.transfer(
-                senderKey, senderCard.getWithdrawalAccountNo(),
-                receiverKey, receiverCard.getWithdrawalAccountNo(),
-                request.amount(), description, description);
+        SsafyTransferResult result;
+        try {
+            result = ssafyFinanceClient.transfer(
+                    senderKey, senderCard.getWithdrawalAccountNo(),
+                    receiverKey, receiverCard.getWithdrawalAccountNo(),
+                    request.amount(), description, description);
+        } catch (BusinessException e) {
+            // 이체 실패(환불 성공 or 환불 실패) — FAILED 상태로 기록
+            Transfer failedTransfer = Transfer.builder()
+                    .senderUser(sender)
+                    .receiverUser(receiver)
+                    .senderCard(senderCard)
+                    .receiverCard(receiverCard)
+                    .transferType(TransferType.P2P)
+                    .amount(request.amount())
+                    .description(description)
+                    .build();
+            failedTransfer.fail(e.getMessage());
+            transferRepository.save(failedTransfer);
+            log.error("P2P 송금 실패 기록 저장: transferId={}, senderId={}, amount={}, reason={}",
+                    failedTransfer.getId(), userId, request.amount(), e.getMessage());
+            throw e;
+        }
 
         Transfer transfer = Transfer.builder()
                 .senderUser(sender)

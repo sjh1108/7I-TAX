@@ -126,19 +126,18 @@ public class AuthService {
         User user = candidates.stream()
                 .filter(u -> phoneNumber.equals(u.getPhoneNumber()))
                 .findFirst()
-                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+                .orElse(null);
+
+        // 사용자 미존재, PIN 미설정, PIN 불일치를 동일한 오류로 처리 (전화번호 열거 공격 방지)
+        if (user == null || user.getPinHash() == null || !pinService.verifyPin(pin, user.getPinHash())) {
+            if (user != null) {
+                redisTemplate.opsForValue().increment(failKey);
+                redisTemplate.expire(failKey, PIN_FAIL_TTL_MINUTES, TimeUnit.MINUTES);
+            }
+            throw new BusinessException(ErrorCode.UNAUTHORIZED, "전화번호 또는 PIN이 올바르지 않습니다.");
+        }
 
         checkUserStatus(user);
-
-        if (user.getPinHash() == null) {
-            throw new BusinessException(ErrorCode.PIN_NOT_SET);
-        }
-
-        if (!pinService.verifyPin(pin, user.getPinHash())) {
-            redisTemplate.opsForValue().increment(failKey);
-            redisTemplate.expire(failKey, PIN_FAIL_TTL_MINUTES, TimeUnit.MINUTES);
-            throw new BusinessException(ErrorCode.PIN_INVALID);
-        }
 
         redisTemplate.delete(failKey);
 

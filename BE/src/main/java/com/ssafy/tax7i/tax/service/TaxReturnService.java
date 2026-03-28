@@ -37,6 +37,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -144,11 +145,21 @@ public class TaxReturnService {
 
     public List<TaxReturnResponse> getReturns(Long userId) {
         List<TaxReturn> returns = taxReturnRepository.findByUserIdOrderByTaxYearDesc(userId);
+        if (returns.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> returnIds = returns.stream()
+                .map(TaxReturn::getId)
+                .toList();
+
+        Map<Long, List<ExpenseDetail>> detailsByReturnId = expenseDetailRepository
+                .findByTaxReturn_IdIn(returnIds)
+                .stream()
+                .collect(Collectors.groupingBy(d -> d.getTaxReturn().getId()));
+
         return returns.stream()
-                .map(r -> {
-                    List<ExpenseDetail> details = expenseDetailRepository.findByTaxReturn_Id(r.getId());
-                    return TaxReturnResponse.from(r, details);
-                })
+                .map(r -> TaxReturnResponse.from(r, detailsByReturnId.getOrDefault(r.getId(), List.of())))
                 .toList();
     }
 

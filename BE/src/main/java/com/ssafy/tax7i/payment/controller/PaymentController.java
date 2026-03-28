@@ -89,6 +89,7 @@ public class PaymentController {
 
     @GetMapping("/qr/token/{token}")
     public ResponseEntity<SuccessResponse<QrPaymentInfoResponse>> getQrPaymentInfo(
+            @AuthenticationPrincipal Long userId,
             @PathVariable String token) {
         QrPaymentInfoResponse response = paymentService.getQrPaymentInfo(token);
         return ResponseEntity.ok(SuccessResponse.of(response));
