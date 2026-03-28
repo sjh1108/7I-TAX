@@ -24,18 +24,15 @@ class LLMAuthError(AIServiceError):
 
 
 class BackendClientError(AIServiceError):
-    """백엔드 클라이언트 오류 예외."""
     def __init__(self, message: str = "백엔드 서버 오류"):
         super().__init__(message, status_code=503)
 
 
 class VectorStoreError(AIServiceError):
-    """벡터 저장소 오류 예외."""
     def __init__(self, message: str = "벡터 저장소 오류"):
         super().__init__(message, status_code=503)
 
 
 class EmbeddingError(AIServiceError):
-    """임베딩 생성 오류 예외."""
     def __init__(self, message: str = "임베딩 생성 오류"):
         super().__init__(message, status_code=503)

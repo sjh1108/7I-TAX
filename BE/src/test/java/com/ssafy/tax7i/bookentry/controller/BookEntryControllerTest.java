@@ -141,7 +141,7 @@ class BookEntryControllerTest {
         BookEntryResponse response = new BookEntryResponse(
                 1L, 1L, LocalDate.of(2026, 3, 16), "스타벅스 결제", "스타벅스",
                 EntryType.EXPENSE, 0L, 50000L, 0L, 5000L, 50000L,
-                "ACC_ENTERTAIN", "접대비", true, true, false, null, null, LocalDateTime.now());
+                "ACC_ENTERTAIN", "접대비", true, true, 0, false, null, null, LocalDateTime.now());
         given(bookEntryService.updateCategory(any(), eq(1L), any())).willReturn(response);
 
         mockMvc.perform(patch("/api/book-entries/1/category")
@@ -172,7 +172,7 @@ class BookEntryControllerTest {
         BookEntryResponse response = new BookEntryResponse(
                 1L, 1L, LocalDate.of(2026, 3, 16), "스타벅스 결제", "스타벅스",
                 EntryType.EXPENSE, 0L, 50000L, 0L, 5000L, 50000L,
-                null, null, false, true, false, null, null, LocalDateTime.now());
+                null, null, false, true, 0, false, null, null, LocalDateTime.now());
         given(bookEntryService.markAsPersonal(any(), eq(1L))).willReturn(response);
 
         mockMvc.perform(patch("/api/book-entries/1/personal"))
@@ -198,7 +198,7 @@ class BookEntryControllerTest {
         return new BookEntryResponse(
                 id, 1L, LocalDate.of(2026, 3, 16), "스타벅스 결제", "스타벅스",
                 EntryType.EXPENSE, 0L, 50000L, 0L, 5000L, 50000L,
-                null, null, true, true, confirmed,
+                null, null, true, true, 0, confirmed,
                 confirmed ? LocalDateTime.now() : null, null, LocalDateTime.now());
     }
 }

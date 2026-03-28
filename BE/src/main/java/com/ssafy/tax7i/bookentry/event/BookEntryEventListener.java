@@ -77,6 +77,7 @@ public class BookEntryEventListener {
                     isVatExempt,
                     categoryCode,
                     categoryName,
+                    classification.confidenceScore(),
                     note
             );
 

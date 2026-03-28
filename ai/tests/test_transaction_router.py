@@ -94,28 +94,37 @@ class TestClassifyHighConfidence:
 
 
 class TestClassifyLowConfidence:
-    """confidence < 0.7: 로컬 모델 결과를 그대로 반환한다."""
+    """confidence < 0.7: LLM fallback 경로 검증."""
 
-    async def test_low_confidence_returns_local_result(self, client_low: AsyncClient):
-        """fallback 없이 로컬 모델 결과가 반환된다."""
-        resp = await client_low.post(
-            "/api/v1/transaction/classify",
-            json={"description": "애매한 거래 내역"},
-        )
-        data = resp.json()
-        assert resp.status_code == 200
-        assert data["category"] == "기타경비"
-        assert data["confidence"] == 0.45
+    async def test_fallback_success(self, client_low: AsyncClient):
+        with patch(
+            "app.routers.transaction._llm_fallback",
+            new_callable=AsyncMock,
+            return_value="소모품비",
+        ):
+            resp = await client_low.post(
+                "/api/v1/transaction/classify",
+                json={"description": "애매한 거래 내역"},
+            )
+            data = resp.json()
+            assert resp.status_code == 200
+            assert data["method"] == "llm_fallback"
+            assert data["category"] == "소모품비"
 
-    async def test_low_confidence_method_field(self, client_low: AsyncClient):
-        """method 필드가 fallback_needed로 반환된다."""
-        resp = await client_low.post(
-            "/api/v1/transaction/classify",
-            json={"description": "애매한 거래 내역"},
-        )
-        data = resp.json()
-        assert resp.status_code == 200
-        assert data["method"] == "fallback_needed"
+    async def test_fallback_failure_uses_local(self, client_low: AsyncClient):
+        with patch(
+            "app.routers.transaction._llm_fallback",
+            new_callable=AsyncMock,
+            side_effect=Exception("LLM 호출 실패"),
+        ):
+            resp = await client_low.post(
+                "/api/v1/transaction/classify",
+                json={"description": "애매한 거래 내역"},
+            )
+            data = resp.json()
+            assert resp.status_code == 200
+            assert data["method"] == "local_model"
+            assert data["category"] == "기타경비"
 
 
 class TestClassifyValidation:

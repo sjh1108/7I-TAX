@@ -7,6 +7,9 @@ import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
+import com.ssafy.tax7i.taxcalendar.entity.TaxDeadline;
+import com.ssafy.tax7i.taxcalendar.repository.TaxDeadlineRepository;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.service.TaxEstimationService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +29,8 @@ public class ExportService {
     private final BookEntryRepository bookEntryRepository;
     private final TaxEstimationService taxEstimationService;
     private final UserRepository userRepository;
+    private final TaxParameterService taxParameterService;
+    private final TaxDeadlineRepository taxDeadlineRepository;
 
     /**
      * 간편장부 전체 CSV (국세청 양식 기반)
@@ -155,9 +160,18 @@ public class ExportService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         TaxEstimationResponse est = taxEstimationService.estimate(userId, year);
 
-        // 지방세법 §92: 개인지방소득세 = 종합소득세 결정세액 × 10% (원 단위 절사)
+        // 지방세법 §92: 개인지방소득세 = 종합소득세 결정세액 × 지방세율 (원 단위 절사)
         long incomeTax = est.estimatedIncomeTax();
-        long localTax = (long) Math.floor(incomeTax * 0.1);
+        double localTaxRate = taxParameterService.getLocalTaxRate(year);
+        long localTax = (long) Math.floor(incomeTax * localTaxRate);
+        long localTaxPercent = Math.round(localTaxRate * 100);
+
+        // 신고기한 조회
+        int deadlineYear = year + 1;
+        String deadlineStr = taxDeadlineRepository.findByYearAndName(deadlineYear, "지방소득세 신고")
+                .or(() -> taxDeadlineRepository.findByYearAndName(year, "지방소득세 신고"))
+                .map(d -> deadlineYear + "년 " + d.getDeadlineMonth() + "월 " + d.getDeadlineDay() + "일")
+                .orElse(deadlineYear + "년 5월 31일");
 
         StringBuilder sb = new StringBuilder();
         sb.append("개인지방소득세 신고 요약,").append(year).append("년\n");
@@ -167,8 +181,8 @@ public class ExportService {
         sb.append("성명,").append(csvEscape(user.getName())).append('\n');
         sb.append("사업자등록번호,-\n");
         sb.append("종합소득세 결정세액,").append(incomeTax).append('\n');
-        sb.append("개인지방소득세(결정세액×10%),").append(localTax).append('\n');
-        sb.append("신고기한,").append(year + 1).append("년 5월 31일\n");
+        sb.append("개인지방소득세(결정세액×").append(localTaxPercent).append("%),").append(localTax).append('\n');
+        sb.append("신고기한,").append(deadlineStr).append('\n');
         sb.append("납부처,납세지 관할 지방자치단체 (위택스)\n");
 
         return sb.toString();

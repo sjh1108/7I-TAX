@@ -22,16 +22,6 @@ Content-Type: application/json
 
 ###
 
-### [EXPENSE_CLASSIFICATION] 접대비 한도 질문
-POST {{baseUrl}}/chat/
-Content-Type: application/json
-
-{
-  "message": "1인 사업자인데 접대비 한도가 얼마야?"
-}
-
-###
-
 ### [CONCEPT_EXPLANATION] 세무 개념 설명
 POST {{baseUrl}}/chat/
 Content-Type: application/json
@@ -99,8 +89,6 @@ Content-Type: application/json
 {
   "message": "간이과세자와 일반과세자 차이가 뭐야?"
 }
-
-###
 
 # ============================================================
 # Chat — 세션 유지 (session_id로 대화 이어가기)

@@ -59,17 +59,6 @@ async def init_services() -> None:
         logger.error("VectorStoreService 초기화 실패: %s", e, exc_info=True)
         raise
 
-    # ChromaDB가 비어있으면 자동 인덱싱 실행
-    stats = _vectorstore_service.get_collection_stats()
-    if stats["total_documents"] == 0:
-        logger.info("ChromaDB가 비어있습니다. 자동 인덱싱을 시작합니다.")
-        try:
-            from app.scripts.index_documents import run_indexing
-
-            run_indexing(_vectorstore_service)
-        except Exception as e:
-            logger.error("자동 인덱싱 실패: %s", e, exc_info=True)
-
     bm25_index = BM25Index()
     all_docs = _vectorstore_service.get_all_documents()
     if all_docs:

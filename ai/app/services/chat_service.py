@@ -62,21 +62,6 @@ class ChatService:
         session_id: str | None = None,
         user_id: str | None = None,
     ) -> tuple[str, str, str]:
-        """사용자 메시지를 처리하여 AI 응답을 생성한다.
-
-        인텐트 분류 -> 캐시 확인 -> RAG 검색 -> LLM 호출 순서로 처리한다.
-
-        Args:
-            message: 사용자 입력 메시지.
-            session_id: 대화 세션 ID. None이면 자동 생성.
-            user_id: 사용자 ID. 백엔드 데이터 조회 시 필요.
-
-        Returns:
-            tuple: (answer, session_id, model_name).
-
-        Raises:
-            AIServiceError: 검색 또는 LLM 호출 실패 시.
-        """
         if session_id is None:
             session_id = uuid.uuid4().hex
 
@@ -101,22 +86,11 @@ class ChatService:
         if self.settings.rag_enabled and intent_result.rag_required:
             try:
                 search_query = await self.query_rewriter.rewrite(message)
-                logger.info(
-                    "검색 실행 [인텐트=%s, 전략=%s, 쿼리=%s]",
-                    intent_result.intent, intent_result.search_strategy, search_query,
-                )
                 results = await self.retrieval_service.retrieve(
                     query=search_query,
                     metadata_filter=intent_result.metadata_filter or None,
                     search_strategy=intent_result.search_strategy,
                 )
-                if results:
-                    logger.info(
-                        "검색 결과 %d건 (최고 점수: %.3f)",
-                        len(results), max(r.score for r in results),
-                    )
-                else:
-                    logger.info("검색 결과 없음 (점수 임계치 미달 또는 관련 문서 없음)")
                 context_text = format_search_results(results)
             except AIServiceError:
                 raise

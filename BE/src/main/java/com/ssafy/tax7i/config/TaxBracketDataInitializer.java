@@ -22,8 +22,8 @@ public class TaxBracketDataInitializer implements CommandLineRunner {
     @Override
     @Transactional
     public void run(String... args) {
-        if (taxBracketRepository.count() > 0) {
-            log.info("[TaxBracketDataInitializer] 세율 구간 데이터가 이미 존재합니다. 건너뜁니다.");
+        if (!taxBracketRepository.findByYearOrderByBracketMinAsc(2025).isEmpty()) {
+            log.info("[TaxBracketDataInitializer] 2025년 세율 구간 데이터가 이미 존재합니다. 건너뜁니다.");
             return;
         }
 

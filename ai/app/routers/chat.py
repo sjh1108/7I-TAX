@@ -12,18 +12,6 @@ async def chat(
     request: ChatRequest,
     service: ChatService = Depends(get_chat_service),
 ) -> ChatResponse:
-    """채팅 메시지를 처리하고 AI 응답을 반환한다.
-
-    RAG 파이프라인을 통해 관련 문서를 검색하고 LLM이 답변을 생성한다.
-    \f
-
-    Args:
-        request: 채팅 요청 객체.
-        service: ChatService 의존성 주입.
-
-    Returns:
-        ChatResponse: AI 응답과 세션 정보.
-    """
     answer, session_id, model_used = await service.get_response(
         request.message, request.session_id, request.user_id
     )
