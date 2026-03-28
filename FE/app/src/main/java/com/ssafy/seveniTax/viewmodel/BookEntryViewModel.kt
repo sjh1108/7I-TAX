@@ -266,6 +266,8 @@ class BookEntryViewModel @Inject constructor(
                 )
                 if (response.isSuccessful && response.body()?.status == "success") {
                     Log.d("BookEntryVM", "경비 변경 성공: $entryId → $newCategory")
+                    // 카테고리 변경 후 확정 처리
+                    confirmEntry(entryId)
                     loadEntries()
                 } else {
                     val errMsg = response.body()?.message ?: "경비 변경 실패 (${response.code()})"
