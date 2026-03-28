@@ -87,13 +87,16 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.of(response));
     }
 
+    // 가맹점(수신자)용 — userId는 인증 강제 목적, 결제 소유자 검증은 하지 않음 (호출자 ≠ 결제 생성자)
     @GetMapping("/qr/token/{token}")
     public ResponseEntity<SuccessResponse<QrPaymentInfoResponse>> getQrPaymentInfo(
+            @AuthenticationPrincipal Long userId,
             @PathVariable String token) {
         QrPaymentInfoResponse response = paymentService.getQrPaymentInfo(token);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
+    // 가맹점(수신자)용 — userId는 인증 강제 목적, 결제 소유자 검증은 하지 않음 (호출자 ≠ 결제 생성자)
     @PostMapping("/qr/token/{token}/confirm")
     public ResponseEntity<SuccessResponse<QrPaymentResponse>> confirmQrPayment(
             @AuthenticationPrincipal Long userId,

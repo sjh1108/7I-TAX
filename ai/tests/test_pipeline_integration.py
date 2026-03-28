@@ -19,6 +19,7 @@ def chat_service(settings, retrieval_service, mock_classifier) -> ChatService:
             intent_classifier=mock_classifier,
         )
         svc._mock_llm = mock_llm
+        svc.query_rewriter.rewrite = AsyncMock(side_effect=lambda q: q)
         yield svc
 
 

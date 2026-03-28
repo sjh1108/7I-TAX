@@ -6,7 +6,7 @@ spring:
   datasource:
     url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:tax_db}
     username: ${DB_USERNAME:postgres}
-    password: ${DB_PASSWORD:ssafy}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   data:
     redis:
@@ -31,7 +31,7 @@ encryption:
   aes-key: ${AES_ENCRYPTION_KEY}
 
 jwt:
-  secret: ${JWT_SECRET:default-secret}
+  secret: ${JWT_SECRET}
   access-expiration: 1800000
   refresh-expiration: 604800000
 

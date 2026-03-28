@@ -29,6 +29,13 @@ INTENTS_PATH = "app/data/intents/tax_intents.json"
 
 @lru_cache
 def get_settings() -> Settings:
+    """애플리케이션 설정을 로드하고 반환한다.
+
+    캐시되어 있으므로 동일한 Settings 인스턴스를 반환한다.
+
+    Returns:
+        Settings: 애플리케이션 설정 객체.
+    """
     return Settings()
 
 

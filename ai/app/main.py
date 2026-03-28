@@ -16,6 +16,11 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    """애플리케이션 시작/종료 시 리소스를 초기화하고 정리한다.
+
+    Args:
+        app: FastAPI 애플리케이션 인스턴스.
+    """
     await init_services()
     yield
 
@@ -41,6 +46,15 @@ app.include_router(transaction.router)
 
 @app.exception_handler(AIServiceError)
 async def ai_service_error_handler(request: Request, exc: AIServiceError) -> JSONResponse:
+    """AI 서비스 예외를 처리하고 JSON 응답을 반환한다.
+
+    Args:
+        request: HTTP 요청 객체.
+        exc: AIServiceError 예외.
+
+    Returns:
+        JSONResponse: 상태 코드와 에러 메시지를 포함한 JSON 응답.
+    """
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": exc.message},

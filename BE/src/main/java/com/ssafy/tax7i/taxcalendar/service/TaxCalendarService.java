@@ -39,12 +39,12 @@ public class TaxCalendarService {
             result.add(toResponse(d, deadline, today));
         }
 
-        result.sort(Comparator.comparingLong(TaxDeadlineResponse::dDay));
+        result.sort(Comparator.comparingInt(TaxDeadlineResponse::dDay));
         return result;
     }
 
     private TaxDeadlineResponse toResponse(TaxDeadline d, LocalDate deadline, LocalDate today) {
-        long dDay = ChronoUnit.DAYS.between(today, deadline);
+        int dDay = (int) ChronoUnit.DAYS.between(today, deadline);
         return new TaxDeadlineResponse(d.getName(), d.getDescription(), deadline.toString(), dDay);
     }
 }

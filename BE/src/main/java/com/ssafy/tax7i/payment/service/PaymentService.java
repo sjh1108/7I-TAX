@@ -284,7 +284,11 @@ public class PaymentService {
 
     @Transactional
     public QrPaymentResponse confirmQrPayment(String token) {
-        Long paymentId = consumePaymentToken(token);
+        // peek → DB lock → 외부 API → consume 패턴:
+        // 이론적 TOCTOU 윈도우가 존재하나, findByIdWithFetchForUpdate(PESSIMISTIC_WRITE)가
+        // 동일 Payment에 대한 동시 처리를 직렬화하여 중복 결제를 방지함.
+        // 토큰을 먼저 소비하지 않는 이유: 외부 API 실패 시 재시도 가능하도록.
+        Long paymentId = peekPaymentIdFromToken(token);
         Payment payment = paymentRepository.findByIdWithFetchForUpdate(paymentId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
@@ -302,10 +306,14 @@ public class PaymentService {
                     userKey, card.getCardNo(), card.getCvc(),
                     payment.getMerchantId(), payment.getAmount());
         } catch (BusinessException e) {
+            // 외부 API 실패 — 토큰을 삭제하지 않아 사용자가 재시도 가능
             payment.decline();
             notifyQrPaymentResult(token, payment);
             throw e;
         }
+
+        // 외부 API 성공 후 토큰 소비 (중복 결제 방어)
+        consumePaymentToken(token);
 
         payment.capture();
         payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());

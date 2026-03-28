@@ -21,6 +21,11 @@ MAX_HISTORY_LENGTH = 20
 
 
 class ChatService:
+    """채팅 서비스.
+
+    인텐트 분류, RAG 검색, LLM 호출을 조합하여 사용자 메시지에 응답한다.
+    """
+
     def __init__(
         self,
         settings: Settings,
@@ -137,6 +142,14 @@ class ChatService:
         return answer, session_id, llm.model_name
 
     def get_history(self, session_id: str) -> list[dict[str, str]]:
+        """대화 세션의 히스토리를 반환한다.
+
+        Args:
+            session_id: 대화 세션 ID.
+
+        Returns:
+            list: 메시지 리스트. 각 원소는 {"role": "user" | "assistant", "content": str}.
+        """
         history = self._histories.get(session_id, [])
         return [
             {
@@ -162,6 +175,22 @@ class ChatService:
         messages: list[BaseMessage],
         llm: ChatOpenAI | None = None,
     ) -> str:
+        """LLM에 메시지를 전달하고 응답을 받는다.
+
+        타임아웃 발생 시 최대 3회 재시도한다.
+
+        Args:
+            messages: 대화 메시지 리스트.
+            llm: LLM 인스턴스. None이면 self.llm_mini 사용.
+
+        Returns:
+            str: LLM 응답 텍스트.
+
+        Raises:
+            LLMTimeoutError: 타임아웃 발생 시 (3회 재시도 후).
+            LLMAuthError: 인증 실패 시.
+            LLMRateLimitError: API 레이트 제한 시.
+        """
         target_llm = llm or self.llm_mini
         try:
             response = await target_llm.ainvoke(messages)

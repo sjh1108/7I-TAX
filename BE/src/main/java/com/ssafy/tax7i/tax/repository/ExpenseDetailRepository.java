@@ -9,5 +9,7 @@ public interface ExpenseDetailRepository extends JpaRepository<ExpenseDetail, Lo
 
     List<ExpenseDetail> findByTaxReturn_Id(Long taxReturnId);
 
+    List<ExpenseDetail> findByTaxReturn_IdIn(List<Long> taxReturnIds);
+
     void deleteByTaxReturn_Id(Long taxReturnId);
 }
