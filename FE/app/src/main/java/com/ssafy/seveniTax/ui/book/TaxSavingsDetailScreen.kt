@@ -1,5 +1,6 @@
 package com.ssafy.seveniTax.ui.book
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -13,7 +14,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -31,17 +38,19 @@ private val Primary50 = Color(0xFFF2F1F9)
 private val Neutral900 = Color(0xFF343434)
 private val Neutral500 = Color(0xFF898989)
 private val Neutral400 = Color(0xFF989898)
-private val Neutral300 = Color(0xFFCACACA)
 private val BarSafe = Color(0xFF52D5BA)
 private val BarWarning = Color(0xFFFFAF2A)
 private val BarDanger = Color(0xFFFF4267)
+private val IconBg = Color(0xFFF5F5F5)
+
+private enum class IconType { MEAL, CAR, UMBRELLA, CHART, HEART }
 
 private data class DeductionItem(
     val name: String,
     val subtitle: String,
     val limit: Long,
     val used: Long,
-    val iconEmoji: String
+    val iconType: IconType
 )
 
 @Composable
@@ -52,15 +61,15 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
 
     val items = listOf(
         DeductionItem("접대비", "연간 한도 1,200만원", 12_000_000,
-            (expenseMap["접대비"] ?: 0L).coerceAtMost(12_000_000), "🍽️"),
+            (expenseMap["접대비"] ?: 0L).coerceAtMost(12_000_000), IconType.MEAL),
         DeductionItem("차량유지비", "연간 한도 1,500만원", 15_000_000,
-            (expenseMap["차량유지비"] ?: 0L).coerceAtMost(15_000_000), "🚗"),
+            (expenseMap["차량유지비"] ?: 0L).coerceAtMost(15_000_000), IconType.CAR),
         DeductionItem("노란우산공제", "소득 4천만 이하 연 500만원", 5_000_000,
-            0L, "🛡️"),
+            0L, IconType.UMBRELLA),
         DeductionItem("연금저축/IRP", "연간 한도 900만원", 9_000_000,
-            0L, "📈"),
+            0L, IconType.CHART),
         DeductionItem("기부금", "지정기부금 소득금액 30%", 3_000_000,
-            (expenseMap["기부금"] ?: 0L).coerceAtMost(3_000_000), "💜")
+            (expenseMap["기부금"] ?: 0L).coerceAtMost(3_000_000), IconType.HEART)
     )
 
     val totalLimit = items.sumOf { it.limit }
@@ -117,7 +126,6 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
 
                 Spacer(Modifier.height(20.dp))
 
-                // 총 절세 한도 / 사용한 금액
                 Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     SummaryBox("총 절세 한도", "${fmt(totalLimit)}원", Modifier.weight(1f))
                     SummaryBox("사용한 금액", "${fmt(totalUsed)}원", Modifier.weight(1f))
@@ -173,7 +181,7 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {
             Button(
-                onClick = { /* TODO: 더 아낄 수 있는 방법 */ },
+                onClick = { },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp),
@@ -186,12 +194,13 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
     }
 }
 
+// ── Summary Box ──
 @Composable
 private fun SummaryBox(label: String, value: String, modifier: Modifier) {
     Box(
         modifier
             .background(Primary50, RoundedCornerShape(12.dp))
-            .padding(14.dp, 14.dp)
+            .padding(16.dp, 14.dp)
     ) {
         Column {
             Text(label, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = Neutral400, letterSpacing = 0.3.sp)
@@ -201,6 +210,7 @@ private fun SummaryBox(label: String, value: String, modifier: Modifier) {
     }
 }
 
+// ── Deduction Card (목업 동일 레이아웃) ──
 @Composable
 private fun DeductionCard(item: DeductionItem) {
     val percent = if (item.limit > 0) (item.used * 100 / item.limit).toInt() else 0
@@ -210,23 +220,18 @@ private fun DeductionCard(item: DeductionItem) {
         percent >= 61 -> BarWarning
         else -> BarSafe
     }
-    val pctColor = when {
-        percent >= 81 -> BarDanger
-        percent >= 61 -> BarWarning
-        else -> BarSafe
-    }
 
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .shadow(
-                elevation = 4.dp,
+                elevation = 8.dp,
                 shape = RoundedCornerShape(15.dp),
                 ambientColor = Color(0x12362EB7),
                 spotColor = Color(0x12362EB7)
             )
             .background(Color.White, RoundedCornerShape(15.dp))
-            .padding(24.dp, 20.dp)
+            .padding(20.dp, 24.dp)
     ) {
         // 상단: 아이콘 + 이름 + 퍼센트
         Row(
@@ -235,24 +240,24 @@ private fun DeductionCard(item: DeductionItem) {
             verticalAlignment = Alignment.Top
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 아이콘
+                // 아이콘 (Canvas로 SVG 스타일)
                 Box(
                     Modifier
                         .size(40.dp)
                         .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF5F5F5)),
+                        .background(IconBg),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(item.iconEmoji, fontSize = 20.sp)
+                    DeductionIcon(item.iconType)
                 }
                 Spacer(Modifier.width(10.dp))
                 Column {
-                    Text(item.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
+                    Text(item.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900, lineHeight = 21.sp)
                     Spacer(Modifier.height(2.dp))
                     Text(item.subtitle, fontSize = 12.sp, color = Neutral400)
                 }
             }
-            Text("$percent%", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = pctColor)
+            Text("$percent%", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = barColor)
         }
 
         // 프로그레스 바
@@ -278,24 +283,94 @@ private fun DeductionCard(item: DeductionItem) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(
                 buildAnnotatedString {
-                    append("사용 ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                        append("${fmtMan(item.used)}만원")
-                    }
+                    withStyle(SpanStyle(fontWeight = FontWeight.SemiBold, color = Neutral900)) { append("사용 ") }
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Neutral900)) { append("${fmtMan(item.used)}만원") }
                 },
-                fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Neutral900
+                fontSize = 13.sp
             )
             Text(
                 buildAnnotatedString {
-                    append("남은 ")
-                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Primary600)) {
-                        append("${fmtMan(remaining)}만원")
-                    }
+                    withStyle(SpanStyle(fontWeight = FontWeight.Medium, color = Neutral500)) { append("남은 ") }
+                    withStyle(SpanStyle(fontWeight = FontWeight.Bold, color = Primary600)) { append("${fmtMan(remaining)}만원") }
                 },
-                fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Neutral500
+                fontSize = 13.sp
             )
         }
     }
+}
+
+// ── 아이콘 (Canvas) ──
+@Composable
+private fun DeductionIcon(type: IconType) {
+    Canvas(modifier = Modifier.size(20.dp)) {
+        when (type) {
+            IconType.MEAL -> drawMealIcon(this)
+            IconType.CAR -> drawCarIcon(this)
+            IconType.UMBRELLA -> drawUmbrellaIcon(this)
+            IconType.CHART -> drawChartIcon(this)
+            IconType.HEART -> drawHeartIcon(this)
+        }
+    }
+}
+
+private fun drawMealIcon(scope: DrawScope) = with(scope) {
+    val c = Color(0xFFFF6B8A)
+    // 접시
+    drawCircle(c, radius = size.minDimension * 0.4f, center = Offset(size.width / 2, size.height * 0.55f))
+    drawCircle(Color.White, radius = size.minDimension * 0.25f, center = Offset(size.width / 2, size.height * 0.55f))
+    // 포크 라인
+    drawLine(c, Offset(size.width * 0.3f, size.height * 0.1f), Offset(size.width * 0.3f, size.height * 0.4f), strokeWidth = 2f)
+    // 나이프 라인
+    drawLine(c, Offset(size.width * 0.7f, size.height * 0.1f), Offset(size.width * 0.7f, size.height * 0.4f), strokeWidth = 2f)
+}
+
+private fun drawCarIcon(scope: DrawScope) = with(scope) {
+    val c = Color(0xFF4A90D9)
+    // 차체
+    drawRoundRect(c, Offset(size.width * 0.1f, size.height * 0.4f), Size(size.width * 0.8f, size.height * 0.35f), CornerRadius(4f))
+    // 지붕
+    drawRoundRect(c, Offset(size.width * 0.2f, size.height * 0.2f), Size(size.width * 0.6f, size.height * 0.25f), CornerRadius(6f))
+    // 바퀴
+    drawCircle(Color(0xFF343434), radius = size.minDimension * 0.1f, center = Offset(size.width * 0.3f, size.height * 0.75f))
+    drawCircle(Color(0xFF343434), radius = size.minDimension * 0.1f, center = Offset(size.width * 0.7f, size.height * 0.75f))
+}
+
+private fun drawUmbrellaIcon(scope: DrawScope) = with(scope) {
+    val c = Color(0xFFF5A623)
+    // 우산 캡
+    drawArc(c, startAngle = 180f, sweepAngle = 180f, useCenter = true,
+        topLeft = Offset(size.width * 0.1f, size.height * 0.15f),
+        size = Size(size.width * 0.8f, size.height * 0.6f))
+    // 손잡이
+    drawLine(c, Offset(size.width / 2, size.height * 0.45f), Offset(size.width / 2, size.height * 0.85f), strokeWidth = 2.5f)
+    drawArc(c, startAngle = 0f, sweepAngle = 180f, useCenter = false,
+        topLeft = Offset(size.width * 0.38f, size.height * 0.75f),
+        size = Size(size.width * 0.24f, size.height * 0.2f),
+        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.5f))
+}
+
+private fun drawChartIcon(scope: DrawScope) = with(scope) {
+    val c = Color(0xFF52D5BA)
+    // 막대 3개
+    drawRoundRect(c.copy(alpha = 0.5f), Offset(size.width * 0.1f, size.height * 0.5f), Size(size.width * 0.2f, size.height * 0.4f), CornerRadius(2f))
+    drawRoundRect(c, Offset(size.width * 0.4f, size.height * 0.3f), Size(size.width * 0.2f, size.height * 0.6f), CornerRadius(2f))
+    drawRoundRect(c.copy(alpha = 0.7f), Offset(size.width * 0.7f, size.height * 0.15f), Size(size.width * 0.2f, size.height * 0.75f), CornerRadius(2f))
+    // 상승 화살표
+    drawLine(Color(0xFF343434), Offset(size.width * 0.15f, size.height * 0.45f), Offset(size.width * 0.8f, size.height * 0.1f), strokeWidth = 1.5f)
+}
+
+private fun drawHeartIcon(scope: DrawScope) = with(scope) {
+    val c = Color(0xFF7C3AED)
+    val path = Path().apply {
+        val w = size.width; val h = size.height
+        moveTo(w * 0.5f, h * 0.85f)
+        cubicTo(w * 0.15f, h * 0.55f, w * 0.05f, h * 0.25f, w * 0.25f, h * 0.15f)
+        cubicTo(w * 0.4f, h * 0.08f, w * 0.5f, h * 0.25f, w * 0.5f, h * 0.25f)
+        cubicTo(w * 0.5f, h * 0.25f, w * 0.6f, h * 0.08f, w * 0.75f, h * 0.15f)
+        cubicTo(w * 0.95f, h * 0.25f, w * 0.85f, h * 0.55f, w * 0.5f, h * 0.85f)
+        close()
+    }
+    drawPath(path, c, style = Fill)
 }
 
 private fun fmt(amount: Long): String =
