@@ -185,9 +185,26 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
                 HorizontalDivider(color = Surface)
                 DetailInfoRow("분류", entry.categoryName ?: "미분류")
                 HorizontalDivider(color = Surface)
-                DetailInfoRow("증빙", "카드전표")
+                DetailInfoRow("증빙", if (entry.note.isNullOrBlank()) "없음" else "있음")
                 HorizontalDivider(color = Surface)
-                DetailInfoRow("결제수단", "사업용카드 (삼성)")
+                DetailInfoRow("결제수단", "사업용카드")
+            }
+        }
+
+        // 증빙 내역 표시
+        if (!entry.note.isNullOrBlank()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(containerColor = Surface)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text("증빙 내역", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(entry.note!!, fontSize = 14.sp, lineHeight = 22.sp, color = TextPrimary)
+                }
             }
         }
 
@@ -210,14 +227,17 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
                 Text("분류 변경", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
             }
 
-            // 증빙 내역 추가
+            // 증빙 내역 추가/수정
             OutlinedButton(
                 onClick = { navController.navigate(Route.BookMemoAdd.path) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(15.dp),
                 border = BorderStroke(1.dp, Disabled)
             ) {
-                Text("증빙 내역 추가", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                Text(
+                    if (entry.note.isNullOrBlank()) "증빙 내역 추가" else "증빙 내역 수정",
+                    fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary
+                )
             }
 
             // 확인
