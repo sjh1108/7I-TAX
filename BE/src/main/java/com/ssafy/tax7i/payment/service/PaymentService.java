@@ -4,18 +4,11 @@ import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyCreditCardClient;
 import com.ssafy.tax7i.banking.client.dto.SsafyCreditCardTransactionResponse;
-import com.ssafy.tax7i.bookentry.dto.BookEntryCreateRequest;
-import com.ssafy.tax7i.bookentry.entity.EntryType;
-import com.ssafy.tax7i.bookentry.service.BookEntryService;
-import com.ssafy.tax7i.classification.dto.ClassificationRequest;
-import com.ssafy.tax7i.classification.dto.ClassificationResult;
-import com.ssafy.tax7i.classification.service.TaxClassificationService;
+import com.ssafy.tax7i.bookentry.event.PaymentCapturedEvent;
 import com.ssafy.tax7i.card.entity.Card;
 import com.ssafy.tax7i.card.entity.CardTransactionType;
-import com.ssafy.tax7i.card.entity.CardType;
 import com.ssafy.tax7i.card.repository.CardRepository;
 import com.ssafy.tax7i.card.service.CardTransactionSaveService;
-import com.ssafy.tax7i.fcm.service.FcmService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.payment.dto.*;
@@ -23,13 +16,13 @@ import com.ssafy.tax7i.payment.entity.Payment;
 import com.ssafy.tax7i.payment.entity.PaymentMethod;
 import com.ssafy.tax7i.payment.entity.PaymentPurpose;
 import com.ssafy.tax7i.payment.entity.PaymentStatus;
+import com.ssafy.tax7i.payment.event.PaymentCancelledEvent;
 import com.ssafy.tax7i.payment.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import com.ssafy.tax7i.payment.event.BookEntryCreationFailedEvent;
-import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -56,12 +49,9 @@ public class PaymentService {
     private final CardRepository cardRepository;
     private final UserRepository userRepository;
     private final SsafyCreditCardClient ssafyCreditCardClient;
-    private final BookEntryService bookEntryService;
-    private final TaxClassificationService taxClassificationService;
     private final RedisTemplate<String, String> redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final CardTransactionSaveService cardTransactionSaveService;
-    private final FcmService fcmService;
 
     private final Map<String, SseEmitter> qrEmitters = new ConcurrentHashMap<>();
 
@@ -130,8 +120,7 @@ public class PaymentService {
         saveCardTransaction(card, CardTransactionType.PAYMENT, payment.getAmount(),
                 "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
-        autoCreateBookEntry(payment);
-        sendPaymentNotification(payment, "payment");
+        publishPaymentCapturedEvent(payment);
 
         return PaymentCaptureResponse.of(payment);
     }
@@ -163,7 +152,12 @@ public class PaymentService {
         payment.cancel(cancelAmount, request.reason());
         saveCardTransaction(card, CardTransactionType.REFUND, cancelAmount,
                 "환불: " + payment.getMerchantName(), null);
-        sendPaymentNotification(payment, "payment_cancel");
+        eventPublisher.publishEvent(new PaymentCancelledEvent(
+                payment.getId(),
+                payment.getUser().getId(),
+                payment.getAmount(),
+                payment.getMerchantName()
+        ));
 
         return PaymentCancelResponse.from(payment);
     }
@@ -230,8 +224,7 @@ public class PaymentService {
         saveCardTransaction(ctx.card(), CardTransactionType.PAYMENT, request.amount(),
                 "결제: " + request.merchantName(), transactionResponse.rec().paymentBalance());
 
-        autoCreateBookEntry(payment);
-        sendPaymentNotification(payment, "payment");
+        publishPaymentCapturedEvent(payment);
 
         return QrPaymentResponse.of(payment);
     }
@@ -320,8 +313,7 @@ public class PaymentService {
         saveCardTransaction(card, CardTransactionType.PAYMENT, payment.getAmount(),
                 "결제: " + payment.getMerchantName(), transactionResponse.rec().paymentBalance());
 
-        autoCreateBookEntry(payment);
-        sendPaymentNotification(payment, "payment");
+        publishPaymentCapturedEvent(payment);
 
         notifyQrPaymentResult(token, payment);
         return QrPaymentResponse.of(payment);
@@ -389,126 +381,16 @@ public class PaymentService {
         return Long.parseLong(paymentIdStr);
     }
 
-    private void sendPaymentNotification(Payment payment, String type) {
-        try {
-            String title = "payment".equals(type) ? "결제 완료" : "결제 취소";
-            String body = String.format("%s %,d원 %s",
-                    payment.getMerchantName(), payment.getAmount(),
-                    "payment".equals(type) ? "결제가 완료되었습니다." : "결제가 취소되었습니다.");
-            Map<String, String> data = Map.of(
-                    "type", type,
-                    "paymentId", String.valueOf(payment.getId()),
-                    "amount", String.valueOf(payment.getAmount()),
-                    "merchantName", payment.getMerchantName());
-            fcmService.sendNotification(payment.getUser().getId(), title, body, data);
-        } catch (Exception e) {
-            log.warn("결제 FCM 알림 실패: paymentId={}, error={}", payment.getId(), e.getMessage());
-        }
-    }
-
-    private void autoCreateBookEntry(Payment payment) {
-        if (payment.getCard().getCardType() != CardType.BUSINESS) return;
-
-        try {
-            // 세목 자동분류
-            String categoryCode = null;
-            String categoryName = null;
-            int confidenceScore = 0;
-            boolean isConfirmed = false;
-
-            try {
-                // MCC: 4자리 숫자 코드만 사용, 그 외는 null (가맹점명으로 자동분류)
-                String mcc = payment.getMerchantCategoryCode();
-                if (mcc != null && !mcc.matches("\\d{4}")) {
-                    mcc = null;
-                }
-                ClassificationRequest clReq = new ClassificationRequest(
-                        payment.getMerchantName(),
-                        mcc,
-                        payment.getAmount(),
-                        true,
-                        null,
-                        payment.getUser().getId()
-                );
-                ClassificationResult result = taxClassificationService.classify(clReq);
-                categoryName = result.taxCategory();
-
-                // taxCategory에서 categoryCode 추출
-                categoryCode = resolveCategoryCode(categoryName);
-
-                confidenceScore = result.confidenceScore();
-
-                // CONFIRMED → 자동 확정, 나머지 → 미확인 (사용자 확인 필요)
-                isConfirmed = result.confidence() == ClassificationResult.Confidence.CONFIRMED;
-
-                log.info("세목 자동분류: merchant={}, category={} ({}), confidence={}, score={}",
-                        payment.getMerchantName(), categoryName, categoryCode, result.confidence(), confidenceScore);
-            } catch (Exception e) {
-                log.warn("세목 분류 실패, 미분류로 장부 생성: {}", e.getMessage());
-            }
-
-            BookEntryCreateRequest bookRequest = new BookEntryCreateRequest(
-                    payment.getId(),
-                    payment.getCapturedAt().toLocalDate(),
-                    "결제: " + payment.getMerchantName(),
-                    payment.getMerchantName(),
-                    EntryType.EXPENSE,
-                    payment.getAmount(),
-                    false,
-                    categoryCode,
-                    categoryName,
-                    confidenceScore,
-                    null
-            );
-            var entry = bookEntryService.create(payment.getUser().getId(), bookRequest);
-
-            // CONFIRMED이면 자동 확정
-            if (isConfirmed && entry.id() != null) {
-                try {
-                    bookEntryService.confirm(payment.getUser().getId(), entry.id());
-                } catch (Exception e) {
-                    log.warn("장부 자동 확정 실패: {}", e.getMessage());
-                }
-            }
-
-            log.info("사업자카드 결제 → 장부 자동 생성: paymentId={}, amount={}, category={}, confirmed={}",
-                    payment.getId(), payment.getAmount(), categoryName, isConfirmed);
-        } catch (Exception e) {
-            log.warn("장부 자동 생성 실패 (결제는 정상): paymentId={}, error={}", payment.getId(), e.getMessage());
-            eventPublisher.publishEvent(new BookEntryCreationFailedEvent(payment.getId()));
-        }
-    }
-
-    private String resolveCategoryCode(String categoryName) {
-        if (categoryName == null) return null;
-        return switch (categoryName) {
-            case "매출" -> "01";
-            case "상품·원재료 매입" -> "02";
-            case "급료" -> "04";
-            case "제세공과금" -> "05";
-            case "임차료" -> "06";
-            case "지급이자" -> "07";
-            case "접대비" -> "08";
-            case "기부금" -> "09";
-            case "감가상각비" -> "10";
-            case "차량유지비" -> "11";
-            case "지급수수료" -> "12";
-            case "소모품비" -> "13";
-            case "복리후생비" -> "14";
-            case "운반비" -> "15";
-            case "광고선전비" -> "16";
-            case "여비교통비" -> "17";
-            case "고정자산 매입" -> "19";
-            case "고정자산 매도" -> "20";
-            case "통신비" -> "21";
-            case "교육훈련비" -> "22";
-            case "도서인쇄비" -> "23";
-            case "수도광열비" -> "24";
-            case "수선비" -> "25";
-            case "경비불인정" -> "90";
-            case "미분류" -> "99";
-            default -> "18"; // 기타 경비
-        };
+    private void publishPaymentCapturedEvent(Payment payment) {
+        eventPublisher.publishEvent(new PaymentCapturedEvent(
+                payment.getId(),
+                payment.getUser().getId(),
+                payment.getAmount(),
+                payment.getMerchantName(),
+                payment.getMerchantCategoryCode(),
+                payment.getCard().getCardType().name(),
+                payment.getCapturedAt()
+        ));
     }
 
     private void saveCardTransaction(Card card, CardTransactionType type, Long amount, String description, Long paymentBalance) {
