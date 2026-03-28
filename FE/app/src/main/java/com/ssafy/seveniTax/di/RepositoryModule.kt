@@ -25,4 +25,10 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindTaxRepository(impl: TaxRepositoryImpl): TaxRepository
+
+    @Binds @Singleton
+    abstract fun bindClassificationRepository(impl: ClassificationRepositoryImpl): ClassificationRepository
+
+    @Binds @Singleton
+    abstract fun bindChatbotRepository(impl: ChatbotRepositoryImpl): ChatbotRepository
 }
