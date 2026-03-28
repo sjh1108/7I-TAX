@@ -150,12 +150,16 @@ class PaymentViewModel @Inject constructor(
 
     fun startPollingStatus(token: String) = viewModelScope.launch {
         Log.d(TAG, "▶ startPollingStatus() token=$token")
+        var failCount = 0
         while (true) {
             kotlinx.coroutines.delay(2000L)
             try {
                 val response = paymentApi.getQrPaymentStatus(token)
+                val code = response.code()
                 val body = response.body()
+
                 if (response.isSuccessful && body?.status == "success" && body.data != null) {
+                    failCount = 0
                     val status = body.data.status
                     Log.d(TAG, "  폴링 상태: $status")
                     if (status == "CAPTURED" || status == "CANCELLED") {
@@ -167,8 +171,31 @@ class PaymentViewModel @Inject constructor(
                         }
                         break
                     }
+                } else if (code == 410 || code == 404) {
+                    // 토큰 만료 또는 없음 → 폴링 중단
+                    Log.w(TAG, "  폴링 중단: HTTP $code (토큰 만료)")
+                    _uiState.update {
+                        it.copy(paymentStatus = "EXPIRED", errorMessage = "QR 토큰이 만료되었습니다.")
+                    }
+                    break
+                } else {
+                    failCount++
+                    Log.w(TAG, "  폴링 실패: HTTP $code (${failCount}회)")
+                    if (failCount >= 5) {
+                        Log.e(TAG, "  폴링 중단: 연속 실패 $failCount 회")
+                        _uiState.update { it.copy(errorMessage = "결제 상태 확인 실패") }
+                        break
+                    }
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                failCount++
+                Log.e(TAG, "  폴링 에러 (${failCount}회): ${e.message}")
+                if (failCount >= 5) {
+                    Log.e(TAG, "  폴링 중단: 연속 에러 $failCount 회")
+                    _uiState.update { it.copy(errorMessage = "네트워크 오류") }
+                    break
+                }
+            }
         }
     }
 
