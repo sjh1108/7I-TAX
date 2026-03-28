@@ -41,7 +41,7 @@ data class UnclassifiedTransaction(
 @Composable
 fun UnclassifiedListScreen(
     navController: NavController,
-    transactions: List<UnclassifiedTransaction> = sampleTransactions(),
+    transactions: List<UnclassifiedTransaction> = emptyList(),
     showFirstVisitToast: Boolean = false,
     aiRecommendedInitial: Boolean = false,
     onBulkConfirm: () -> Unit = {},

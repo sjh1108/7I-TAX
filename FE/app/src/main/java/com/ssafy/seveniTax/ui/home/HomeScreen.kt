@@ -188,11 +188,6 @@ fun HomeScreen(
                             bookEntryViewModel.loadUnconfirmedCount()
                         }
                     }
-                    // TODO: 테스트용 버튼 — 배포 전 제거
-                    androidx.compose.material3.TextButton(onClick = { bookEntryViewModel.createTestEntries() }) {
-                        Text("🧪 미분류 테스트 데이터 생성", fontSize = 12.sp, color = Color(0xFFFF6B18))
-                    }
-
                     if (unclassifiedCount > 0) {
                         UnconfirmedLedgerCard(
                             count = unclassifiedCount,
