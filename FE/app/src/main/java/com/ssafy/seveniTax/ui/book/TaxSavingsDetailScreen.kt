@@ -31,7 +31,9 @@ private data class SavingItem(
     val subtitle: String,
     val limit: Long,
     val used: Long,
-    val icon: String
+    val icon: String,
+    val iconBg: Color = Color(0xFFF2F1F9),
+    val accentColor: Color = Color(0xFF5655B9)
 )
 
 @Composable
@@ -41,16 +43,21 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
     val expenseMap = expenses.toMap()
 
     val savingItems = listOf(
-        SavingItem("접대비", "연간 한도 12,000,000원 + 수입금액별", 12_000_000,
-            (expenseMap["접대비"] ?: 0L).coerceAtMost(12_000_000), "🍽️"),
-        SavingItem("차량유지비", "연간 한도 15,000,000원", 15_000_000,
-            (expenseMap["차량유지비"] ?: 0L).coerceAtMost(15_000_000), "🚗"),
-        SavingItem("노란우산공제", "소득 4천만 이하 연 5,000,000원", 5_000_000,
-            0L, "☂️"), // TODO: 실제 납입액 연동
-        SavingItem("연금저축/IRP", "연간 한도 9,000,000원", 9_000_000,
-            0L, "💰"), // TODO: 실제 납입액 연동
+        SavingItem("접대비", "연간 한도 1,200만원 + 수입금액별", 12_000_000,
+            (expenseMap["접대비"] ?: 0L).coerceAtMost(12_000_000), "🍽️",
+            iconBg = Color(0xFFFFF0F3), accentColor = Color(0xFFFF6B8A)),
+        SavingItem("차량유지비", "연간 한도 1,500만원", 15_000_000,
+            (expenseMap["차량유지비"] ?: 0L).coerceAtMost(15_000_000), "🚗",
+            iconBg = Color(0xFFF0F7FF), accentColor = Color(0xFF4A90D9)),
+        SavingItem("노란우산공제", "소득 4천만 이하 연 500만원", 5_000_000,
+            0L, "🛡️", // TODO: 실제 납입액 연동
+            iconBg = Color(0xFFFFF8E1), accentColor = Color(0xFFFFAF2A)),
+        SavingItem("연금저축/IRP", "연간 한도 900만원", 9_000_000,
+            0L, "📈", // TODO: 실제 납입액 연동
+            iconBg = Color(0xFFE8F5E9), accentColor = Color(0xFF52D5BA)),
         SavingItem("기부금", "지정기부금 소득금액 30% 한도", 3_000_000,
-            (expenseMap["기부금"] ?: 0L).coerceAtMost(3_000_000), "❤️")
+            (expenseMap["기부금"] ?: 0L).coerceAtMost(3_000_000), "💜",
+            iconBg = Color(0xFFF2F1F9), accentColor = Color(0xFF7C3AED))
     )
 
     val totalLimit = savingItems.sumOf { it.limit }
@@ -202,59 +209,70 @@ private fun SavingCard(item: SavingItem) {
     val barColor = when {
         percent >= 81 -> Color(0xFF52D5BA)
         percent >= 61 -> Color(0xFFFFAF2A)
-        else -> Color(0xFFFF4267)
+        else -> item.accentColor
     }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(modifier = Modifier.padding(18.dp)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // 아이콘 - 컬러 배경 + 둥근 모서리
                 Box(
                     Modifier
-                        .size(42.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color(0xFFF5F5F5)),
+                        .size(46.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .background(item.iconBg),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(item.icon, fontSize = 20.sp)
+                    Text(item.icon, fontSize = 22.sp)
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(item.name, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                    Text(item.subtitle, fontSize = 12.sp, color = TextSecondary)
+                    Spacer(Modifier.height(2.dp))
+                    Text(item.subtitle, fontSize = 11.sp, color = TextSecondary)
                 }
-                Text("$percent%", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = barColor)
+                // 퍼센트 뱃지
+                Box(
+                    Modifier
+                        .clip(RoundedCornerShape(10.dp))
+                        .background(barColor.copy(alpha = 0.12f))
+                        .padding(horizontal = 10.dp, vertical = 4.dp)
+                ) {
+                    Text("$percent%", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = barColor)
+                }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
 
+            // 프로그레스 바
             Box(
                 Modifier
                     .fillMaxWidth()
-                    .height(8.dp)
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(Color(0xFFF0F0F0))
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(item.iconBg)
             ) {
                 Box(
                     Modifier
                         .fillMaxHeight()
-                        .fillMaxWidth(percent / 100f)
-                        .clip(RoundedCornerShape(4.dp))
+                        .fillMaxWidth((percent / 100f).coerceIn(0f, 1f))
+                        .clip(RoundedCornerShape(3.dp))
                         .background(barColor)
                 )
             }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(10.dp))
 
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("사용 ${formatSavingsAmount(item.used)}원", fontSize = 12.sp, color = TextSecondary)
                 Text(
                     "남은 ${formatSavingsAmount(remaining)}원",
-                    fontSize = 12.sp, fontWeight = FontWeight.Bold, color = LogoPurple
+                    fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = item.accentColor
                 )
             }
         }
