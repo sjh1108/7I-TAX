@@ -80,21 +80,30 @@ class ChatbotViewModel @Inject constructor(
                 Log.d(TAG, "▶ sendMessage: $text, session=${request.sessionId}")
 
                 val response = chatbotRepository.sendMessage(request)
+                val code = response.code()
                 val body = response.body()
+                val errorBody = if (!response.isSuccessful) response.errorBody()?.string() else null
+
+                Log.d(TAG, "  HTTP $code | success=${response.isSuccessful}")
+                Log.d(TAG, "  body=$body")
+                if (errorBody != null) Log.e(TAG, "  errorBody=$errorBody")
 
                 // 로딩 메시지 제거
                 val msgs = _uiState.value.messages.filter { !it.isLoading }
 
                 if (response.isSuccessful && body?.data != null) {
                     val data = body.data
-                    Log.d(TAG, "  응답: ${data.answer.take(50)}...")
+                    Log.d(TAG, "  응답: ${data.answer.take(100)}...")
+                    Log.d(TAG, "  sessionId=${data.sessionId}, model=${data.model}")
                     _uiState.value = _uiState.value.copy(
                         messages = msgs + ChatMessage(text = data.answer, isUser = false),
                         sessionId = data.sessionId,
                         isSending = false
                     )
                 } else {
-                    val errMsg = body?.message ?: "응답 실패 (${response.code()})"
+                    val errMsg = body?.message?.ifEmpty { null }
+                        ?: errorBody?.take(200)
+                        ?: "응답 실패 (HTTP $code)"
                     Log.e(TAG, "  실패: $errMsg")
                     _uiState.value = _uiState.value.copy(
                         messages = msgs + ChatMessage(
