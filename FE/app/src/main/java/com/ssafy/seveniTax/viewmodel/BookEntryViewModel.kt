@@ -336,9 +336,9 @@ class BookEntryViewModel @Inject constructor(
         return result
     }
 
-    fun getTotalIncome(): Long = getEntriesForMonth().sumOf { it.incomeAmount }
-    fun getTotalExpense(): Long = getEntriesForMonth().sumOf { it.expenseAmount }
-    fun getTotalAsset(): Long = getEntriesForMonth().sumOf { it.fixedAssetAmount }
+    fun getTotalIncome(): Long = getEntriesForMonth().filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    fun getTotalExpense(): Long = getEntriesForMonth().filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
+    fun getTotalAsset(): Long = getEntriesForMonth().filter { it.entryType == "ASSET" }.sumOf { it.fixedAssetAmount }
     fun getNetProfit(): Long = getTotalIncome() - getTotalExpense()
 
     // 세목별 비용 집계
@@ -370,8 +370,8 @@ class BookEntryViewModel @Inject constructor(
         }
     }
 
-    fun getIncomeFor(year: Int, month: Int): Long = getEntriesFor(year, month).sumOf { it.incomeAmount }
-    fun getExpenseFor(year: Int, month: Int): Long = getEntriesFor(year, month).sumOf { it.expenseAmount }
+    fun getIncomeFor(year: Int, month: Int): Long = getEntriesFor(year, month).filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    fun getExpenseFor(year: Int, month: Int): Long = getEntriesFor(year, month).filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
 
     fun getExpenseByCategoryFor(year: Int, month: Int): List<Pair<String, Long>> {
         return getEntriesFor(year, month)
@@ -408,8 +408,8 @@ class BookEntryViewModel @Inject constructor(
         }
     }
 
-    fun getAnnualIncome(year: Int): Long = getEntriesForYear(year).sumOf { it.incomeAmount }
-    fun getAnnualExpense(year: Int): Long = getEntriesForYear(year).sumOf { it.expenseAmount }
+    fun getAnnualIncome(year: Int): Long = getEntriesForYear(year).filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    fun getAnnualExpense(year: Int): Long = getEntriesForYear(year).filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
 
     fun getAnnualExpenseByCategory(year: Int): List<Pair<String, Long>> {
         return getEntriesForYear(year)
