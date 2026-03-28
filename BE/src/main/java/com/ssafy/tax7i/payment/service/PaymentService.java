@@ -372,7 +372,8 @@ public class PaymentService {
                     MERCHANT_QR_PREFIX + token, json,
                     QR_TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
         } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "QR 토큰 생성 실패");
+            log.error("가맹점 QR 토큰 생성 실패: {}", e.getMessage(), e);
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "QR 토큰 생성 실패: " + e.getMessage());
         }
 
         LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(QR_TOKEN_TTL_SECONDS);
