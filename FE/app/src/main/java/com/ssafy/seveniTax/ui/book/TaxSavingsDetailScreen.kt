@@ -207,9 +207,9 @@ private fun SavingCard(item: SavingItem) {
     val percent = if (item.limit > 0) (item.used * 100 / item.limit).toInt() else 0
     val remaining = item.limit - item.used
     val barColor = when {
-        percent >= 81 -> Color(0xFF52D5BA)
-        percent >= 61 -> Color(0xFFFFAF2A)
-        else -> item.accentColor
+        percent >= 81 -> Color(0xFF52D5BA)   // 충분
+        percent >= 61 -> Color(0xFFFFAF2A)   // 양호
+        else -> Color(0xFFFF4267)            // 부족
     }
 
     Card(
