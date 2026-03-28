@@ -115,6 +115,62 @@ fun QrPaymentScreen(
         }
     }
 
+    // QR 스캔 결과 팝업
+    if (scannedResult != null && !showPayConfirmDialog && !showResultDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                scannedResult = null
+                paymentViewModel.resetPayment()
+            },
+            title = {
+                if (paymentState.isLoading) {
+                    Text("결제 정보 조회 중", fontWeight = FontWeight.Bold)
+                } else {
+                    Text("결제 정보", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                if (paymentState.isLoading) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = BrandPurple,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Text("조회 중...", fontSize = 14.sp, color = TextSecondary)
+                    }
+                } else if (paymentState.amount > 0) {
+                    Column {
+                        Text(paymentState.payerName, fontSize = 14.sp, color = TextSecondary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "${java.text.NumberFormat.getNumberInstance().format(paymentState.amount)}원",
+                            fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple
+                        )
+                    }
+                } else {
+                    Text("결제 정보를 불러올 수 없습니다.", fontSize = 14.sp, color = TextSecondary)
+                }
+            },
+            confirmButton = {
+                if (!paymentState.isLoading && paymentState.amount > 0) {
+                    androidx.compose.material3.TextButton(onClick = {
+                        showPayConfirmDialog = true
+                    }) {
+                        Text("결제하기", color = BrandPurple, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    scannedResult = null
+                    paymentViewModel.resetPayment()
+                }) {
+                    Text(if (paymentState.isLoading) "취소" else "다시 스캔", color = TextSecondary)
+                }
+            }
+        )
+    }
+
     // 결제 확인 다이얼로그
     if (showPayConfirmDialog) {
         androidx.compose.material3.AlertDialog(
@@ -317,59 +373,7 @@ fun QrPaymentScreen(
                     Text("QR코드 생성 실패", color = TextSecondary, fontSize = 14.sp)
                 }
             } else {
-                if (scannedResult != null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
-                        if (paymentState.isLoading) {
-                            androidx.compose.material3.CircularProgressIndicator(color = BrandPurple)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("결제 정보 조회 중...", fontSize = 14.sp, color = TextSecondary)
-                        } else if (paymentState.amount > 0) {
-                            Text("결제 정보", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(paymentState.payerName, fontSize = 14.sp, color = TextSecondary)
-                            Text(
-                                "${java.text.NumberFormat.getNumberInstance().format(paymentState.amount)}원",
-                                fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(BrandPurple)
-                                    .clickable { showPayConfirmDialog = true }
-                                    .padding(vertical = 14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("결제하기", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "다시 스캔",
-                                fontSize = 13.sp, color = TextSecondary,
-                                modifier = Modifier.clickable { scannedResult = null; paymentViewModel.resetPayment() }
-                            )
-                        } else {
-                            Text("스캔 완료", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(scannedResult!!, fontSize = 14.sp, color = TextSecondary)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(BrandPurple)
-                                    .clickable { scannedResult = null }
-                                    .padding(horizontal = 24.dp, vertical = 10.dp)
-                            ) {
-                                Text("다시 스캔", color = Color.White, fontSize = 14.sp)
-                            }
-                        }
-                    }
-                } else if (cameraPermissionGranted) {
+                if (cameraPermissionGranted) {
                     QrScannerView(
                         onQrScanned = { result ->
                             scannedResult = result
