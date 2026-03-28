@@ -1,5 +1,7 @@
 package com.ssafy.tax7i.payment.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.banking.client.SsafyCreditCardClient;
@@ -43,6 +45,7 @@ import java.util.concurrent.TimeUnit;
 public class PaymentService {
 
     private static final String QR_TOKEN_PREFIX = "qr-pay:";
+    private static final String MERCHANT_QR_PREFIX = "qr-merchant:";
     private static final long QR_TOKEN_TTL_SECONDS = 300; // 5분
 
     private final PaymentRepository paymentRepository;
@@ -52,6 +55,7 @@ public class PaymentService {
     private final RedisTemplate<String, String> redisTemplate;
     private final ApplicationEventPublisher eventPublisher;
     private final CardTransactionSaveService cardTransactionSaveService;
+    private final ObjectMapper objectMapper;
 
     private final Map<String, SseEmitter> qrEmitters = new ConcurrentHashMap<>();
 
@@ -334,6 +338,139 @@ public class PaymentService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.PAYMENT_NOT_FOUND));
 
         SseEmitter emitter = new SseEmitter(QR_TOKEN_TTL_SECONDS * 1000);
+        qrEmitters.put(token, emitter);
+
+        emitter.onCompletion(() -> qrEmitters.remove(token));
+        emitter.onTimeout(() -> qrEmitters.remove(token));
+        emitter.onError(e -> qrEmitters.remove(token));
+
+        try {
+            emitter.send(SseEmitter.event().name("connect").data("connected"));
+        } catch (Exception e) {
+            log.debug("SSE 초기 이벤트 전송 실패: {}", e.getMessage());
+        }
+
+        return emitter;
+    }
+
+    // ───────────── 가맹점 QR 결제 (MPM) ─────────────
+
+    public MerchantQrTokenResponse createMerchantQrToken(MerchantQrCreateRequest request) {
+        String token = UUID.randomUUID().toString();
+
+        Map<String, Object> merchantInfo = Map.of(
+                "amount", request.amount(),
+                "merchantId", request.merchantId(),
+                "merchantName", request.merchantName(),
+                "merchantCategoryCode", request.merchantCategoryCode() != null ? request.merchantCategoryCode() : "",
+                "purpose", request.purpose().name()
+        );
+
+        try {
+            String json = objectMapper.writeValueAsString(merchantInfo);
+            redisTemplate.opsForValue().set(
+                    MERCHANT_QR_PREFIX + token, json,
+                    QR_TOKEN_TTL_SECONDS, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "QR 토큰 생성 실패");
+        }
+
+        LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(QR_TOKEN_TTL_SECONDS);
+        return new MerchantQrTokenResponse(token, request.amount(), request.merchantName(), expiresAt);
+    }
+
+    public MerchantQrInfoResponse getMerchantQrInfo(String token) {
+        String json = redisTemplate.opsForValue().get(MERCHANT_QR_PREFIX + token);
+        if (json == null) {
+            throw new BusinessException(ErrorCode.QR_TOKEN_EXPIRED);
+        }
+        try {
+            Map<String, Object> info = objectMapper.readValue(json, new TypeReference<>() {});
+            return new MerchantQrInfoResponse(
+                    token,
+                    ((Number) info.get("amount")).longValue(),
+                    (String) info.get("merchantName"),
+                    (String) info.get("merchantCategoryCode"),
+                    PaymentPurpose.valueOf((String) info.get("purpose"))
+            );
+        } catch (BusinessException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "QR 정보 조회 실패");
+        }
+    }
+
+    @Transactional
+    public QrPaymentResponse payMerchantQr(Long userId, String token, MerchantQrPayRequest request) {
+        // 1. Get and delete merchant info from Redis (atomic consumption)
+        String json = redisTemplate.opsForValue().getAndDelete(MERCHANT_QR_PREFIX + token);
+        if (json == null) {
+            throw new BusinessException(ErrorCode.QR_TOKEN_EXPIRED);
+        }
+
+        Map<String, Object> info;
+        try {
+            info = objectMapper.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR, "QR 정보 파싱 실패");
+        }
+
+        // 2. Prepare payment context (validates user + card ownership)
+        PaymentContext ctx = preparePayment(userId, request.cardId());
+
+        Long amount = ((Number) info.get("amount")).longValue();
+        Long merchantId = ((Number) info.get("merchantId")).longValue();
+        String merchantName = (String) info.get("merchantName");
+        String mcc = (String) info.get("merchantCategoryCode");
+        PaymentPurpose purpose = PaymentPurpose.valueOf((String) info.get("purpose"));
+
+        // 3. Create Payment entity (with user + card — same as existing flow)
+        Payment payment = Payment.builder()
+                .user(ctx.user())
+                .card(ctx.card())
+                .amount(amount)
+                .currency("KRW")
+                .merchantId(merchantId)
+                .merchantName(merchantName)
+                .merchantCategoryCode(mcc)
+                .paymentMethod(PaymentMethod.OFFLINE)
+                .purpose(purpose)
+                .authorizationCode(ctx.authCode())
+                .build();
+        paymentRepository.save(payment);
+
+        // 4. Call SSAFY API
+        SsafyCreditCardTransactionResponse transactionResponse;
+        try {
+            transactionResponse = ssafyCreditCardClient.createTransaction(
+                    ctx.userKey(), ctx.card().getCardNo(), ctx.card().getCvc(),
+                    merchantId, amount);
+        } catch (BusinessException e) {
+            payment.decline();
+            throw e;
+        }
+
+        // 5. Capture + events (same as existing flow)
+        payment.capture();
+        payment.assignSsafyTransaction(transactionResponse.rec().transactionUniqueNo());
+        saveCardTransaction(ctx.card(), CardTransactionType.PAYMENT, amount,
+                "결제: " + merchantName, transactionResponse.rec().paymentBalance());
+
+        publishPaymentCapturedEvent(payment);
+
+        // 6. Notify merchant via SSE
+        notifyQrPaymentResult(token, payment);
+
+        return QrPaymentResponse.of(payment);
+    }
+
+    public SseEmitter subscribeMerchantQrPayment(String token) {
+        String json = redisTemplate.opsForValue().get(MERCHANT_QR_PREFIX + token);
+        if (json == null) {
+            throw new BusinessException(ErrorCode.QR_TOKEN_EXPIRED);
+        }
+
+        SseEmitter emitter = new SseEmitter(QR_TOKEN_TTL_SECONDS * 1000L);
         qrEmitters.put(token, emitter);
 
         emitter.onCompletion(() -> qrEmitters.remove(token));
