@@ -6,6 +6,7 @@ import com.ssafy.seveniTax.data.model.book.BookEntryResponse
 import com.ssafy.seveniTax.data.repository.BookEntryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import android.util.Log
+import com.ssafy.seveniTax.data.model.book.BookEntryRequest
 import com.ssafy.seveniTax.data.model.book.CategoryUpdateRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -291,6 +292,33 @@ class BookEntryViewModel @Inject constructor(
             } catch (e: Exception) {
                 Log.e("BookEntryVM", "경비 확정 에러: ${e.message}", e)
             }
+        }
+    }
+
+    fun createTestEntries() {
+        val today = java.time.LocalDate.now().toString()
+        val testData = listOf(
+            BookEntryRequest(entryDate = today, merchantName = "스타벅스 강남점", entryType = "EXPENSE", amount = 5500, description = "커피"),
+            BookEntryRequest(entryDate = today, merchantName = "카카오T 택시", entryType = "EXPENSE", amount = 18400, description = "택시비"),
+            BookEntryRequest(entryDate = today, merchantName = "쿠팡", entryType = "EXPENSE", amount = 32000, description = "사무용품"),
+            BookEntryRequest(entryDate = today, merchantName = "GS25 역삼점", entryType = "EXPENSE", amount = 4800, description = "간식"),
+            BookEntryRequest(entryDate = today, merchantName = "네이버클라우드", entryType = "EXPENSE", amount = 110000, description = "서버 호스팅"),
+        )
+        viewModelScope.launch {
+            testData.forEach { req ->
+                try {
+                    val response = bookEntryRepository.createEntry(req)
+                    if (response.isSuccessful) {
+                        Log.d("BookEntryVM", "테스트 데이터 생성: ${req.merchantName}")
+                    } else {
+                        Log.e("BookEntryVM", "테스트 데이터 실패: ${req.merchantName} (${response.code()})")
+                    }
+                } catch (e: Exception) {
+                    Log.e("BookEntryVM", "테스트 데이터 에러: ${e.message}")
+                }
+            }
+            loadEntries()
+            loadUnconfirmedCount()
         }
     }
 
