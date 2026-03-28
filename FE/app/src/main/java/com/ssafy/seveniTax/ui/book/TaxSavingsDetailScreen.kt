@@ -41,16 +41,16 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
     val expenseMap = expenses.toMap()
 
     val savingItems = listOf(
-        SavingItem("노란우산공제", "연간 한도 5,000,000원", 5_000_000,
-            (expenseMap["보험료"] ?: 0L).coerceAtMost(5_000_000), "☂️"),
-        SavingItem("사업용카드 공제", "연간 한도 전액 공제", expenses.sumOf { it.second },
-            expenses.sumOf { it.second }, "💳"),
-        SavingItem("교육훈련비 공제", "연간 한도 1,500,000원", 1_500_000,
-            (expenseMap["교육훈련비"] ?: expenseMap["도서인쇄비"] ?: 0L).coerceAtMost(1_500_000), "📚"),
-        SavingItem("접대비 공제", "연간 한도 36,000,000원", 36_000_000,
-            (expenseMap["접대비"] ?: 0L).coerceAtMost(36_000_000), "🍽️"),
-        SavingItem("통신비 공제", "사업용 비율 공제", 1_200_000,
-            (expenseMap["통신비"] ?: 0L).coerceAtMost(1_200_000), "📱")
+        SavingItem("접대비", "연간 한도 12,000,000원 + 수입금액별", 12_000_000,
+            (expenseMap["접대비"] ?: 0L).coerceAtMost(12_000_000), "🍽️"),
+        SavingItem("차량유지비", "연간 한도 15,000,000원", 15_000_000,
+            (expenseMap["차량유지비"] ?: 0L).coerceAtMost(15_000_000), "🚗"),
+        SavingItem("노란우산공제", "소득 4천만 이하 연 5,000,000원", 5_000_000,
+            0L, "☂️"), // TODO: 실제 납입액 연동
+        SavingItem("연금저축/IRP", "연간 한도 9,000,000원", 9_000_000,
+            0L, "💰"), // TODO: 실제 납입액 연동
+        SavingItem("기부금", "지정기부금 소득금액 30% 한도", 3_000_000,
+            (expenseMap["기부금"] ?: 0L).coerceAtMost(3_000_000), "❤️")
     )
 
     val totalLimit = savingItems.sumOf { it.limit }
