@@ -55,6 +55,9 @@ public class Transfer extends BaseTimeEntity {
 
     private String ssafyTransactionUniqueNo;
 
+    @Column(length = 500)
+    private String failureReason;
+
     @Builder
     public Transfer(User senderUser, User receiverUser, Card senderCard, Card receiverCard,
                     TransferType transferType, Long amount, String description, String targetAccountNo) {
@@ -75,6 +78,11 @@ public class Transfer extends BaseTimeEntity {
 
     public void fail() {
         this.status = TransferStatus.FAILED;
+    }
+
+    public void fail(String reason) {
+        this.status = TransferStatus.FAILED;
+        this.failureReason = reason;
     }
 
     public void assignSsafyTransactionUniqueNo(String uniqueNo) {
