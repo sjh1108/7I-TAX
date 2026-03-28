@@ -101,25 +101,49 @@ class ChatbotViewModel @Inject constructor(
                         isSending = false
                     )
                 } else {
-                    val errMsg = body?.message?.ifEmpty { null }
-                        ?: errorBody?.take(200)
-                        ?: "응답 실패 (HTTP $code)"
-                    Log.e(TAG, "  실패: $errMsg")
+                    // errorBody에서 errorCode 추출
+                    val errorCode = try {
+                        org.json.JSONObject(errorBody ?: "{}").optString("errorCode", "")
+                    } catch (_: Exception) { "" }
+                    val userMsg = toUserMessage(code, errorCode)
+                    Log.e(TAG, "  실패: HTTP $code | errorCode=$errorCode | errorBody=$errorBody")
                     _uiState.value = _uiState.value.copy(
                         messages = msgs + ChatMessage(
-                            text = errMsg,
+                            text = userMsg,
                             isUser = false,
                             isError = true
                         ),
                         isSending = false
                     )
                 }
-            } catch (e: Exception) {
-                Log.e(TAG, "  에러: ${e.message}", e)
+            } catch (e: java.net.UnknownHostException) {
+                Log.e(TAG, "  DNS 에러: ${e.message}", e)
                 val msgs = _uiState.value.messages.filter { !it.isLoading }
                 _uiState.value = _uiState.value.copy(
                     messages = msgs + ChatMessage(
-                        text = "네트워크 오류가 발생했어요. 다시 시도해주세요.",
+                        text = "인터넷 연결을 확인해주세요.",
+                        isUser = false,
+                        isError = true
+                    ),
+                    isSending = false
+                )
+            } catch (e: java.net.SocketTimeoutException) {
+                Log.e(TAG, "  타임아웃: ${e.message}", e)
+                val msgs = _uiState.value.messages.filter { !it.isLoading }
+                _uiState.value = _uiState.value.copy(
+                    messages = msgs + ChatMessage(
+                        text = "서버 응답이 너무 오래 걸려요. 잠시 후 다시 시도해주세요.",
+                        isUser = false,
+                        isError = true
+                    ),
+                    isSending = false
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "  에러: ${e.javaClass.simpleName} ${e.message}", e)
+                val msgs = _uiState.value.messages.filter { !it.isLoading }
+                _uiState.value = _uiState.value.copy(
+                    messages = msgs + ChatMessage(
+                        text = "알 수 없는 오류가 발생했어요. 다시 시도해주세요.",
                         isUser = false,
                         isError = true
                     ),
@@ -138,6 +162,17 @@ class ChatbotViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(messages = withoutError)
             sendMessage(lastUserMsg.text)
         }
+    }
+
+    private fun toUserMessage(httpCode: Int, errorCode: String): String = when {
+        errorCode == "AI_SERVICE_UNAVAILABLE" -> "AI 서비스가 일시적으로 중단되었어요. 잠시 후 다시 시도해주세요."
+        errorCode == "RATE_LIMIT_EXCEEDED" -> "요청이 너무 많아요. 잠시 후 다시 질문해주세요."
+        errorCode == "INVALID_SESSION" -> "대화 세션이 만료되었어요. 새 대화를 시작해주세요."
+        httpCode == 401 || httpCode == 403 -> "로그인이 필요합니다. 앱을 재시작해주세요."
+        httpCode == 404 -> "요청한 서비스를 찾을 수 없어요."
+        httpCode == 500 -> "서버에 문제가 발생했어요. 잠시 후 다시 시도해주세요."
+        httpCode == 502 || httpCode == 503 || httpCode == 504 -> "서버가 응답하지 않아요. 잠시 후 다시 시도해주세요."
+        else -> "오류가 발생했어요 (오류 코드: $httpCode). 다시 시도해주세요."
     }
 
     fun newSession() {
