@@ -383,6 +383,10 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         composable(Route.UnclassifiedList.path) { backStackEntry ->
             val aiDone = backStackEntry.savedStateHandle.get<Boolean>("aiRecommended") ?: false
             val entries by bookEntryViewModel.entries.collectAsState()
+            val bulkResults by classificationViewModel.bulkResults.collectAsState()
+            // AI 일괄 분류 결과를 entryId → category 맵으로 변환
+            val aiCategoryMap = bulkResults.filter { it.isDone && it.aiCategory != null }
+                .associate { it.entryId to it.aiCategory!! }
             val unclassified = entries.filter { !it.confirmed }.map { entry ->
                 val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
                 val amount = when (entry.entryType) {
@@ -395,12 +399,14 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                     val dt = entry.createdAt.take(16).replace("T", " ")
                     dt
                 } catch (_: Exception) { entry.createdAt }
+                // AI 일괄 분류 결과가 있으면 우선 사용, 없으면 BE 데이터
+                val aiCategory = aiCategoryMap[entry.id] ?: entry.categoryName ?: "미분류"
                 com.ssafy.seveniTax.ui.classification.UnclassifiedTransaction(
                     id = entry.id.toString(),
                     merchantName = entry.merchantName ?: entry.description ?: "거래",
                     amount = "${fmt.format(amount)}원",
                     dateTime = dateTime,
-                    aiCategory = entry.categoryName ?: "미분류"
+                    aiCategory = aiCategory
                 )
             }
 
@@ -475,7 +481,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                     results.filter { it.isDone && it.aiCategory != null && it.aiCategory != "미분류" }.forEach { item ->
                         bookEntryViewModel.updateEntryCategory(item.entryId, item.aiCategory!!)
                     }
-                    classificationViewModel.reset()
+                    // reset은 하지 않음 — UnclassifiedList에서 aiCategoryMap으로 사용
                     navController.previousBackStackEntry?.savedStateHandle?.set("aiRecommended", true)
                     navController.popBackStack()
                 }
