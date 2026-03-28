@@ -318,7 +318,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                                 popUpTo(Route.BookEntryList.path) { inclusive = false }
                             }
                         } else {
-                            navController.navigate(Route.ClassificationComplete.create()) {
+                            navController.navigate(Route.ClassificationComplete.create("unclassified")) {
                                 popUpTo(Route.UnclassifiedList.path) { inclusive = false }
                             }
                         }
@@ -349,15 +349,31 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                 classificationViewModel = classificationViewModel,
                 onConfirm = {
                     classificationViewModel.reset()
-                    if (returnTo == "book") {
-                        navController.navigate(Route.BookEntryList.path) {
-                            popUpTo(Route.BookEntryList.path) { inclusive = false }
+                    bookEntryViewModel.loadEntries()
+                    bookEntryViewModel.loadUnconfirmedCount()
+                    when (returnTo) {
+                        "book" -> {
+                            navController.navigate(Route.BookEntryList.path) {
+                                popUpTo(Route.BookEntryList.path) { inclusive = false }
+                            }
                         }
-                    } else {
-                        bookEntryViewModel.loadEntries()
-                        bookEntryViewModel.loadUnconfirmedCount()
-                        navController.navigate(Route.Main.path) {
-                            popUpTo(0) { inclusive = true }
+                        "unclassified" -> {
+                            // 미분류 건이 남아있으면 목록으로 복귀, 없으면 홈으로
+                            val remaining = bookEntryViewModel.entries.value.count { !it.confirmed }
+                            if (remaining > 0) {
+                                navController.navigate(Route.UnclassifiedList.path) {
+                                    popUpTo(Route.UnclassifiedList.path) { inclusive = true }
+                                }
+                            } else {
+                                navController.navigate(Route.Main.path) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
+                        else -> {
+                            navController.navigate(Route.Main.path) {
+                                popUpTo(0) { inclusive = true }
+                            }
                         }
                     }
                 }
