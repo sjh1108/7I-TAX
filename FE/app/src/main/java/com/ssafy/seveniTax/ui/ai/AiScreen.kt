@@ -63,7 +63,7 @@ fun AiScreen(
             .background(Color.White)
     ) {
         // Header
-        ChatHeader(onNewChat = { viewModel.newSession() })
+        ChatHeader(onBack = { navController.popBackStack() }, onNewChat = { viewModel.newSession() })
 
         // Chat Area
         LazyColumn(
@@ -103,14 +103,24 @@ fun AiScreen(
 
 // ── Header ──
 @Composable
-private fun ChatHeader(onNewChat: () -> Unit) {
+private fun ChatHeader(onBack: () -> Unit, onNewChat: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(Primary900)
-            .padding(horizontal = 20.dp, vertical = 14.dp),
+            .padding(horizontal = 12.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("‹", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+        Spacer(modifier = Modifier.width(4.dp))
         Text("AI 챗봇", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(modifier = Modifier.width(8.dp))
         Box(
