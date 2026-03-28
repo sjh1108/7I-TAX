@@ -49,8 +49,11 @@ class PaymentViewModel @Inject constructor(
             )
             Log.d(TAG, "  요청: $request")
             val response = paymentApi.createQrToken(request)
+            val code = response.code()
             val body = response.body()
-            Log.d(TAG, "  응답: code=${response.code()}, status=${body?.status}, token=${body?.data?.token}")
+            val errorBody = if (!response.isSuccessful) response.errorBody()?.string() else null
+            Log.d(TAG, "  응답: code=$code, status=${body?.status}, token=${body?.data?.token}")
+            if (errorBody != null) Log.e(TAG, "  errorBody=$errorBody")
             if (response.isSuccessful && body?.status == "success" && body.data != null) {
                 _uiState.update {
                     it.copy(
@@ -100,8 +103,11 @@ class PaymentViewModel @Inject constructor(
         _uiState.update { it.copy(isLoading = true, errorMessage = "") }
         try {
             val response = paymentApi.getQrPaymentInfo(token)
+            val code = response.code()
             val body = response.body()
-            Log.d(TAG, "  조회 응답: ${body?.data}")
+            val errorBody = if (!response.isSuccessful) response.errorBody()?.string() else null
+            Log.d(TAG, "  조회 응답: code=$code, data=${body?.data}")
+            if (errorBody != null) Log.e(TAG, "  errorBody=$errorBody")
             if (response.isSuccessful && body?.status == "success" && body.data != null) {
                 _uiState.update {
                     it.copy(
