@@ -187,7 +187,7 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
                 HorizontalDivider(color = Surface)
                 DetailInfoRow("증빙", if (entry.note.isNullOrBlank()) "없음" else "있음")
                 HorizontalDivider(color = Surface)
-                DetailInfoRow("결제수단", "사업용카드")
+                DetailInfoRow("결제수단", if (entry.paymentId != null) "카드결제" else "직접입력")
             }
         }
 
