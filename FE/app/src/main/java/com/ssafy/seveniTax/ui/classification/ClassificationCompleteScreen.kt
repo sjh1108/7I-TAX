@@ -10,6 +10,8 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import com.ssafy.seveniTax.viewmodel.ClassificationViewModel
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
@@ -27,12 +29,25 @@ import com.ssafy.seveniTax.ui.theme.*
 @Composable
 fun ClassificationCompleteScreen(
     navController: NavController,
-    merchantName: String = "스타벅스 강남점",
-    amount: String = "5,500원",
-    category: String = "복리후생비",
-    memo: String = "팀 회의 후 커피 구매",
+    classificationViewModel: ClassificationViewModel? = null,
+    merchantName: String = "",
+    amount: String = "",
+    category: String = "",
+    memo: String = "",
     onConfirm: () -> Unit = {}
 ) {
+    val uiState = classificationViewModel?.uiState?.collectAsState()?.value
+    val result = uiState?.result
+    val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+
+    val displayMerchant = uiState?.merchantName?.ifEmpty { null } ?: merchantName.ifEmpty { "가맹점" }
+    val displayAmount = if (uiState != null && uiState.amount > 0) "${fmt.format(uiState.amount)}원" else amount.ifEmpty { "" }
+    val displayCategory = uiState?.selectedCategory ?: result?.taxCategory ?: category.ifEmpty { "경비" }
+    val displayMemo = result?.remark?.ifEmpty { null } ?: memo.ifEmpty { "" }
+
+    android.util.Log.d("CompleteScreen", "▶ merchant=$displayMerchant | amount=$displayAmount | category=$displayCategory")
+    android.util.Log.d("CompleteScreen", "  uiState: entryId=${uiState?.entryId} amount=${uiState?.amount} selectedCategory=${uiState?.selectedCategory}")
+    android.util.Log.d("CompleteScreen", "  result: taxCategory=${result?.taxCategory} remark=${result?.remark}")
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -111,18 +126,20 @@ fun ClassificationCompleteScreen(
                 )
                 .padding(24.dp)
         ) {
-            SummaryRow(label = "가맹점", value = merchantName)
+            SummaryRow(label = "가맹점", value = displayMerchant)
             SummaryDivider()
-            SummaryRow(label = "금액", value = amount)
+            SummaryRow(label = "금액", value = displayAmount)
             SummaryDivider()
             SummaryRow(
                 label = "경비",
-                value = category,
+                value = displayCategory,
                 valueColor = BrandPurple,
                 valueFontWeight = FontWeight.SemiBold
             )
-            SummaryDivider()
-            SummaryRow(label = "증빙 자료", value = memo)
+            if (displayMemo.isNotEmpty()) {
+                SummaryDivider()
+                SummaryRow(label = "증빙 자료", value = displayMemo)
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
