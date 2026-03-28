@@ -30,5 +30,5 @@ interface AuthApi {
     suspend fun reissue(@Body body: ReissueRequest): Response<ApiResponse<TokenResponse>>
 
     @POST("auth/logout")
-    suspend fun logout(): Response<ApiResponse<Unit>>
+    suspend fun logout(@Header("Authorization") authorization: String): Response<ApiResponse<Unit>>
 }

@@ -50,6 +50,9 @@ fun TaxCalendarScreen(
     val isLoading by viewModel.isLoading.collectAsState()
     val urgentDeadline = viewModel.getMostUrgentDeadline()
     val monthDeadlines = viewModel.getDeadlinesForMonth(currentMonth)
+    val estimatedVat by viewModel.estimatedVat.collectAsState()
+    val estimatedIncomeTax by viewModel.estimatedIncomeTax.collectAsState()
+    val estimatedLocalTax by viewModel.estimatedLocalTax.collectAsState()
 
     val snackbarHostState = remember { SnackbarHostState() }
     val scope = rememberCoroutineScope()
@@ -145,7 +148,10 @@ fun TaxCalendarScreen(
                     filter = selectedFilter,
                     deadlines = viewModel.getFilteredDeadlines(),
                     year = currentMonth.year,
-                    navController = navController
+                    navController = navController,
+                    estimatedVat = estimatedVat,
+                    estimatedIncomeTax = estimatedIncomeTax,
+                    estimatedLocalTax = estimatedLocalTax
                 )
             }
         }
@@ -752,7 +758,10 @@ private fun AnnualTimelineView(
     filter: TaxFilter,
     deadlines: List<TaxDeadline>,
     year: Int,
-    navController: NavController
+    navController: NavController,
+    estimatedVat: Long = 0,
+    estimatedIncomeTax: Long = 0,
+    estimatedLocalTax: Long = 0
 ) {
     val today = LocalDate.now()
     val taxColor = when (filter) {
@@ -830,7 +839,7 @@ private fun AnnualTimelineView(
         Spacer(modifier = Modifier.height(20.dp))
 
         // 예상 납부액 카드
-        EstimateCard(filter = filter)
+        EstimateCard(filter = filter, estimatedVat = estimatedVat, estimatedIncomeTax = estimatedIncomeTax, estimatedLocalTax = estimatedLocalTax)
     }
 }
 
@@ -1007,11 +1016,17 @@ private fun TimelineItem(
 // ─── 예상 납부액 카드 ───────────────────────────────────
 
 @Composable
-private fun EstimateCard(filter: TaxFilter) {
+private fun EstimateCard(
+    filter: TaxFilter,
+    estimatedVat: Long = 0,
+    estimatedIncomeTax: Long = 0,
+    estimatedLocalTax: Long = 0
+) {
+    val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
     val (label, amount) = when (filter) {
-        TaxFilter.VAT -> "1기 예정고지 예상 납부액" to "1,230,000"
-        TaxFilter.INCOME -> "종합소득세 예상 납부액" to "3,960,000"
-        TaxFilter.LOCAL -> "지방소득세 예상 납부액" to "396,000"
+        TaxFilter.VAT -> "부가가치세 예상 납부액" to fmt.format(estimatedVat)
+        TaxFilter.INCOME -> "종합소득세 예상 납부액" to fmt.format(estimatedIncomeTax)
+        TaxFilter.LOCAL -> "지방소득세 예상 납부액" to fmt.format(estimatedLocalTax)
         else -> "" to "0"
     }
 

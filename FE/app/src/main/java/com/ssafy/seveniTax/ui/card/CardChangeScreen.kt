@@ -160,7 +160,9 @@ fun CardChangeScreen(navController: NavController, viewModel: CardViewModel) {
                 text = "변경하기",
                 onClick = {
                     viewModel.setDefaultCard(selectedCardId)
-                    navController.popBackStack()
+                    navController.navigate(Route.Main.path) {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
 

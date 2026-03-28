@@ -26,9 +26,29 @@ class CardRepositoryImpl @Inject constructor(
         return response.body() ?: throw Exception(extractErrorMessage(response, "카드 용도 설정에 실패했습니다."))
     }
 
+    override suspend fun getMyAccounts(): ApiResponse<List<com.ssafy.seveniTax.data.model.card.CardAccountResponse>> {
+        val response = cardApi.getMyAccounts()
+        return response.body() ?: throw Exception(extractErrorMessage(response, "계좌 목록 조회에 실패했습니다."))
+    }
+
+    override suspend fun getCardProducts(): ApiResponse<List<com.ssafy.seveniTax.data.model.card.CardProductResponse>> {
+        val response = cardApi.getCardProducts()
+        return response.body() ?: throw Exception(extractErrorMessage(response, "카드 상품 조회에 실패했습니다."))
+    }
+
     override suspend fun getCards(): ApiResponse<List<CardResponse>> {
         val response = cardApi.getCards()
         return response.body() ?: throw Exception(extractErrorMessage(response, "카드 목록 조회에 실패했습니다."))
+    }
+
+    override suspend fun getCard(cardId: String): ApiResponse<CardResponse> {
+        val response = cardApi.getCard(cardId)
+        return response.body() ?: throw Exception(extractErrorMessage(response, "카드 조회에 실패했습니다."))
+    }
+
+    override suspend fun setDefaultCard(cardId: String): ApiResponse<CardResponse> {
+        val response = cardApi.setDefaultCard(cardId)
+        return response.body() ?: throw Exception(extractErrorMessage(response, "기본 카드 변경에 실패했습니다."))
     }
 
     override suspend fun deleteCard(cardId: String) {

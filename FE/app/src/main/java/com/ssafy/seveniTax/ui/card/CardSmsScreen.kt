@@ -24,7 +24,42 @@ import kotlinx.coroutines.delay
 
 @Composable
 fun CardSmsScreen(navController: NavController, viewModel: CardViewModel) {
+    val uiState by viewModel.uiState.collectAsState()
     var smsCode by remember { mutableStateOf("") }
+    var submitted by remember { mutableStateOf(false) }
+
+    // 등록 성공 시 완료 화면 이동
+    LaunchedEffect(uiState.registerComplete) {
+        if (uiState.registerComplete && submitted) {
+            navController.navigate(Route.CardComplete.path)
+        }
+    }
+
+    // 에러 시 다이얼로그
+    var showErrorDialog by remember { mutableStateOf(false) }
+    var errorText by remember { mutableStateOf("") }
+    LaunchedEffect(uiState.errorMessage) {
+        if (uiState.errorMessage.isNotEmpty() && submitted) {
+            errorText = uiState.errorMessage
+            showErrorDialog = true
+            viewModel.clearError()
+            submitted = false
+            smsCode = ""
+        }
+    }
+
+    if (showErrorDialog) {
+        AlertDialog(
+            onDismissRequest = { showErrorDialog = false },
+            title = { Text("카드 등록 실패", fontWeight = androidx.compose.ui.text.font.FontWeight.Bold) },
+            text = { Text(errorText) },
+            confirmButton = {
+                TextButton(onClick = { showErrorDialog = false }) {
+                    Text("확인", color = BrandPurple)
+                }
+            }
+        )
+    }
     var remainingSeconds by remember { mutableIntStateOf(180) }
     val focusRequester = remember { FocusRequester() }
 
@@ -88,9 +123,9 @@ fun CardSmsScreen(navController: NavController, viewModel: CardViewModel) {
                     onValueChange = { code ->
                         if (code.length <= 6 && code.all(Char::isDigit)) {
                             smsCode = code
-                            if (code.length == 6) {
+                            if (code.length == 6 && !submitted) {
+                                submitted = true
                                 viewModel.completeRegistration()
-                                navController.navigate(Route.CardComplete.path)
                             }
                         }
                     },

@@ -168,6 +168,15 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                                 applyFilter(setOf(category), "", false, false)
                             }
                             navController.navigate(Route.BookEntryList.path)
+                        },
+                        onMerchantClick = { merchant ->
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectMonth(selectedMonth)
+                                selectFilter(EntryFilter.INCOME)
+                                applyFilter(setOf("전체"), merchant, false, false)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
                     )
                 }
@@ -209,6 +218,14 @@ fun TaxReportScreen(navController: NavController, bookEntryViewModel: BookEntryV
                                 applyFilter(setOf(category), "", false, false)
                             }
                             navController.navigate(Route.BookEntryList.path)
+                        },
+                        onMerchantClick = { merchant ->
+                            vm?.apply {
+                                selectYear(selectedYear)
+                                selectFilter(EntryFilter.INCOME)
+                                applyFilter(setOf("전체"), merchant, false, false)
+                            }
+                            navController.navigate(Route.BookEntryList.path)
                         }
                     )
                 }
@@ -231,7 +248,8 @@ private fun MonthlyReport(
     onIncomeClick: () -> Unit = {}, onExpenseClick: () -> Unit = {},
     onSavingsClick: () -> Unit = {},
     onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> },
-    onCategoryClick: (String) -> Unit = {}
+    onCategoryClick: (String) -> Unit = {},
+    onMerchantClick: (String) -> Unit = {}
 ) {
     val net = income - expense
     val fmt = NumberFormat.getNumberInstance(Locale.KOREA)
@@ -266,7 +284,7 @@ private fun MonthlyReport(
     if (incomeByMerchant.isNotEmpty()) {
         SectionTitle("거래처별 수입")
         Spacer(Modifier.height(12.dp))
-        IncomeBarChart(incomeByMerchant)
+        IncomeBarChart(incomeByMerchant, onMerchantClick = onMerchantClick)
     }
 
     Spacer(Modifier.height(24.dp))
@@ -333,7 +351,8 @@ private fun AnnualReport(
     onPrev: () -> Unit, onNext: () -> Unit,
     onSavingsClick: () -> Unit = {},
     onDotClick: (monthLabel: String, isIncome: Boolean) -> Unit = { _, _ -> },
-    onCategoryClick: (String) -> Unit = {}
+    onCategoryClick: (String) -> Unit = {},
+    onMerchantClick: (String) -> Unit = {}
 ) {
     val net = income - expense
     val prevNet = prevIncome - prevExpense
@@ -380,7 +399,31 @@ private fun AnnualReport(
 
     Spacer(Modifier.height(24.dp))
 
-    // 5. 연간 세금 예상액
+    // 5. 월별 추이 (12개월)
+    if (trend.isNotEmpty()) {
+        SectionTitle("월별 추이")
+        Spacer(Modifier.height(12.dp))
+        TrendLineChart(trend, onDotClick = onDotClick)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 6. 연간 계정과목별 비용
+    if (expenseByCategory.isNotEmpty()) {
+        SectionTitle("연간 계정과목별 비용")
+        Spacer(Modifier.height(12.dp))
+        DonutChart(expenseByCategory, onCategoryClick = onCategoryClick)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 7. 거래처별 수입
+    if (incomeByMerchant.isNotEmpty()) {
+        SectionTitle("거래처별 수입")
+        Spacer(Modifier.height(12.dp))
+        IncomeBarChart(incomeByMerchant, onMerchantClick = onMerchantClick)
+        Spacer(Modifier.height(24.dp))
+    }
+
+    // 8. 연간 세금 예상액
     val vatSales = (income * 0.1).toLong()
     val vatPurchase = (expense * 0.1).toLong()
     val vatPayable = vatSales - vatPurchase
@@ -422,10 +465,6 @@ private fun AnnualReport(
         "비고" to "종합소득세의 10%"
     ))
 
-    Spacer(Modifier.height(12.dp))
-
-    TotalTaxBox("연간 총 예상 세금", "${fmt.format(totalTax)}원")
-
     Spacer(Modifier.height(24.dp))
 
     // 올해 공제 요약
@@ -435,30 +474,7 @@ private fun AnnualReport(
 
     Spacer(Modifier.height(24.dp))
 
-    // 6. 월별 추이 (12개월)
-    if (trend.isNotEmpty()) {
-        SectionTitle("월별 추이")
-        Spacer(Modifier.height(12.dp))
-        TrendLineChart(trend, onDotClick = onDotClick)
-        Spacer(Modifier.height(24.dp))
-    }
-
-    // 7. 연간 계정과목별 비용
-    if (expenseByCategory.isNotEmpty()) {
-        SectionTitle("연간 계정과목별 비용")
-        Spacer(Modifier.height(12.dp))
-        DonutChart(expenseByCategory, onCategoryClick = onCategoryClick)
-        Spacer(Modifier.height(24.dp))
-    }
-
-    // 8. 거래처별 수입
-    if (incomeByMerchant.isNotEmpty()) {
-        SectionTitle("거래처별 수입")
-        Spacer(Modifier.height(12.dp))
-        IncomeBarChart(incomeByMerchant)
-        Spacer(Modifier.height(24.dp))
-    }
-
+    TotalTaxBox("연간 총 예상 세금", "${fmt.format(totalTax)}원")
 }
 
 // ─── 날짜 네비게이터 ─────────────────────────────────────
@@ -613,11 +629,28 @@ private fun TaxBracketCard(income: Long = 0, expense: Long = 0) {
                 Text("${currentRate}% 구간", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrandPurple)
             }
             Spacer(Modifier.height(12.dp))
-            // 프로그레스 바 (최대 1억 5천)
-            Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
-                Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
+            // 프로그레스 바 (최대 1억 5천) + 세율 구간 표기
+            Box(Modifier.fillMaxWidth().height(24.dp)) {
+                // 바 배경
+                Box(Modifier.fillMaxWidth().height(8.dp).align(Alignment.BottomStart).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
+                }
+                // 세율 구간 마커
+                brackets.forEach { bracket ->
+                    val pos = (bracket.limit.toFloat() / maxLimit).coerceIn(0f, 1f)
+                    Text(
+                        text = "${bracket.rate}%",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (currentRate == bracket.rate) BrandPurple else TextSecondary,
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .fillMaxWidth(pos)
+                            .wrapContentWidth(Alignment.End)
+                    )
+                }
             }
-            Spacer(Modifier.height(8.dp))
+            Spacer(Modifier.height(4.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 Text("0원", fontSize = 10.sp, color = TextSecondary)
                 Text("1억 5,000만원", fontSize = 10.sp, color = TextSecondary)
@@ -948,7 +981,7 @@ private fun DonutChart(categoryData: List<Pair<String, Long>> = emptyList(), onC
 // ─── 거래처별 수입 막대 그래프 ────────────────────────────
 
 @Composable
-private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList()) {
+private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList(), onMerchantClick: (String) -> Unit = {}) {
     val totalIncome = merchantData.sumOf { it.second }.coerceAtLeast(1)
     val topItems = if (merchantData.size > 3) {
         val top2 = merchantData.take(2)
@@ -972,6 +1005,19 @@ private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList())
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(140.dp)
+                    .pointerInput(bars) {
+                        detectTapGestures { tapOffset ->
+                            val w = size.width.toFloat()
+                            val barCount = bars.size
+                            val barWidth = w / (barCount * 2 + 1)
+                            bars.forEachIndexed { i, (name, _, _) ->
+                                val x = barWidth * (i * 2 + 1)
+                                if (tapOffset.x in x..(x + barWidth)) {
+                                    onMerchantClick(name)
+                                }
+                            }
+                        }
+                    }
             ) {
                 val w = size.width
                 val h = size.height
@@ -1026,7 +1072,13 @@ private fun IncomeBarChart(merchantData: List<Pair<String, Long>> = emptyList())
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 bars.forEachIndexed { i, (name, _, pct) ->
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable { onMerchantClick(name) }
+                            .padding(horizontal = 4.dp, vertical = 2.dp)
+                    ) {
                         Text(name, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
                         Text("${pct}%", fontSize = 10.sp, color = TextSecondary)
                     }

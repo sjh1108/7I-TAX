@@ -53,6 +53,7 @@ pipeline {
                         -p 18080:8080 \
                         -e TZ=Asia/Seoul \
                         --env-file /home/ubuntu/.env.backend \
+                        -v /home/ubuntu/firebase-service-account.json:/home/ubuntu/firebase-service-account.json:ro \
                         tax-backend
 
                     docker stop tax-frontend || true

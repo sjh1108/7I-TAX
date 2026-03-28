@@ -1,4 +1,4 @@
-package com.ssafy.seveniTax.ui.home
+﻿package com.ssafy.seveniTax.ui.home
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -12,13 +12,16 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Menu
+import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -35,6 +38,9 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
@@ -64,7 +70,7 @@ private data class SummaryMetric(
 private data class ScheduleItem(
     val title: String,
     val dueText: String,
-    val dDayText: String
+    val dDay: Int
 )
 
 private data class TransactionItem(
@@ -82,34 +88,44 @@ private data class InsightItem(
 fun HomeScreen(
     navController: NavController,
     modifier: Modifier = Modifier,
-    viewModel: MainViewModel = hiltViewModel()
+    viewModel: MainViewModel = hiltViewModel(),
+    onNotificationClick: () -> Unit = {},
+    onMenuClick: () -> Unit = {},
+    notificationCount: Int = 0
 ) {
     val userName = viewModel.getUserName().ifBlank { "이름" }
     val actions = listOf(
         HomeActionItem("세금 일정", "home/icon_tax_calendar.svg") {
             it.navigate(Route.TaxCalendar.path)
         },
-        HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
-            it.navigate(Route.QrPayment.path)
-        },
-        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
-            it.navigate(Route.CardList.path)
+        HomeActionItem("장부 보기", "home/icon_book_entries.svg") {
+            it.navigate(Route.BookEntryList.path)
         },
         HomeActionItem("리포트 보기", "home/icon_report.svg") {
             it.navigate(Route.TaxReport.path)
         },
-        HomeActionItem("장부 보기", "home/icon_book_entries.svg") {
-            it.navigate(Route.BookEntryList.path)
+        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
+            it.navigate(Route.CardList.path)
         },
-        HomeActionItem("송금", "home/icon_transfer.svg") {
-            it.navigate(Route.ServerTest.path)
+        HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
+            it.navigate(Route.QrPayment.path)
         }
     )
 
-    val schedules = listOf(
-        ScheduleItem("부가세 예정신고", "3월 31일", "D-6"),
-        ScheduleItem("원천세 신고", "4월 10일", "D-16")
-    )
+    // 서버에서 가져온 세금 일정 → 가까운 순 2개
+    val taxCalendarViewModel: com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel = hiltViewModel()
+    val deadlines by taxCalendarViewModel.deadlines.collectAsState()
+    val schedules = deadlines
+        .filter { it.dDay >= 0 }
+        .sortedBy { it.dDay }
+        .take(2)
+        .map {
+            val date = try {
+                val d = java.time.LocalDate.parse(it.deadline)
+                "${d.monthValue}월 ${d.dayOfMonth}일"
+            } catch (_: Exception) { it.deadline }
+            ScheduleItem(it.taxName, date, it.dDay)
+        }
     val recentTransactions = listOf(
         TransactionItem("스타벅스 강남점", "12,000원", "미분류"),
         TransactionItem("쿠팡", "48,000원", "사업용"),
@@ -142,7 +158,12 @@ fun HomeScreen(
                         .fillMaxWidth()
                         .padding(horizontal = 24.dp)
                 ) {
-                    HomeHeader(userName = userName)
+                    HomeHeader(
+                        userName = userName,
+                        notificationCount = notificationCount,
+                        onNotificationClick = onNotificationClick,
+                        onMenuClick = onMenuClick
+                    )
                     Spacer(modifier = Modifier.height(20.dp))
                 }
             }
@@ -156,9 +177,15 @@ fun HomeScreen(
                         .padding(horizontal = 24.dp, vertical = 24.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    UnconfirmedLedgerCard(
-                        onClick = { navController.navigate(Route.UnclassifiedList.path) }
-                    )
+                    val bookEntryViewModel: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
+                    val unclassifiedCount by bookEntryViewModel.unconfirmedCount.collectAsState()
+                    LaunchedEffect(Unit) { bookEntryViewModel.loadUnconfirmedCount() }
+                    if (unclassifiedCount > 0) {
+                        UnconfirmedLedgerCard(
+                            count = unclassifiedCount,
+                            onClick = { navController.navigate(Route.UnclassifiedList.path) }
+                        )
+                    }
                     ActionGrid(
                         navController = navController,
                         items = actions
@@ -183,7 +210,12 @@ fun HomeScreen(
 }
 
 @Composable
-private fun HomeHeader(userName: String) {
+private fun HomeHeader(
+    userName: String,
+    notificationCount: Int,
+    onNotificationClick: () -> Unit,
+    onMenuClick: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         verticalAlignment = Alignment.CenterVertically
@@ -197,31 +229,47 @@ private fun HomeHeader(userName: String) {
             modifier = Modifier.weight(1f)
         )
 
-        Box {
+        Box(
+            modifier = Modifier.clickable { onNotificationClick() }
+        ) {
             Icon(
-                painter = painterResource(R.drawable.ic_34),
+                imageVector = Icons.Default.NotificationsNone,
                 contentDescription = "알림",
                 tint = Color.White,
                 modifier = Modifier
                     .padding(top = 6.dp)
                     .size(24.dp)
             )
-            Box(
-                modifier = Modifier
-                    .size(16.dp)
-                    .clip(CircleShape)
-                    .background(Error)
-                    .align(Alignment.TopEnd),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "3",
-                    fontSize = 9.sp,
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold
-                )
+            if (notificationCount > 0) {
+                Box(
+                    modifier = Modifier
+                        .size(16.dp)
+                        .clip(CircleShape)
+                        .background(Error)
+                        .align(Alignment.TopEnd),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = notificationCount.toString(),
+                        fontSize = 9.sp,
+                        color = Color.White,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
             }
         }
+
+        Spacer(modifier = Modifier.width(14.dp))
+
+        Icon(
+            imageVector = Icons.Default.Menu,
+            contentDescription = "전체 메뉴",
+            tint = Color.White,
+            modifier = Modifier
+                .padding(top = 6.dp)
+                .size(24.dp)
+                .clickable { onMenuClick() }
+        )
     }
 }
 
@@ -284,7 +332,7 @@ private fun SummaryStat(label: String, value: String, modifier: Modifier = Modif
 }
 
 @Composable
-private fun UnconfirmedLedgerCard(onClick: () -> Unit) {
+private fun UnconfirmedLedgerCard(count: Int = 0, onClick: () -> Unit) {
     Card(
         modifier = Modifier.clickable { onClick() },
         shape = RoundedCornerShape(22.dp),
@@ -305,7 +353,7 @@ private fun UnconfirmedLedgerCard(onClick: () -> Unit) {
                 )
                 Spacer(modifier = Modifier.height(6.dp))
                 Text(
-                    text = "12건",
+                    text = "${count}건",
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Bold,
                     color = BrandPurple
@@ -432,11 +480,16 @@ private fun ScheduleRow(item: ScheduleItem) {
                 color = TextSecondary
             )
         }
+        val ddayColor = when {
+            item.dDay <= 3 -> com.ssafy.seveniTax.ui.theme.DdayError
+            item.dDay <= 7 -> com.ssafy.seveniTax.ui.theme.DdayWarning
+            else -> com.ssafy.seveniTax.ui.theme.DdayNormal
+        }
         Text(
-            text = item.dDayText,
+            text = if (item.dDay == 0) "D-Day" else "D-${item.dDay}",
             fontSize = 14.sp,
             fontWeight = FontWeight.Bold,
-            color = BrandPurple
+            color = ddayColor
         )
     }
 }
