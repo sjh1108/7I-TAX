@@ -42,6 +42,9 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
@@ -179,7 +182,12 @@ fun HomeScreen(
                 ) {
                     val bookEntryViewModel: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
                     val unclassifiedCount by bookEntryViewModel.unconfirmedCount.collectAsState()
-                    LaunchedEffect(Unit) { bookEntryViewModel.loadUnconfirmedCount() }
+                    val lifecycleOwner = LocalLifecycleOwner.current
+                    LaunchedEffect(lifecycleOwner) {
+                        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+                            bookEntryViewModel.loadUnconfirmedCount()
+                        }
+                    }
                     if (unclassifiedCount > 0) {
                         UnconfirmedLedgerCard(
                             count = unclassifiedCount,
