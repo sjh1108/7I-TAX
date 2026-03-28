@@ -107,10 +107,11 @@ private fun ChatHeader(onNewChat: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 20.dp, vertical = 12.dp),
+            .background(Primary900)
+            .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("AI 챗봇", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
+        Text("AI 챗봇", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(modifier = Modifier.width(8.dp))
         Box(
             modifier = Modifier
@@ -123,11 +124,11 @@ private fun ChatHeader(onNewChat: () -> Unit) {
             modifier = Modifier
                 .size(36.dp)
                 .clip(RoundedCornerShape(12.dp))
-                .background(Primary50)
+                .background(Color.White.copy(alpha = 0.15f))
                 .clickable(onClick = onNewChat),
             contentAlignment = Alignment.Center
         ) {
-            Text("+", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Neutral900)
+            Text("+", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Color.White)
         }
     }
 }
