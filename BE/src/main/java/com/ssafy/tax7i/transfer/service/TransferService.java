@@ -32,6 +32,7 @@ public class TransferService {
     private final UserRepository userRepository;
     private final CardRepository cardRepository;
     private final SsafyFinanceClient ssafyFinanceClient;
+    private final TransferFailureSaveService transferFailureSaveService;
 
     @Transactional
     public TransferResponse p2pTransfer(Long userId, P2pTransferRequest request) {
@@ -60,20 +61,10 @@ public class TransferService {
                     receiverKey, receiverCard.getWithdrawalAccountNo(),
                     request.amount(), description, description);
         } catch (BusinessException e) {
-            // 이체 실패(환불 성공 or 환불 실패) — FAILED 상태로 기록
-            Transfer failedTransfer = Transfer.builder()
-                    .senderUser(sender)
-                    .receiverUser(receiver)
-                    .senderCard(senderCard)
-                    .receiverCard(receiverCard)
-                    .transferType(TransferType.P2P)
-                    .amount(request.amount())
-                    .description(description)
-                    .build();
-            failedTransfer.fail(e.getMessage());
-            transferRepository.save(failedTransfer);
-            log.error("P2P 송금 실패 기록 저장: transferId={}, senderId={}, amount={}, reason={}",
-                    failedTransfer.getId(), userId, request.amount(), e.getMessage());
+            // REQUIRES_NEW 트랜잭션으로 실패 기록 저장 — 외부 트랜잭션 롤백과 무관하게 커밋됨
+            transferFailureSaveService.saveFailedTransfer(
+                    sender, receiver, senderCard, receiverCard,
+                    request.amount(), description, e.getMessage());
             throw e;
         }
 
