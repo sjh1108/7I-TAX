@@ -85,8 +85,11 @@ fun QrPaymentScreen(
 ) {
     val cardUiState by cardViewModel.uiState.collectAsState()
     val paymentState by paymentViewModel.uiState.collectAsState()
+    val merchants by paymentViewModel.merchants.collectAsState()
+    val selectedMerchant by paymentViewModel.selectedMerchant.collectAsState()
     var selectedTab by remember { mutableIntStateOf(0) }
     var selectedCard by remember { mutableIntStateOf(0) }
+    var showMerchantPicker by remember { mutableStateOf(false) }
     var scannedResult by remember { mutableStateOf<String?>(null) }
     var showPayConfirmDialog by remember { mutableStateOf(false) }
     var scannedToken by remember { mutableStateOf("") }
@@ -295,7 +298,83 @@ fun QrPaymentScreen(
             }
         }
 
-        Spacer(modifier = Modifier.height(24.dp))
+        // 가맹점 선택 버튼
+        if (selectedTab == 0) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 24.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("가맹점", fontSize = 13.sp, color = TextSecondary)
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .weight(1f)
+                        .clip(RoundedCornerShape(8.dp))
+                        .border(1.dp, Divider, RoundedCornerShape(8.dp))
+                        .clickable { showMerchantPicker = true }
+                        .padding(horizontal = 12.dp, vertical = 10.dp)
+                ) {
+                    Text(
+                        text = selectedMerchant?.merchantName ?: "가맹점을 선택하세요",
+                        fontSize = 14.sp,
+                        color = if (selectedMerchant != null) TextPrimary else TextSecondary
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // 가맹점 선택 다이얼로그
+        if (showMerchantPicker && merchants.isNotEmpty()) {
+            androidx.compose.material3.AlertDialog(
+                onDismissRequest = { showMerchantPicker = false },
+                title = { Text("가맹점 선택", fontWeight = FontWeight.Bold) },
+                text = {
+                    Column {
+                        merchants.forEach { merchant ->
+                            val isSelected = merchant.merchantId == selectedMerchant?.merchantId
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(if (isSelected) BrandPurple.copy(alpha = 0.1f) else Color.Transparent)
+                                    .clickable {
+                                        paymentViewModel.selectMerchant(merchant)
+                                        showMerchantPicker = false
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = merchant.merchantName,
+                                        fontSize = 15.sp,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                        color = if (isSelected) BrandPurple else TextPrimary
+                                    )
+                                    if (!merchant.categoryName.isNullOrEmpty()) {
+                                        Text(
+                                            text = merchant.categoryName,
+                                            fontSize = 12.sp,
+                                            color = TextSecondary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                confirmButton = {
+                    androidx.compose.material3.TextButton(onClick = { showMerchantPicker = false }) {
+                        Text("닫기", color = TextSecondary)
+                    }
+                }
+            )
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
 
         Box(
             modifier = Modifier
@@ -311,13 +390,14 @@ fun QrPaymentScreen(
                 val card = cardUiState.cards.getOrNull(selectedCard)
 
                 // 카드 선택 시 QR 토큰 생성
-                LaunchedEffect(selectedCard, card) {
+                LaunchedEffect(selectedCard, card, selectedMerchant) {
                     card?.let {
+                        val merchant = selectedMerchant ?: return@LaunchedEffect
                         paymentViewModel.createQrToken(
                             cardId = it.id.toLongOrNull() ?: 0,
-                            amount = 1000, // 테스트용 최소 금액
-                            merchantId = 1,
-                            merchantName = "7iTAX QR 결제"
+                            amount = 1000,
+                            merchantId = merchant.merchantId,
+                            merchantName = merchant.merchantName
                         )
                     }
                 }

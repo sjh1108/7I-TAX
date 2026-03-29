@@ -2,10 +2,14 @@ package com.ssafy.seveniTax.data.remote
 
 import com.ssafy.seveniTax.data.model.card.*
 import com.ssafy.seveniTax.data.model.common.ApiResponse
+import com.ssafy.seveniTax.data.model.payment.MerchantResponse
 import retrofit2.Response
 import retrofit2.http.*
 
 interface CardApi {
+
+    @GET("cards/merchants")
+    suspend fun getMerchants(): Response<ApiResponse<List<MerchantResponse>>>
 
     @POST("cards")
     suspend fun createCard(@Body body: CardCreateRequest): Response<ApiResponse<CardResponse>>
