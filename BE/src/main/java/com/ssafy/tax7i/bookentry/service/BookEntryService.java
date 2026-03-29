@@ -66,9 +66,9 @@ public class BookEntryService {
         long fixedAssetAmount = 0L;
 
         switch (request.entryType()) {
-            case INCOME -> incomeAmount = supplyPrice;
-            case EXPENSE -> expenseAmount = supplyPrice;
-            case ASSET -> fixedAssetAmount = supplyPrice;
+            case INCOME -> incomeAmount = amount;
+            case EXPENSE -> expenseAmount = amount;
+            case ASSET -> fixedAssetAmount = amount;
         }
 
         BookEntry entry = BookEntry.builder()
