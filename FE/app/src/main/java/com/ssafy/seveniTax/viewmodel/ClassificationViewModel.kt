@@ -22,6 +22,7 @@ data class ClassificationUiState(
     val merchantName: String = "",
     val amount: Long = 0L,
     val dateTime: String = "",
+    val note: String? = null,
     // 수동 선택한 카테고리
     val selectedCategory: String? = null
 )
@@ -42,12 +43,13 @@ class ClassificationViewModel @Inject constructor(
     private val _bulkResults = MutableStateFlow<List<BulkClassificationItem>>(emptyList())
     val bulkResults: StateFlow<List<BulkClassificationItem>> = _bulkResults.asStateFlow()
 
-    fun setEntryInfo(entryId: Long, merchantName: String, amount: Long, dateTime: String) {
+    fun setEntryInfo(entryId: Long, merchantName: String, amount: Long, dateTime: String, note: String? = null) {
         _uiState.value = _uiState.value.copy(
             entryId = entryId,
             merchantName = merchantName,
             amount = amount,
-            dateTime = dateTime
+            dateTime = dateTime,
+            note = note
         )
     }
 
@@ -55,14 +57,15 @@ class ClassificationViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(selectedCategory = category)
     }
 
-    fun classify(merchantName: String, amount: Long? = null) {
+    fun classify(merchantName: String, amount: Long? = null, note: String? = null) {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, error = null, result = null)
-            Log.d(TAG, "▶ classify() merchant=$merchantName, amount=$amount")
+            Log.d(TAG, "▶ classify() merchant=$merchantName, amount=$amount, note=$note")
             try {
                 val request = ClassificationRequest(
                     merchantName = merchantName,
-                    amount = amount
+                    amount = amount,
+                    note = note
                 )
                 val response = classificationRepository.classify(request)
                 val body = response.body()

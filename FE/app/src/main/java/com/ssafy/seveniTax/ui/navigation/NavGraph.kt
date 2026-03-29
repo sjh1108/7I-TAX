@@ -522,7 +522,8 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                             entryId = firstUnconfirmed.id,
                             merchantName = firstUnconfirmed.merchantName ?: firstUnconfirmed.description ?: "거래",
                             amount = amt,
-                            dateTime = firstUnconfirmed.createdAt.take(16).replace("T", " ")
+                            dateTime = firstUnconfirmed.createdAt.take(16).replace("T", " "),
+                            note = firstUnconfirmed.note
                         )
                         navController.navigate(Route.ClassificationLoading.path)
                     }
