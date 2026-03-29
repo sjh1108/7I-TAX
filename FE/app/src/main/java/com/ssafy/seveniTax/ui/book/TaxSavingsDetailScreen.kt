@@ -125,17 +125,27 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
                 }
             }
 
-            // ── 항목별 현황 (HTML section-header) ──
-            Column(Modifier.padding(horizontal = 20.dp)) {
+            // ── 항목별 현황 (리포트와 동일한 섹션 카드) ──
+            Column(
+                Modifier
+                    .padding(horizontal = 20.dp)
+                    .shadow(8.dp, RoundedCornerShape(15.dp), ambientColor = CardShadow, spotColor = CardShadow)
+                    .background(Color.White, RoundedCornerShape(15.dp))
+                    .padding(20.dp)
+            ) {
                 Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.CenterVertically) {
                     Text("항목별 현황", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
                     Text("탭하여 상세 확인", fontSize = 13.sp, fontWeight = FontWeight.Medium, color = Neutral400)
                 }
                 Spacer(Modifier.height(16.dp))
 
-                items.forEach { item ->
-                    DeductionCard(item)
-                    Spacer(Modifier.height(12.dp))
+                items.forEachIndexed { index, item ->
+                    DeductionRow(item)
+                    if (index < items.lastIndex) {
+                        Spacer(Modifier.height(12.dp))
+                        HorizontalDivider(color = Color(0xFFF2F1F9))
+                        Spacer(Modifier.height(12.dp))
+                    }
                 }
             }
 
@@ -168,9 +178,9 @@ private fun SummaryBox(label: String, value: String, modifier: Modifier) {
     }
 }
 
-// ── 공제 카드 (HTML deduction-card) ──
+// ── 공제 행 (섹션 카드 내부) ──
 @Composable
-private fun DeductionCard(item: DeductionItem) {
+private fun DeductionRow(item: DeductionItem) {
     val pct = if (item.limit > 0) (item.used * 100 / item.limit).toInt() else 0
     val remain = item.limit - item.used
     val barCol = when {
@@ -179,17 +189,10 @@ private fun DeductionCard(item: DeductionItem) {
         else -> BarSafe
     }
 
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(15.dp), ambientColor = CardShadow, spotColor = CardShadow)
-            .background(Color.White, RoundedCornerShape(15.dp))
-            .padding(horizontal = 20.dp, vertical = 24.dp)
-    ) {
-        // 상단: 아이콘 + 이름 + 퍼센트 (HTML deduction-top)
+    Column(Modifier.fillMaxWidth()) {
+        // 상단: 아이콘 + 이름 + 퍼센트
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween, Alignment.Top) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // 아이콘 (HTML deduction-icon)
                 Box(
                     Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(IconBg),
                     Alignment.Center
@@ -198,21 +201,20 @@ private fun DeductionCard(item: DeductionItem) {
                         painter = painterResource(item.iconRes),
                         contentDescription = item.name,
                         modifier = Modifier.size(20.dp),
-                        tint = Color.Unspecified // 다색 아이콘 → tint 비활성
+                        tint = Color.Unspecified
                     )
                 }
                 Spacer(Modifier.width(10.dp))
                 Column {
-                    Text(item.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900, lineHeight = 21.sp)
+                    Text(item.name, fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
                     Spacer(Modifier.height(2.dp))
                     Text(item.sub, fontSize = 12.sp, color = Neutral400)
                 }
             }
-            // 퍼센트 (HTML deduction-pct)
             Text("$pct%", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = barCol)
         }
 
-        // 바 (HTML deduction-bar-wrap)
+        // 바
         Spacer(Modifier.height(14.dp))
         Box(
             Modifier.fillMaxWidth().height(8.dp)
@@ -225,7 +227,7 @@ private fun DeductionCard(item: DeductionItem) {
             )
         }
 
-        // 사용/남은 (HTML deduction-values)
+        // 사용/남은
         Spacer(Modifier.height(10.dp))
         Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
             Text(buildAnnotatedString {
