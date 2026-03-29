@@ -152,17 +152,7 @@ fun TaxSavingsDetailScreen(navController: NavController, bookEntryViewModel: Boo
             Spacer(Modifier.height(16.dp))
         }
 
-        // ── Bottom CTA (HTML btn-primary) ──
-        Box(Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 16.dp)) {
-            Button(
-                onClick = { },
-                Modifier.fillMaxWidth().height(52.dp),
-                shape = RoundedCornerShape(15.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Primary900)
-            ) {
-                Text("더 아낄 수 있는 방법 보기", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
+        Spacer(Modifier.navigationBarsPadding())
     }
 }
 
