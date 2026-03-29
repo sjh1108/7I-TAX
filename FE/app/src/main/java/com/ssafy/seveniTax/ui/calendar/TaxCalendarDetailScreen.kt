@@ -614,8 +614,6 @@ private fun ReminderCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("🔔", fontSize = 16.sp)
-                    Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "리마인드 알림",
                         fontSize = 16.sp,

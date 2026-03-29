@@ -241,8 +241,6 @@ private fun UrgentBanner(deadline: TaxDeadline, onClick: () -> Unit = {}) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("🔔", fontSize = 14.sp)
-                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "가장 임박한 일정",
                     fontSize = 13.sp,
