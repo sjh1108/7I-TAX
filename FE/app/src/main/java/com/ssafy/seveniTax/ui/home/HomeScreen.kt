@@ -129,11 +129,6 @@ fun HomeScreen(
             } catch (_: Exception) { it.deadline }
             ScheduleItem(it.taxName, date, it.dDay)
         }
-    val recentTransactions = listOf(
-        TransactionItem("스타벅스 강남점", "12,000원", "미분류"),
-        TransactionItem("쿠팡", "48,000원", "사업용"),
-        TransactionItem("강남주유소", "70,000원", "확인 필요")
-    )
     val insights = listOf(
         InsightItem("경비 처리 누락 가능 거래 4건", "정리하면 약 32만원 수준의 절세 여지를 확인할 수 있어요."),
         InsightItem("신고 전 검토 추천", "미분류 경비를 먼저 처리하면 신고 누락 위험을 줄일 수 있어요.")
@@ -182,12 +177,27 @@ fun HomeScreen(
                 ) {
                     val bookEntryViewModel: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
                     val unclassifiedCount by bookEntryViewModel.unconfirmedCount.collectAsState()
+                    val entries by bookEntryViewModel.entries.collectAsState()
                     val lifecycleOwner = LocalLifecycleOwner.current
                     LaunchedEffect(lifecycleOwner) {
                         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
                             bookEntryViewModel.loadUnconfirmedCount()
+                            bookEntryViewModel.loadEntries()
                         }
                     }
+                    // 장부 현황 계산 (이번 달)
+                    val now = java.time.LocalDate.now()
+                    val thisMonthEntries = entries.filter {
+                        try {
+                            val d = java.time.LocalDate.parse(it.entryDate)
+                            d.year == now.year && d.monthValue == now.monthValue
+                        } catch (_: Exception) { false }
+                    }
+                    val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+                    val totalIncome = thisMonthEntries.filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+                    val totalExpense = thisMonthEntries.filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
+                    val totalAsset = thisMonthEntries.filter { it.entryType == "ASSET" }.sumOf { it.fixedAssetAmount }
+                    val unclassifiedEntries = thisMonthEntries.count { !it.confirmed }
                     if (unclassifiedCount > 0) {
                         UnconfirmedLedgerCard(
                             count = unclassifiedCount,
@@ -203,7 +213,10 @@ fun HomeScreen(
                         onClick = { navController.navigate(Route.TaxCalendar.path) }
                     )
                     LedgerSection(
-                        transactions = recentTransactions,
+                        income = "${fmt.format(totalIncome)}원",
+                        expense = "${fmt.format(totalExpense)}원",
+                        asset = "${fmt.format(totalAsset)}원",
+                        unclassified = "${unclassifiedEntries}건",
                         onClick = { navController.navigate(Route.BookEntryList.path) }
                     )
                     InsightSection(
@@ -503,20 +516,23 @@ private fun ScheduleRow(item: ScheduleItem) {
 }
 
 @Composable
-private fun LedgerSection(transactions: List<TransactionItem>, onClick: () -> Unit) {
+private fun LedgerSection(
+    income: String, expense: String, asset: String, unclassified: String,
+    onClick: () -> Unit
+) {
     HomeSectionCard(
         title = "이번 달 장부 현황",
         actionText = "장부 보기",
         onClick = onClick
     ) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LedgerMetricCard("수입", "4,820,000원", Modifier.weight(1f))
-            LedgerMetricCard("지출", "1,430,000원", Modifier.weight(1f))
+            LedgerMetricCard("수입", income, Modifier.weight(1f))
+            LedgerMetricCard("지출", expense, Modifier.weight(1f))
         }
         Spacer(modifier = Modifier.height(12.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LedgerMetricCard("고정자산", "320,000원", Modifier.weight(1f))
-            LedgerMetricCard("미분류", "5건", Modifier.weight(1f))
+            LedgerMetricCard("고정자산", asset, Modifier.weight(1f))
+            LedgerMetricCard("미분류", unclassified, Modifier.weight(1f))
         }
     }
 }
