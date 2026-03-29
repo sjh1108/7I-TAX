@@ -339,16 +339,29 @@ private fun SummaryCard(income: Long, expense: Long, nearest: com.ssafy.seveniTa
         }
 
         if (nearest != null) {
+            // 예상 세금 계산
+            val taxable = (income - expense).coerceAtLeast(0)
+            val estimatedVat = (income / 10 - expense / 10).coerceAtLeast(0) // 간이 부가세
+            val estimatedIncome = when { // 종소세
+                taxable <= 14_000_000 -> (taxable * 0.06).toLong()
+                taxable <= 50_000_000 -> (taxable * 0.15 - 1_260_000).toLong()
+                taxable <= 88_000_000 -> (taxable * 0.24 - 5_760_000).toLong()
+                else -> (taxable * 0.35 - 15_440_000).toLong()
+            }
+            val isVat = nearest.taxName.contains("부가")
+            val estimatedTax = if (isVat) estimatedVat else estimatedIncome
+            val taxLabel = if (isVat) "예상 부가가치세" else "예상 종합소득세"
+
             Spacer(Modifier.height(12.dp))
             Row(
                 Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(16.dp)).clickable { navController.navigate(Route.TaxCalendar.path) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(Modifier.weight(1f)) {
-                    Text("예상 세금 (${nearest.taxName.take(6)})", fontSize = 12.sp, color = TextSecondary)
+                    Text(taxLabel, fontSize = 12.sp, color = TextSecondary)
                     Spacer(Modifier.height(2.dp))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("상세 보기", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Text("${fmt.format(estimatedTax)}원", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
                         Spacer(Modifier.width(8.dp))
                         Box(Modifier.background(TaxBarAccent.copy(0.15f), RoundedCornerShape(20.dp)).padding(8.dp, 2.dp)) {
                             Text("D-${nearest.dDay}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TaxBarAccent)

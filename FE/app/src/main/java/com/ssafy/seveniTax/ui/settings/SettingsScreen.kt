@@ -64,19 +64,10 @@ fun SettingsScreen(
     Column(modifier = modifier.fillMaxSize().background(Color.White)) {
 
         // ── 헤더 (< 설정) — 카드관리/페이가입과 동일 패턴 ──
-        Row(
-            Modifier.fillMaxWidth().statusBarsPadding().height(56.dp).padding(horizontal = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Spacer(Modifier.size(48.dp)) // 좌측 균형
-            Spacer(Modifier.weight(1f))
-            Text("설정", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
-            Spacer(Modifier.weight(1f))
-            Spacer(Modifier.size(48.dp))
-        }
-
-        // ── 프로필 영역 ──
-        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+        // ── 프로필 영역 (헤더 겸용) ──
+        Column(Modifier.fillMaxWidth().statusBarsPadding().padding(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 16.dp)) {
+            Text("설정", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Primary600, letterSpacing = 0.3.sp)
+            Spacer(Modifier.height(12.dp))
             Text(userName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
             if (userPhone.isNotBlank()) {
                 Spacer(Modifier.height(4.dp))
