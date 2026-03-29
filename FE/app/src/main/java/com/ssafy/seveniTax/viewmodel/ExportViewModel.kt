@@ -97,32 +97,31 @@ class ExportViewModel @Inject constructor(
 
             try {
                 val response = request()
+                val code = response.code()
                 val body = response.body()
+                val errorBody = if (!response.isSuccessful) response.errorBody()?.string() else null
+                android.util.Log.d("ExportVM", "▶ export: HTTP $code | hasBody=${body != null} | prefix=$filePrefix")
+                if (errorBody != null) android.util.Log.e("ExportVM", "  errorBody=$errorBody")
+
                 if (!response.isSuccessful || body == null) {
+                    val errMsg = errorBody?.take(100) ?: "파일 내보내기에 실패했습니다 (HTTP $code)"
+                    android.util.Log.e("ExportVM", "  실패: $errMsg")
                     _uiState.update {
-                        it.copy(
-                            isExporting = false,
-                            errorMessage = "파일 내보내기에 실패했습니다."
-                        )
+                        it.copy(isExporting = false, errorMessage = errMsg)
                     }
                     return@launch
                 }
 
                 val fileName = extractFileName(response, filePrefix)
+                android.util.Log.d("ExportVM", "  저장: $fileName")
                 saveToDownloads(fileName, body)
                 _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        successFileName = fileName,
-                        errorMessage = null
-                    )
+                    it.copy(isExporting = false, successFileName = fileName, errorMessage = null)
                 }
-            } catch (_: Exception) {
+            } catch (e: Exception) {
+                android.util.Log.e("ExportVM", "  에러: ${e.javaClass.simpleName} ${e.message}", e)
                 _uiState.update {
-                    it.copy(
-                        isExporting = false,
-                        errorMessage = "파일 저장 중 오류가 발생했습니다."
-                    )
+                    it.copy(isExporting = false, errorMessage = "파일 저장 중 오류: ${e.message}")
                 }
             }
         }
