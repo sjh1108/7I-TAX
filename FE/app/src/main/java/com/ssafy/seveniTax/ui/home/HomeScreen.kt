@@ -218,53 +218,96 @@ fun HomeScreen(
     }
 }
 
-// ── 세율 구간 카드 ──
+// ── 세율 구간 카드 (세무 리포트와 동일 스타일) ──
 @Composable
 private fun TaxBracketCard(taxableIncome: Long, fmt: java.text.NumberFormat) {
-    data class Bracket(val limit: Long, val rate: Int, val deduction: Long)
+    data class Bracket(val limit: Long, val rate: Int, val label: String)
     val brackets = listOf(
-        Bracket(14_000_000, 6, 0), Bracket(50_000_000, 15, 1_260_000),
-        Bracket(88_000_000, 24, 5_760_000), Bracket(150_000_000, 35, 15_440_000)
+        Bracket(14_000_000, 6, "~1,400만"),
+        Bracket(50_000_000, 15, "~5,000만"),
+        Bracket(88_000_000, 24, "~8,800만"),
+        Bracket(150_000_000, 35, "~1.5억")
     )
-    val currentIdx = brackets.indexOfLast { taxableIncome >= it.limit }.coerceAtLeast(0)
-    val currentBracket = brackets.getOrElse(currentIdx) { brackets[0] }
-    val nextBracket = brackets.getOrNull(currentIdx + 1)
-    val maxDisplay = 150_000_000L
-    val fillFraction = (taxableIncome.toFloat() / maxDisplay).coerceIn(0f, 1f)
+    val maxLimit = 150_000_000L
+    val currentRate = when {
+        taxableIncome <= 14_000_000 -> 6
+        taxableIncome <= 50_000_000 -> 15
+        taxableIncome <= 88_000_000 -> 24
+        taxableIncome <= 150_000_000 -> 35
+        else -> 38
+    }
+    val currentLabel = brackets.lastOrNull { taxableIncome >= it.limit }?.label
+        ?: brackets.first().label
+    val nextBracket = brackets.firstOrNull { taxableIncome < it.limit }
+    val progress = (taxableIncome.toFloat() / maxLimit).coerceIn(0f, 1f)
 
-    Column(
-        Modifier.fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(18.dp), ambientColor = CardShadow, spotColor = CardShadow)
-            .background(Color.White, RoundedCornerShape(18.dp))
-            .padding(16.dp)
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        elevation = CardDefaults.cardElevation(2.dp)
     ) {
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            Text("현재 과세표준", fontSize = 13.sp, color = TextSecondary)
-            Text("${fmt.format(taxableIncome)}원", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-        }
-        Spacer(Modifier.height(6.dp))
-        Box(Modifier.background(Surface, RoundedCornerShape(4.dp)).padding(horizontal = 8.dp, vertical = 3.dp)) {
-            Text("${currentBracket.rate}% 구간", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = BrandPurple)
-        }
+        Column(Modifier.padding(16.dp)) {
+            // 상단: 과세표준 + 금액
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                Text("현재 과세표준", fontSize = 13.sp, color = TextSecondary)
+                Text("${fmt.format(taxableIncome)}원", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            }
+            Spacer(Modifier.height(8.dp))
 
-        Spacer(Modifier.height(10.dp))
-        Box(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
-            Box(Modifier.fillMaxHeight().fillMaxWidth(fillFraction).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
-        }
-        Spacer(Modifier.height(4.dp))
-        Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
-            Text("0원", fontSize = 10.sp, color = TextSecondary)
-            Text("1억 5,000만원", fontSize = 10.sp, color = TextSecondary)
-        }
+            // 구간 뱃지 + 범위
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.background(Surface, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
+                    Text("${currentRate}% 구간", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrandPurple)
+                }
+                Spacer(Modifier.width(8.dp))
+                Text("($currentLabel)", fontSize = 11.sp, color = TextSecondary)
+            }
 
-        if (nextBracket != null) {
-            val remaining = nextBracket.limit - taxableIncome
-            if (remaining > 0) {
-                Spacer(Modifier.height(10.dp))
-                Column(Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(8.dp)).padding(10.dp)) {
-                    Text("다음 구간까지", fontSize = 11.sp, color = TaxBarAccent)
-                    Spacer(Modifier.height(2.dp))
-                    Text("${fmt.format(remaining)}원 더 벌면 ${nextBracket.rate}% 구간", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Spacer(Modifier.height(12.dp))
+
+            // 프로그레스 바 + 세율 마커
+            Box(Modifier.fillMaxWidth().height(24.dp)) {
+                Box(Modifier.fillMaxWidth().height(8.dp).align(Alignment.BottomStart).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
+                }
+                brackets.forEach { bracket ->
+                    val pos = (bracket.limit.toFloat() / maxLimit).coerceIn(0f, 1f)
+                    Text(
+                        text = "${bracket.rate}%",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (currentRate == bracket.rate) BrandPurple else TextSecondary,
+                        modifier = Modifier.align(Alignment.TopStart).fillMaxWidth(pos).wrapContentWidth(Alignment.End)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                Text("0원", fontSize = 10.sp, color = TextSecondary)
+                Text("1억 5,000만원", fontSize = 10.sp, color = TextSecondary)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("간편장부 대상 한도 (정보통신업)", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+
+            // 다음 구간 안내
+            if (nextBracket != null) {
+                val remaining = nextBracket.limit - taxableIncome
+                if (remaining > 0) {
+                    Spacer(Modifier.height(12.dp))
+                    Column(Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(8.dp)).padding(12.dp)) {
+                        Text("다음 구간까지", fontSize = 12.sp, color = TaxBarAccent)
+                        Text("${fmt.format(remaining)}원 더 벌면 ${nextBracket.rate}% 구간 (${nextBracket.label})", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    }
+                }
+            }
+
+            // 한도 초과 경고
+            if (taxableIncome >= maxLimit) {
+                Spacer(Modifier.height(12.dp))
+                Box(Modifier.fillMaxWidth().background(Color(0xFFFFF0F3), RoundedCornerShape(8.dp)).padding(12.dp)) {
+                    Text("간편장부 한도를 초과했습니다. 복식부기 전환을 권장합니다.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE8475A))
                 }
             }
         }
