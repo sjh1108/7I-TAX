@@ -4,6 +4,8 @@ import com.ssafy.tax7i.auth.domain.BusinessProfile;
 import com.ssafy.tax7i.auth.domain.User;
 import com.ssafy.tax7i.auth.repository.BusinessProfileRepository;
 import com.ssafy.tax7i.auth.repository.UserRepository;
+import com.ssafy.tax7i.bookentry.entity.BookEntry;
+import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.classification.entity.TaxCategory;
@@ -13,10 +15,15 @@ import com.ssafy.tax7i.tax.dto.TaxCalculationResult;
 import com.ssafy.tax7i.tax.service.TaxCalculationEngine;
 import com.ssafy.tax7i.tax.service.TaxParameterService;
 import lombok.RequiredArgsConstructor;
+import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -115,7 +122,13 @@ public class IncomeTaxExcelExporter {
         fillDeclarationSheet(workbook.getSheetAt(0), user, profile, year, result);
         fillRevenueExpenseSheet(workbook.getSheetAt(1), result, categoryExpenses);
         fillIncomeCalculationSheet(workbook.getSheetAt(2), result, expenseAdjustment);
-        workbook.removeSheetAt(3);
+
+        // 시트4(템플릿 여분)를 간편장부 시트로 교체
+        if (workbook.getNumberOfSheets() > 3) {
+            workbook.removeSheetAt(3);
+        }
+        Sheet ledgerSheet = workbook.createSheet("간편장부");
+        fillLedgerSheet(ledgerSheet, userId, start, end);
 
         return helper.workbookToBytes(workbook);
     }
@@ -173,5 +186,41 @@ public class IncomeTaxExcelExporter {
         helper.setCellValue(sheet, ROW_CALC_DIFF_INCOME, COL_CALC_VALUE, result.totalRevenue() - rawExpense);
         helper.setCellValue(sheet, ROW_CALC_ADJUSTMENT, COL_CALC_VALUE, expenseAdjustment);
         helper.setCellValue(sheet, ROW_CALC_INCOME_AMOUNT, COL_CALC_VALUE, result.incomeAmount());
+    }
+
+    private void fillLedgerSheet(Sheet sheet, Long userId, LocalDate start, LocalDate end) {
+        // 헤더
+        String[] headers = {"일자", "계정과목", "거래내용", "거래처", "수입금액", "비용금액", "고정자산", "부가세", "사업용여부"};
+        Row headerRow = sheet.createRow(0);
+        for (int i = 0; i < headers.length; i++) {
+            headerRow.createCell(i).setCellValue(headers[i]);
+        }
+
+        int rowIdx = 1;
+        int page = 0;
+        Page<BookEntry> entryPage;
+        do {
+            entryPage = bookEntryRepository.findByUserIdAndEntryDateBetween(
+                    userId, start, end, PageRequest.of(page, 500, Sort.by("entryDate")));
+            for (BookEntry e : entryPage.getContent()) {
+                Row row = sheet.createRow(rowIdx++);
+                row.createCell(0).setCellValue(e.getEntryDate().toString());
+                row.createCell(1).setCellValue(e.getCategoryName() != null ? e.getCategoryName() : "");
+                row.createCell(2).setCellValue(e.getDescription() != null ? e.getDescription() : "");
+                row.createCell(3).setCellValue(e.getMerchantName() != null ? e.getMerchantName() : "");
+
+                if (e.getEntryType() == EntryType.INCOME) {
+                    row.createCell(4).setCellValue(e.getIncomeAmount());
+                } else if (e.getEntryType() == EntryType.EXPENSE) {
+                    row.createCell(5).setCellValue(e.getExpenseAmount());
+                } else if (e.getEntryType() == EntryType.ASSET) {
+                    row.createCell(6).setCellValue(e.getFixedAssetAmount());
+                }
+
+                row.createCell(7).setCellValue(e.getVatAmount());
+                row.createCell(8).setCellValue(e.getIsBusinessExpense() ? "사업용" : "개인용");
+            }
+            page++;
+        } while (entryPage.hasNext());
     }
 }

@@ -1,17 +1,12 @@
 package com.ssafy.tax7i.export.controller;
 
 import com.ssafy.tax7i.export.service.ExcelExportService;
-import com.ssafy.tax7i.export.service.ExportService;
-import com.ssafy.tax7i.global.exception.BusinessException;
-import com.ssafy.tax7i.global.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -21,57 +16,9 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class ExportController {
 
-    private final ExportService exportService;
     private final ExcelExportService excelExportService;
 
-    @GetMapping("/book-entries")
-    public ResponseEntity<byte[]> exportBookEntries(
-            @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        if (startDate != null && endDate != null) {
-            if (startDate.isAfter(endDate)) {
-                throw new BusinessException(ErrorCode.INVALID_ARGUMENT,
-                        "시작일은 종료일보다 이전이어야 합니다.");
-            }
-            String csv = exportService.exportBookEntriesToCsv(userId, startDate, endDate);
-            return csvResponse(csv, "간편장부_" + startDate + "_" + endDate + ".csv");
-        }
-
-        int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportBookEntriesToCsv(userId, targetYear);
-        return csvResponse(csv, "간편장부_" + targetYear + ".csv");
-    }
-
-    @GetMapping("/vat")
-    public ResponseEntity<byte[]> exportVat(
-            @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false, defaultValue = "1") Integer half) {
-        int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportVatSummaryCsv(userId, targetYear, half);
-        return csvResponse(csv, "부가세_" + targetYear + "_" + half + "기.csv");
-    }
-
-    @GetMapping("/income-tax")
-    public ResponseEntity<byte[]> exportIncomeTax(
-            @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Integer year) {
-        int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportIncomeTaxSummaryCsv(userId, targetYear);
-        return csvResponse(csv, "종합소득세_" + targetYear + ".csv");
-    }
-
-    @GetMapping("/local-tax")
-    public ResponseEntity<byte[]> exportLocalTax(
-            @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Integer year) {
-        int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportLocalTaxSummaryCsv(userId, targetYear);
-        return csvResponse(csv, "지방소득세_" + targetYear + ".csv");
-    }
+    // ── PDF ──
 
     @GetMapping("/simple-ledger/pdf")
     public ResponseEntity<byte[]> exportSimpleLedgerPdf(
@@ -81,6 +28,8 @@ public class ExportController {
         byte[] pdfBytes = excelExportService.generateSimpleLedgerPdf(userId, targetYear);
         return pdfResponse(pdfBytes, "간편장부_" + targetYear + ".pdf");
     }
+
+    // ── Excel ──
 
     @GetMapping("/vat/excel")
     public ResponseEntity<byte[]> exportVatExcel(
@@ -101,22 +50,11 @@ public class ExportController {
         return excelResponse(excelBytes, "종합소득세_" + targetYear + ".xlsx");
     }
 
+    // ── Response Helpers ──
+
     private String buildContentDisposition(String filename) {
         String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
         return "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + encoded;
-    }
-
-    private ResponseEntity<byte[]> csvResponse(String csv, String filename) {
-        byte[] bom = new byte[]{(byte)0xEF, (byte)0xBB, (byte)0xBF};
-        byte[] content = csv.getBytes(StandardCharsets.UTF_8);
-        byte[] bytes = new byte[bom.length + content.length];
-        System.arraycopy(bom, 0, bytes, 0, bom.length);
-        System.arraycopy(content, 0, bytes, bom.length, content.length);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(filename))
-                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
-                .contentLength(bytes.length)
-                .body(bytes);
     }
 
     private ResponseEntity<byte[]> pdfResponse(byte[] bytes, String filename) {
