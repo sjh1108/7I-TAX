@@ -1,5 +1,7 @@
 package com.ssafy.tax7i.tax.service;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.tax7i.auth.repository.BusinessProfileRepository;
 import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.classification.entity.TaxCategory;
@@ -10,7 +12,9 @@ import com.ssafy.tax7i.tax.dto.TaxSavingResponse;
 import com.ssafy.tax7i.tax.dto.TaxSavingSummaryResponse;
 import com.ssafy.tax7i.tax.dto.TaxSavingSummaryResponse.LimitTracking;
 import com.ssafy.tax7i.tax.dto.TaxSavingSummaryResponse.TaxReductions;
+import com.ssafy.tax7i.tax.repository.TaxReturnRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +24,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -29,9 +34,11 @@ public class TaxSavingService {
     private static final String NORAN_CATEGORY = "노란우산공제";
 
     private final BookEntryRepository bookEntryRepository;
+    private final TaxReturnRepository taxReturnRepository;
     private final TaxCalculationEngine taxCalculationEngine;
     private final TaxParameterService taxParameterService;
     private final BusinessProfileRepository businessProfileRepository;
+    private final ObjectMapper objectMapper;
 
     public TaxSavingResponse getRecommendations(Long userId, int taxYear) {
         // 1. Aggregate book entries for the year
@@ -61,10 +68,11 @@ public class TaxSavingService {
                 taxYear, totalRevenue, totalExpense, 0, withNoran);
         long noranSaving = currentTax.determinedTax() - withNoranTax.determinedTax();
         noranSaving += (long) (noranSaving * localTaxRate); // 지방세 포함 (지방세법 §92)
+        long noranPaid = getNoranPaidFromTaxReturn(userId, taxYear);
         recommendations.add(TaxSavingRecommendation.withUsage(
                 "DEDUCTION", "노란우산공제",
                 "소기업·소상공인 공제부금. 가입 시 연 최대 " + (noranLimit / 10000) + "만원 소득공제.",
-                noranLimit, noranSaving, false, 0));
+                noranLimit, noranSaving, noranPaid > 0, noranPaid));
 
         // 5. 연금저축 (DB 조회) — 종합소득금액 기준 (소득세법 §59조의3)
         double creditRate = taxParameterService.getPensionCreditRate(taxYear, businessIncome);
@@ -161,7 +169,7 @@ public class TaxSavingService {
      */
     public TaxSavingSummaryResponse getSummary(Long userId, int taxYear) {
         LocalDate start = LocalDate.of(taxYear, 1, 1);
-        LocalDate end = LocalDate.now();
+        LocalDate end = LocalDate.of(taxYear, 12, 31);
         AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
         long totalRevenue = agg.totalIncome();
         long totalExpense = agg.businessExpense();
@@ -185,10 +193,8 @@ public class TaxSavingService {
         double vehicleRatio = vehicleLimit > 0
                 ? Math.round(vehicleUsed * 1000.0 / vehicleLimit) / 1000.0 : 0.0;
 
-        // 3. 노란우산공제 (조특법 §86의3)
-        Long noranPaidRaw = bookEntryRepository.sumAmountByUserIdAndCategoryNameAndYear(
-                userId, NORAN_CATEGORY, taxYear);
-        long noranPaid = noranPaidRaw != null ? noranPaidRaw : 0L;
+        // 3. 노란우산공제 (조특법 §86의3) — 소득공제 항목이므로 TaxReturn 공제내역에서 조회
+        long noranPaid = getNoranPaidFromTaxReturn(userId, taxYear);
         long noranDeductionLimit = taxParameterService.getNoranLimit(taxYear, businessIncome);
 
         // 예상 절세액 = 납입액 × 적용세율 × (1 + 지방세율)
@@ -234,5 +240,24 @@ public class TaxSavingService {
                 new TaxSavingSummaryResponse.BookkeepingCreditItem(true, bookkeepingRate, bookkeepingAmount));
 
         return new TaxSavingSummaryResponse(limitTracking, taxReductions);
+    }
+
+    /** TaxReturn의 deductionsJson에서 노란우산공제 납입액 조회 (소득공제 항목이므로 BookEntry에 없음) */
+    private long getNoranPaidFromTaxReturn(Long userId, int taxYear) {
+        return taxReturnRepository.findByUserIdAndTaxYear(userId, taxYear)
+                .map(tr -> parseDeductionAmount(tr.getDeductionsJson(), NORAN_CATEGORY))
+                .orElse(0L);
+    }
+
+    private long parseDeductionAmount(String deductionsJson, String key) {
+        if (deductionsJson == null || deductionsJson.isBlank()) return 0L;
+        try {
+            Map<String, Long> map = objectMapper.readValue(
+                    deductionsJson, new TypeReference<Map<String, Long>>() {});
+            return map.getOrDefault(key, 0L);
+        } catch (Exception e) {
+            log.warn("deductionsJson 파싱 실패: {}", e.getMessage());
+            return 0L;
+        }
     }
 }

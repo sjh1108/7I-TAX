@@ -1,6 +1,8 @@
 package com.ssafy.tax7i.tax.entity;
 
 import com.ssafy.tax7i.global.entity.BaseTimeEntity;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -95,8 +97,7 @@ public class VatReturn extends BaseTimeEntity {
 
     public void transitionTo(TaxReturnStatus next) {
         if (!this.status.canTransitionTo(next)) {
-            throw new com.ssafy.tax7i.global.exception.BusinessException(
-                    com.ssafy.tax7i.global.exception.ErrorCode.TAX_INVALID_TRANSITION,
+            throw new BusinessException(ErrorCode.TAX_INVALID_TRANSITION,
                     this.status + " → " + next + " 전이가 불가합니다.");
         }
         this.status = next;

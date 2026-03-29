@@ -1,10 +1,12 @@
 package com.ssafy.tax7i.tax.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.tax7i.auth.repository.BusinessProfileRepository;
 import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.tax.dto.TaxCalculationResult;
 import com.ssafy.tax7i.tax.dto.TaxSavingResponse;
+import com.ssafy.tax7i.tax.repository.TaxReturnRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,9 +28,11 @@ import static org.mockito.Mockito.lenient;
 class TaxSavingServiceTest {
 
     @Mock private BookEntryRepository bookEntryRepository;
+    @Mock private TaxReturnRepository taxReturnRepository;
     @Mock private TaxCalculationEngine taxCalculationEngine;
     @Mock private TaxParameterService taxParameterService;
     @Mock private BusinessProfileRepository businessProfileRepository;
+    @Mock private ObjectMapper objectMapper;
     @InjectMocks private TaxSavingService taxSavingService;
 
     @Test

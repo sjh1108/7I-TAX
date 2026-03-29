@@ -8,6 +8,7 @@ import com.ssafy.tax7i.classification.dto.ClassificationRequest;
 import com.ssafy.tax7i.classification.dto.ClassificationResult;
 import com.ssafy.tax7i.classification.entity.TaxCategory;
 import com.ssafy.tax7i.classification.service.TaxClassificationService;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -32,6 +33,7 @@ public class BookEntryEventListener {
 
     private final BookEntryService bookEntryService;
     private final TaxClassificationService classificationService;
+    private final TaxParameterService taxParameterService;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -107,13 +109,16 @@ public class BookEntryEventListener {
                     ? event.senderName() + " 입금"
                     : event.description();
 
+            int taxYear = event.transferredAt().getYear();
+            double withholdingRate = taxParameterService.getWithholdingRate(taxYear) * 100;
+
             bookEntryService.createIncome(
                     event.receiverUserId(),
                     new com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest(
                             event.transferredAt().toLocalDate(),
                             description,
                             event.amount(),
-                            3.0,  // 원천징수율 3% (사업소득)
+                            withholdingRate,
                             "P2P 이체 자동 매출 등록"
                     )
             );

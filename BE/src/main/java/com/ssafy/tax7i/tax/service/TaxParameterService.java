@@ -169,6 +169,18 @@ public class TaxParameterService {
         return parseDouble("VEHICLE", "no_insurance_ratio", requireParam(params, "VEHICLE", "no_insurance_ratio"));
     }
 
+    /** 사업소득 원천징수율 (소득세법 §129①5) — DB 미설정 시 기본값 3% */
+    public double getWithholdingRate(int year) {
+        try {
+            Map<String, String> params = getParams(year, "WITHHOLDING");
+            return parseDouble("WITHHOLDING", "business_income_rate",
+                    requireParam(params, "WITHHOLDING", "business_income_rate"));
+        } catch (BusinessException e) {
+            log.info("WITHHOLDING 파라미터 미설정, 기본값 0.03 사용 ({}년)", year);
+            return 0.03;
+        }
+    }
+
     /** 교육훈련비 추천한도 (소득세법 §19) */
     public long getEducationLimit(int year) {
         Map<String, String> params = getParams(year, "EDUCATION");

@@ -1,7 +1,6 @@
 package com.ssafy.tax7i.classification.service;
 
 import com.ssafy.tax7i.ai.service.AiClassificationService;
-import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.classification.dto.ClassificationRequest;
 import com.ssafy.tax7i.classification.dto.ClassificationResult;
 import com.ssafy.tax7i.classification.dto.ClassificationResult.Confidence;
@@ -48,15 +47,16 @@ public class TaxClassificationService {
     private final TaxLimitRepository taxLimitRepository;
     private final AiClassificationService aiClassificationService;
     private final TaxParameterService taxParameterService;
-    private final BookEntryRepository bookEntryRepository;
+    private final CategoryLearningService categoryLearningService;
 
     public ClassificationResult classify(ClassificationRequest request) {
         log.info("세목 분류 시작: merchant={}, mcc={}, amount={}",
                 request.merchantName(), request.mcc(), request.amount());
 
-        // 0. 사용자 학습 — 동일 가맹점 3회 이상 동일 세목 확정 시 자동 분류
+        // 0. 사용자 학습 — 동일 가맹점 N회 이상 동일 세목 확정 시 자동 분류
         if (request.userId() != null && request.merchantName() != null) {
-            ClassificationResult learned = tryUserLearned(request.userId(), request.merchantName());
+            ClassificationResult learned = categoryLearningService.findLearnedClassification(
+                    request.userId(), request.merchantName());
             if (learned != null) {
                 log.info("사용자 학습 확정: userId={}, merchant={}, category={}",
                         request.userId(), request.merchantName(), learned.taxCategory());
@@ -147,25 +147,6 @@ public class TaxClassificationService {
                 fallback.getTaxCategory(), fallback.getVatDeductible(),
                 fallback.getLegalBasis(), fallback.getRemark());
         return attachEntertainmentLimitIfNeeded(result, request);
-    }
-
-    // ── 사용자 학습 ──
-
-    private ClassificationResult tryUserLearned(Long userId, String merchantName) {
-        List<Object[]> results = bookEntryRepository.findLearnedCategory(userId, merchantName);
-        if (results.isEmpty()) return null;
-
-        Object[] top = results.get(0);
-        String categoryName = (String) top[1];
-        boolean vatDeductible = (Boolean) top[2];
-        int count = ((Number) top[3]).intValue();
-
-        return ClassificationResult.confirmed(
-                categoryName,
-                vatDeductible ? "공제" : "불공제",
-                null,
-                "사용자 학습: 동일 가맹점 " + count + "회 동일 분류",
-                95);
     }
 
     // ── MCC 결정 ──

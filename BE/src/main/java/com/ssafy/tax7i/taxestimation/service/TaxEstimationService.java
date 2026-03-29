@@ -2,6 +2,8 @@ package com.ssafy.tax7i.taxestimation.service;
 
 import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.tax.entity.TaxBracket;
 import com.ssafy.tax7i.tax.service.TaxCalculationEngine;
 import com.ssafy.tax7i.tax.service.TaxParameterService;
@@ -92,8 +94,7 @@ public class TaxEstimationService {
      */
     public MonthlyTaxEstimationResponse estimateMonthly(Long userId, int year, int month) {
         if (month < 1 || month > 12) {
-            throw new com.ssafy.tax7i.global.exception.BusinessException(
-                    com.ssafy.tax7i.global.exception.ErrorCode.INVALID_ARGUMENT,
+            throw new BusinessException(ErrorCode.INVALID_ARGUMENT,
                     "월은 1~12 범위여야 합니다: " + month);
         }
 
@@ -121,13 +122,15 @@ public class TaxEstimationService {
         long currentIncome = monthlyAgg.totalIncome();
         long currentBusinessExpense = monthlyAgg.businessExpense();
 
-        // 소득세법 §33·§35·§33의2: 세목별 한도 초과 경비 조정
-        long monthlyAdjustment = taxCalculationEngine.computeExpenseAdjustment(userId, year, currentIncome);
-        currentBusinessExpense = Math.max(0, currentBusinessExpense - monthlyAdjustment);
-
-        // 연환산 = 현재 누적 × (12 / 경과월수)
+        // 연환산 먼저 적용 (소득세법 §70) — 경비한도는 연간 기준이므로 연환산 후 적용해야 정확
         long projectedIncome = month > 0 ? currentIncome * 12 / month : 0;
         long projectedBusinessExpense = month > 0 ? currentBusinessExpense * 12 / month : 0;
+
+        // 소득세법 §33·§35·§33의2: 연환산 수입 기준으로 경비한도 적용
+        long projectedAdjustment = taxCalculationEngine.computeExpenseAdjustment(userId, year, projectedIncome);
+        projectedAdjustment = month > 0 ? projectedAdjustment * 12 / month : 0;
+        projectedBusinessExpense = Math.max(0, projectedBusinessExpense - projectedAdjustment);
+
         long projectedTaxable = Math.max(0, projectedIncome - projectedBusinessExpense);
         List<TaxBracket> brackets = taxCalculationEngine.loadBrackets(year);
         long projectedCalculatedTax = taxCalculationEngine.calculateIncomeTaxFromBrackets(projectedTaxable, brackets);

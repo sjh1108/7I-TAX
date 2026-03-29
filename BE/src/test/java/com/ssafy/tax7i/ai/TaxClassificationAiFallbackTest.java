@@ -40,7 +40,7 @@ class TaxClassificationAiFallbackTest {
     @Mock private TaxLimitRepository taxLimitRepository;
     @Mock private AiClassificationService aiClassificationService;
     @Mock private com.ssafy.tax7i.tax.service.TaxParameterService taxParameterService;
-    @Mock private com.ssafy.tax7i.bookentry.repository.BookEntryRepository bookEntryRepository;
+    @Mock private com.ssafy.tax7i.classification.service.CategoryLearningService categoryLearningService;
 
     @InjectMocks
     private TaxClassificationService service;

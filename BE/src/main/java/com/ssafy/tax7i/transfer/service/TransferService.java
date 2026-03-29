@@ -84,15 +84,17 @@ public class TransferService {
 
         transferRepository.save(transfer);
 
-        // 수신자에게 매출 장부 자동 생성 이벤트 발행
-        eventPublisher.publishEvent(new TransferReceivedEvent(
-                transfer.getId(),
-                receiver.getId(),
-                request.amount(),
-                sender.getName(),
-                description,
-                java.time.LocalDateTime.now()
-        ));
+        // 수신자가 사업자인 경우에만 매출 장부 자동 생성 (개인 간 송금은 매출이 아님)
+        if (Boolean.TRUE.equals(receiver.getIsBusiness())) {
+            eventPublisher.publishEvent(new TransferReceivedEvent(
+                    transfer.getId(),
+                    receiver.getId(),
+                    request.amount(),
+                    sender.getName(),
+                    description,
+                    java.time.LocalDateTime.now()
+            ));
+        }
 
         return TransferResponse.from(transfer);
     }
