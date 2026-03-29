@@ -34,13 +34,15 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 import kotlinx.coroutines.delay
 import java.io.File
 
 @Composable
 fun BookMemoAddScreen(
-    navController: NavController
+    navController: NavController,
+    fromPayment: Boolean = false
 ) {
     var memoText by rememberSaveable { mutableStateOf("") }
     var showSuccess by remember { mutableStateOf(false) }
@@ -71,7 +73,13 @@ fun BookMemoAddScreen(
     LaunchedEffect(showSuccess) {
         if (showSuccess) {
             delay(1500L)
-            navController.popBackStack()
+            if (fromPayment) {
+                navController.navigate(Route.Main.path) {
+                    popUpTo(0) { inclusive = true }
+                }
+            } else {
+                navController.popBackStack()
+            }
         }
     }
 
@@ -92,17 +100,19 @@ fun BookMemoAddScreen(
                     .background(Background),
                 contentAlignment = Alignment.Center
             ) {
-                IconButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로가기",
-                        tint = TextPrimary
-                    )
+                if (!fromPayment) {
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "뒤로가기",
+                            tint = TextPrimary
+                        )
+                    }
                 }
                 Text(
                     text = "증빙 내역 추가",
@@ -255,12 +265,13 @@ fun BookMemoAddScreen(
                 }
             }
 
-            // 저장 버튼
-            Box(
+            // 하단 버튼
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 28.dp, vertical = 12.dp)
+                    .padding(horizontal = 28.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
                     onClick = { showSuccess = true },
@@ -282,6 +293,27 @@ fun BookMemoAddScreen(
                         fontWeight = FontWeight.SemiBold,
                         color = Color.White
                     )
+                }
+
+                if (fromPayment) {
+                    OutlinedButton(
+                        onClick = {
+                            navController.navigate(Route.Main.path) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                    ) {
+                        Text(
+                            text = "건너뛰기",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }

@@ -537,8 +537,14 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
             BookFilterScreen(navController, viewModel = bookEntryViewModel)
         }
 
-        composable(Route.BookMemoAdd.path) {
-            BookMemoAddScreen(navController)
+        composable(
+            route = Route.BookMemoAdd.path,
+            arguments = listOf(navArgument("fromPayment") {
+                type = NavType.BoolType; defaultValue = false
+            })
+        ) { backStackEntry ->
+            val fromPayment = backStackEntry.arguments?.getBoolean("fromPayment") ?: false
+            BookMemoAddScreen(navController, fromPayment = fromPayment)
         }
 
         composable(Route.TaxReport.path) {

@@ -95,13 +95,14 @@ fun QrPaymentScreen(
     var dialogMessage by remember { mutableStateOf("") }
     var dialogIsSuccess by remember { mutableStateOf(false) }
 
-    // 결제 완료 감지 → PaymentCompleteScreen으로 이동
+    // 결제 완료 감지 → 증빙 내역 추가 페이지로 이동
     LaunchedEffect(paymentState.paymentComplete) {
         if (paymentState.paymentComplete) {
             scannedResult = null
             showPayConfirmDialog = false
             showResultDialog = false
-            navController.navigate(Route.PaymentComplete.path) {
+            paymentViewModel.resetPayment()
+            navController.navigate(Route.BookMemoAdd.createFromPayment()) {
                 popUpTo(Route.Main.path) { inclusive = false }
             }
         }
