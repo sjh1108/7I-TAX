@@ -67,7 +67,6 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.google.zxing.BarcodeFormat
 import com.google.zxing.qrcode.QRCodeWriter
-import com.ssafy.seveniTax.data.model.payment.MerchantResponse
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.CardViewModel
@@ -301,16 +300,7 @@ fun QrPaymentScreen(
             }
         }
 
-        // 가맹점 선택 (바코드 탭에서만 표시)
-        if (selectedTab == 0 && paymentState.merchants.isNotEmpty()) {
-            MerchantSelector(
-                merchants = paymentState.merchants,
-                selectedMerchant = paymentState.selectedMerchant,
-                onSelect = { paymentViewModel.selectMerchant(it) }
-            )
-        }
-
-        Spacer(modifier = Modifier.height(if (selectedTab == 0 && paymentState.merchants.isNotEmpty()) 12.dp else 24.dp))
+        Spacer(modifier = Modifier.height(24.dp))
 
         Box(
             modifier = Modifier
@@ -595,77 +585,6 @@ private fun TabButton(
             color = if (selected) Color.White else TextSecondary,
             modifier = Modifier.padding(horizontal = 8.dp)
         )
-    }
-}
-
-@Composable
-private fun MerchantSelector(
-    merchants: List<MerchantResponse>,
-    selectedMerchant: MerchantResponse?,
-    onSelect: (MerchantResponse) -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-
-    Box(modifier = Modifier.padding(horizontal = 24.dp)) {
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .border(1.dp, Divider, RoundedCornerShape(12.dp))
-                .clickable { expanded = true }
-                .padding(horizontal = 16.dp, vertical = 12.dp)
-        ) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column {
-                    Text(
-                        text = "가맹점",
-                        fontSize = 11.sp,
-                        color = TextSecondary
-                    )
-                    Text(
-                        text = selectedMerchant?.merchantName ?: "선택해주세요",
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = TextPrimary
-                    )
-                }
-                Text("▼", fontSize = 12.sp, color = TextSecondary)
-            }
-        }
-
-        androidx.compose.material3.DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false },
-            modifier = Modifier
-                .fillMaxWidth(0.85f)
-                .background(Color.White)
-        ) {
-            merchants.forEach { merchant ->
-                androidx.compose.material3.DropdownMenuItem(
-                    text = {
-                        Column {
-                            Text(
-                                merchant.merchantName,
-                                fontSize = 14.sp,
-                                fontWeight = if (merchant == selectedMerchant) FontWeight.Bold else FontWeight.Normal,
-                                color = if (merchant == selectedMerchant) BrandPurple else TextPrimary
-                            )
-                            if (!merchant.categoryName.isNullOrEmpty()) {
-                                Text(merchant.categoryName, fontSize = 11.sp, color = TextSecondary)
-                            }
-                        }
-                    },
-                    onClick = {
-                        onSelect(merchant)
-                        expanded = false
-                    }
-                )
-            }
-        }
     }
 }
 
