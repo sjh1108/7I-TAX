@@ -60,6 +60,10 @@ public class VatExcelExporter {
     private final ExcelExportHelper helper;
 
     public byte[] export(Long userId, int year, int half) {
+        if (half != 1 && half != 2) {
+            throw new BusinessException(ErrorCode.INVALID_ARGUMENT, "half는 1 또는 2여야 합니다.");
+        }
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
         BusinessProfile profile = businessProfileRepository.findByUserId(userId).orElse(null);

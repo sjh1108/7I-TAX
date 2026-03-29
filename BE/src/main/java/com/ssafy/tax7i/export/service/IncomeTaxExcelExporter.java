@@ -203,6 +203,8 @@ public class IncomeTaxExcelExporter {
             entryPage = bookEntryRepository.findByUserIdAndEntryDateBetween(
                     userId, start, end, PageRequest.of(page, 500, Sort.by("entryDate")));
             for (BookEntry e : entryPage.getContent()) {
+                if (!Boolean.TRUE.equals(e.getConfirmed()) || !Boolean.TRUE.equals(e.getIsBusinessExpense())) continue;
+
                 Row row = sheet.createRow(rowIdx++);
                 row.createCell(0).setCellValue(e.getEntryDate().toString());
                 row.createCell(1).setCellValue(e.getCategoryName() != null ? e.getCategoryName() : "");
@@ -218,7 +220,7 @@ public class IncomeTaxExcelExporter {
                 }
 
                 row.createCell(7).setCellValue(e.getVatAmount());
-                row.createCell(8).setCellValue(e.getIsBusinessExpense() ? "사업용" : "개인용");
+                row.createCell(8).setCellValue("사업용");
             }
             page++;
         } while (entryPage.hasNext());
