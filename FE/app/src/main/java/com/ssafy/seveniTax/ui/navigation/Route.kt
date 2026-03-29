@@ -78,4 +78,5 @@ sealed class Route(val path: String) {
     object UnclassifiedList : Route("unclassified_list")
     object BulkClassificationLoading : Route("bulk_classification_loading")
     object AutoClassification : Route("auto_classification")
+    object AiChat : Route("ai_chat")
 }

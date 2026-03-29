@@ -1,17 +1,28 @@
 package com.ssafy.seveniTax.ui.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.navArgument
 import androidx.navigation.navigation
+import com.ssafy.seveniTax.ui.ai.AiScreen
+import com.ssafy.seveniTax.ui.main.AiChatFab
 import com.ssafy.seveniTax.ui.auth.AuthSuccessScreen
 import com.ssafy.seveniTax.ui.auth.IdentityVerificationScreen
 import com.ssafy.seveniTax.ui.auth.PinConfirmScreen
@@ -79,6 +90,19 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
     val paymentViewModel: PaymentViewModel = hiltViewModel()
     val classificationViewModel: ClassificationViewModel = hiltViewModel()
 
+    // FAB을 auth 화면과 AI 챗봇 화면에서는 숨김
+    val navBackStackEntry by navController.currentBackStackEntryAsState()
+    val currentRoute by remember {
+        derivedStateOf { navBackStackEntry?.destination?.route }
+    }
+    val authRoutes = setOf(
+        Route.Splash.path, Route.PinLogin.path, Route.IdentityVerify.path,
+        Route.SmsAuth.path, Route.PinSetup.path, Route.PinConfirm.path,
+        Route.AuthSuccess.path
+    )
+    val showFab = currentRoute != null && currentRoute !in authRoutes && currentRoute != Route.AiChat.path
+
+    Box(modifier = Modifier.fillMaxSize()) {
     NavHost(
         navController = navController,
         startDestination = AUTH_GRAPH_ROUTE
@@ -291,10 +315,19 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         ) { backStackEntry ->
             val returnTo = backStackEntry.arguments?.getString("returnTo") ?: ""
             val entryId = backStackEntry.arguments?.getLong("entryId") ?: -1L
+            // AI 일괄 분석 결과가 있는 상태에서 개별 수정인지 판별
+            val hasBulkResults = classificationViewModel.bulkResults.value.any { it.isDone }
+            val isUnclassifiedEdit = returnTo == "unclassified" && hasBulkResults
+
             CategorySelectScreen(
                 navController = navController,
                 onCategorySelected = { category ->
-                    if (entryId > 0) {
+                    if (entryId > 0 && isUnclassifiedEdit) {
+                        // AI 일괄 분석 후 개별 수정: 서버 확정 + bulkResults에서 제거
+                        classificationViewModel.removeBulkEntry(entryId)
+                        bookEntryViewModel.updateEntryCategory(entryId, category)
+                        navController.popBackStack()
+                    } else if (entryId > 0) {
                         // 완료 화면에 표시할 정보 세팅
                         val entry = bookEntryViewModel.entries.value.find { it.id == entryId }
                         if (entry != null) {
@@ -413,17 +446,30 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
             // 서버에서 장부 데이터 로드
             LaunchedEffect(Unit) { bookEntryViewModel.loadEntries() }
 
+            // 일괄 확정 완료 시 네비게이션
+            val bulkConfirmDone by bookEntryViewModel.bulkConfirmDone.collectAsState()
+            LaunchedEffect(bulkConfirmDone) {
+                if (bulkConfirmDone) {
+                    bookEntryViewModel.clearBulkConfirmDone()
+                    classificationViewModel.reset()
+                    navController.navigate(Route.ClassificationComplete.create("unclassified")) {
+                        popUpTo(Route.UnclassifiedList.path) { inclusive = false }
+                    }
+                }
+            }
+
             UnclassifiedListScreen(
                 navController = navController,
                 transactions = unclassified,
                 aiRecommendedInitial = aiDone,
                 onBulkConfirm = {
-                    // 미분류 항목 일괄 확정
-                    val unconfirmedIds = entries.filter { !it.confirmed }.map { it.id }
-                    unconfirmedIds.forEach { id ->
-                        bookEntryViewModel.confirmEntry(id)
-                    }
-                    navController.navigate(Route.ClassificationComplete.create())
+                    // 실행 시점에 최신 bulkResults를 직접 읽어서 수동 수정 반영
+                    val freshCategoryMap = classificationViewModel.bulkResults.value
+                        .filter { it.isDone && it.aiCategory != null }
+                        .associate { it.entryId to it.aiCategory!! }
+                    val unconfirmedIds = bookEntryViewModel.entries.value
+                        .filter { !it.confirmed }.map { it.id }
+                    bookEntryViewModel.bulkConfirmEntries(freshCategoryMap, unconfirmedIds)
                 },
                 onAiRecommend = {
                     // 미분류 항목으로 일괄 AI 분류 시작
@@ -476,12 +522,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                 navController = navController,
                 classificationViewModel = classificationViewModel,
                 onComplete = {
-                    // 일괄 분류 결과로 각 항목 경비 업데이트
-                    val results = classificationViewModel.bulkResults.value
-                    results.filter { it.isDone && it.aiCategory != null && it.aiCategory != "미분류" }.forEach { item ->
-                        bookEntryViewModel.updateEntryCategory(item.entryId, item.aiCategory!!)
-                    }
-                    // reset은 하지 않음 — UnclassifiedList에서 aiCategoryMap으로 사용
+                    // 서버 업데이트 없이 결과만 전달 — 사용자가 "일괄 확정" 시 반영
                     navController.previousBackStackEntry?.savedStateHandle?.set("aiRecommended", true)
                     navController.popBackStack()
                 }
@@ -577,6 +618,22 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                 onEditCategory = { navController.navigate(Route.CategorySelect.create()) }
             )
         }
+
+        composable(Route.AiChat.path) {
+            AiScreen(navController)
+        }
     }
+
+    // AI 챗봇 FAB (모든 비-auth 화면에서 표시)
+    if (showFab) {
+        AiChatFab(
+            onClick = { navController.navigate(Route.AiChat.path) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .navigationBarsPadding()
+                .padding(end = 20.dp, bottom = 20.dp)
+        )
+    }
+    } // Box end
 }
 

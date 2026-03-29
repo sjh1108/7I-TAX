@@ -45,7 +45,6 @@ private val SendGradient = Brush.linearGradient(listOf(Primary900, Primary600))
 @Composable
 fun AiScreen(
     navController: NavController,
-    modifier: Modifier = Modifier,
     viewModel: ChatbotViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsState()
@@ -60,12 +59,15 @@ fun AiScreen(
     }
 
     Column(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .background(Color.White)
     ) {
         // Header
-        ChatHeader(onNewChat = { viewModel.newSession() })
+        ChatHeader(
+            onBack = { navController.popBackStack() },
+            onNewChat = { viewModel.newSession() }
+        )
 
         // Chat Area
         LazyColumn(
@@ -105,14 +107,26 @@ fun AiScreen(
 
 // ── Header ──
 @Composable
-private fun ChatHeader(onNewChat: () -> Unit) {
+private fun ChatHeader(onBack: () -> Unit, onNewChat: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(Primary900)
+            .statusBarsPadding()
             .padding(horizontal = 20.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(RoundedCornerShape(12.dp))
+                .background(Color.White.copy(alpha = 0.15f))
+                .clickable(onClick = onBack),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("‹", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Color.White)
+        }
+        Spacer(modifier = Modifier.width(12.dp))
         Text("AI 챗봇", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
         Spacer(modifier = Modifier.width(8.dp))
         Box(
