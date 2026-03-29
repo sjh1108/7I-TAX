@@ -21,6 +21,8 @@ release 브랜치 기준으로 실제 배포 환경과 일치하도록 작성했
 - **로컬 개발 환경**: `docker-compose.yml` (PostgreSQL, Redis, AI, Worker) + 헬스체크
 - **운영 배포**: Jenkinsfile Pipeline (5단계), Docker 포트 매핑, 볼륨 마운트
 - **DB 접속정보**: 로컬(`tax7i`/`ssafy`) / 운영(환경변수) 분리 기재
+- **Spring 설정**: Async/Retry/Scheduling, Redis 캐시 6종, Security 공개 엔드포인트
+- **템플릿**: Excel 2개(income_tax, vat), PDF 3개(simple-ledger, tax-receipt, tax-return)
 
 ### 2. 외부 서비스 정보
 - SSAFY 금융망 API (계좌/카드/이체)
@@ -29,13 +31,14 @@ release 브랜치 기준으로 실제 배포 환경과 일치하도록 작성했
 - Firebase Cloud Messaging (푸시 알림)
 
 ### 3. DB 덤프
-- 스키마: `db/init/01_schema.sql` (22개 테이블)
-- 시드 데이터: `db/init/02_seed_data.sql`
+- 초기화 SQL 5개 (`db/init/01~05`)
+- 스키마 22테이블, 시드 데이터, 2025 세금 기준, 테스트 결제내역, 금액 보정
 - docker-compose 최초 기동 시 자동 실행
 
-### 4. 시연 시나리오 (6개)
+### 4. 시연 시나리오 (7개)
 - 회원가입 및 로그인
-- 카드 등록 및 QR 결제
+- 카드 등록 (SMS 인증 포함)
+- Pay 등록 및 QR 결제
 - 자동 장부 분류 및 조회
 - 세금 신고 및 절세
 - AI 챗봇 상담
