@@ -4,17 +4,14 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -24,13 +21,13 @@ import androidx.navigation.NavController
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.viewmodel.MainViewModel
 
-private val Primary900 = Color(0xFF281C9D)
+// ── 디자인 토큰 (스타일 가이드 기준) ──
 private val Primary600 = Color(0xFF5655B9)
 private val Primary50 = Color(0xFFF2F1F9)
 private val Neutral900 = Color(0xFF343434)
 private val Neutral500 = Color(0xFF898989)
-private val Neutral400 = Color(0xFF989898)
-private val CardShadow = Color(0x123629B7)
+private val Neutral300 = Color(0xFFCACACA)
+private val ErrorColor = Color(0xFFFF4267)
 
 @Composable
 fun SettingsScreen(
@@ -45,17 +42,15 @@ fun SettingsScreen(
     if (showLogoutDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutDialog = false },
-            title = { Text("로그아웃", fontWeight = FontWeight.Bold) },
+            title = { Text("로그아웃", fontWeight = FontWeight.Bold, color = Neutral900) },
             text = { Text("정말 로그아웃 하시겠습니까?", fontSize = 14.sp, color = Neutral500) },
             confirmButton = {
                 TextButton(onClick = {
                     showLogoutDialog = false
                     mainViewModel.logout()
-                    navController.navigate(Route.Splash.path) {
-                        popUpTo(0) { inclusive = true }
-                    }
+                    navController.navigate(Route.Splash.path) { popUpTo(0) { inclusive = true } }
                 }) {
-                    Text("로그아웃", color = Color(0xFFFF4267), fontWeight = FontWeight.Bold)
+                    Text("로그아웃", color = ErrorColor, fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -66,161 +61,109 @@ fun SettingsScreen(
         )
     }
 
-    Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(Color.White)
-    ) {
-        // ── 헤더 ──
+    Column(modifier = modifier.fillMaxSize().background(Color.White)) {
+
+        // ── 헤더 (< 설정) — 카드관리/페이가입과 동일 패턴 ──
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(Primary900)
-                .statusBarsPadding()
-                .padding(horizontal = 24.dp, vertical = 20.dp),
+            Modifier.fillMaxWidth().statusBarsPadding().height(56.dp).padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("설정", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+            Spacer(Modifier.size(48.dp)) // 좌측 균형
+            Spacer(Modifier.weight(1f))
+            Text("설정", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
+            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.size(48.dp))
         }
 
+        // ── 프로필 영역 ──
+        Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp)) {
+            Text(userName, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Neutral900)
+            if (userPhone.isNotBlank()) {
+                Spacer(Modifier.height(4.dp))
+                Text(userPhone, fontSize = 14.sp, color = Neutral500)
+            }
+        }
+
+        HorizontalDivider(color = Primary50)
+
+        // ── 메뉴 리스트 ──
         Column(
-            modifier = Modifier
-                .weight(1f)
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 20.dp, vertical = 20.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            Modifier.weight(1f).verticalScroll(rememberScrollState())
         ) {
-            // ── 프로필 카드 ──
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(8.dp, RoundedCornerShape(15.dp), ambientColor = CardShadow, spotColor = CardShadow)
-                    .background(Color.White, RoundedCornerShape(15.dp))
-                    .padding(20.dp)
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Box(
-                        modifier = Modifier
-                            .size(48.dp)
-                            .clip(CircleShape)
-                            .background(Primary50),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(userName.take(1), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = Primary900)
-                    }
-                    Spacer(Modifier.width(14.dp))
-                    Column {
-                        Text(userName, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = Neutral900)
-                        if (userPhone.isNotBlank()) {
-                            Spacer(Modifier.height(2.dp))
-                            Text(userPhone, fontSize = 13.sp, color = Neutral500)
-                        }
-                    }
-                }
-            }
+            // 세금·장부
+            SettingsGroupHeader("세금·장부")
+            SettingsRow("알림 설정") { navController.navigate(Route.NotificationSettings.path) }
+            SettingsRow("세금 캘린더") { navController.navigate(Route.TaxCalendar.path) }
+            SettingsRow("공제 한도") { navController.navigate(Route.TaxSavingsDetail.path) }
 
-            // ── 세금·장부 ──
-            SettingsSection("세금·장부") {
-                SettingsItem("알림 설정", "세금 일정 알림 관리") {
-                    navController.navigate(Route.NotificationSettings.path)
-                }
-                SettingsDivider()
-                SettingsItem("세금 캘린더", "신고·납부 일정 확인") {
-                    navController.navigate(Route.TaxCalendar.path)
-                }
-                SettingsDivider()
-                SettingsItem("공제 한도", "절세 항목별 현황") {
-                    navController.navigate(Route.TaxSavingsDetail.path)
-                }
-            }
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = Primary50)
 
-            // ── 결제·카드 ──
-            SettingsSection("결제·카드") {
-                SettingsItem("카드 관리", "등록된 카드 조회·변경") {
-                    navController.navigate(Route.CardList.path)
-                }
-                SettingsDivider()
-                SettingsItem("QR 결제", "바코드·QR 결제") {
-                    navController.navigate(Route.QrPayment.path)
-                }
-            }
+            // 결제·카드
+            SettingsGroupHeader("결제·카드")
+            SettingsRow("카드 관리") { navController.navigate(Route.CardList.path) }
+            SettingsRow("QR 결제") { navController.navigate(Route.QrPayment.path) }
 
-            // ── 앱 정보 ──
-            SettingsSection("앱 정보") {
-                SettingsInfoRow("버전", "1.0.0")
-                SettingsDivider()
-                SettingsInfoRow("빌드", "2026.03")
-            }
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = Primary50)
 
-            // ── 로그아웃 ──
+            // 앱 정보
+            SettingsGroupHeader("앱 정보")
+            SettingsInfoRow("버전", "1.0.0")
+            SettingsInfoRow("빌드", "2026.03")
+
+            Spacer(Modifier.height(8.dp))
+            HorizontalDivider(color = Primary50)
+
+            // 로그아웃
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(15.dp))
-                    .clickable { showLogoutDialog = true }
-                    .padding(vertical = 16.dp),
-                contentAlignment = Alignment.Center
+                Modifier.fillMaxWidth().clickable { showLogoutDialog = true }.padding(horizontal = 20.dp, vertical = 18.dp),
+                contentAlignment = Alignment.CenterStart
             ) {
-                Text("로그아웃", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFF4267))
+                Text("로그아웃", fontSize = 15.sp, fontWeight = FontWeight.Medium, color = ErrorColor)
             }
 
-            Spacer(Modifier.height(16.dp))
+            Spacer(Modifier.height(40.dp))
         }
     }
 }
 
+// ── 그룹 헤더 (스타일 가이드: #5655B9 SemiBold 13px) ──
 @Composable
-private fun SettingsSection(title: String, content: @Composable ColumnScope.() -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(15.dp), ambientColor = CardShadow, spotColor = CardShadow)
-            .background(Color.White, RoundedCornerShape(15.dp))
-            .padding(20.dp)
-    ) {
-        Text(title, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = Primary600, letterSpacing = 0.3.sp)
-        Spacer(Modifier.height(16.dp))
-        content()
-    }
+private fun SettingsGroupHeader(title: String) {
+    Text(
+        title,
+        fontSize = 13.sp,
+        fontWeight = FontWeight.SemiBold,
+        color = Primary600,
+        letterSpacing = 0.3.sp,
+        modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)
+    )
 }
 
+// ── 메뉴 행 (좌: 타이틀, 우: 셰브론 >) ──
 @Composable
-private fun SettingsItem(title: String, subtitle: String, onClick: () -> Unit) {
+private fun SettingsRow(title: String, onClick: () -> Unit) {
     Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(10.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 10.dp),
+        Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 20.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Neutral900)
-            Spacer(Modifier.height(2.dp))
-            Text(subtitle, fontSize = 12.sp, color = Neutral500)
-        }
-        Icon(
-            Icons.AutoMirrored.Filled.KeyboardArrowRight,
-            contentDescription = null,
-            tint = Neutral400,
-            modifier = Modifier.size(20.dp)
-        )
+        Text(title, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Neutral900, modifier = Modifier.weight(1f))
+        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Neutral300, modifier = Modifier.size(20.dp))
     }
+    HorizontalDivider(color = Primary50, modifier = Modifier.padding(horizontal = 20.dp))
 }
 
+// ── 정보 행 (좌: 라벨, 우: 값) ──
 @Composable
 private fun SettingsInfoRow(label: String, value: String) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(vertical = 10.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 16.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(label, fontSize = 15.sp, fontWeight = FontWeight.Medium, color = Neutral900)
         Text(value, fontSize = 14.sp, color = Neutral500)
     }
-}
-
-@Composable
-private fun SettingsDivider() {
-    HorizontalDivider(color = Primary50, modifier = Modifier.padding(vertical = 2.dp))
+    HorizontalDivider(color = Primary50, modifier = Modifier.padding(horizontal = 20.dp))
 }
