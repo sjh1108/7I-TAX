@@ -87,13 +87,16 @@ public class PaymentController {
         return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.of(response));
     }
 
+    // 가맹점(수신자)용 — userId는 인증 강제 목적, 결제 소유자 검증은 하지 않음 (호출자 ≠ 결제 생성자)
     @GetMapping("/qr/token/{token}")
     public ResponseEntity<SuccessResponse<QrPaymentInfoResponse>> getQrPaymentInfo(
+            @AuthenticationPrincipal Long userId,
             @PathVariable String token) {
         QrPaymentInfoResponse response = paymentService.getQrPaymentInfo(token);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 
+    // 가맹점(수신자)용 — userId는 인증 강제 목적, 결제 소유자 검증은 하지 않음 (호출자 ≠ 결제 생성자)
     @PostMapping("/qr/token/{token}/confirm")
     public ResponseEntity<SuccessResponse<QrPaymentResponse>> confirmQrPayment(
             @AuthenticationPrincipal Long userId,
@@ -115,5 +118,35 @@ public class PaymentController {
             @AuthenticationPrincipal Long userId,
             @PathVariable String token) {
         return paymentService.subscribeQrPayment(userId, token);
+    }
+
+    // ───────────── 가맹점 QR 결제 (MPM) ─────────────
+
+    @PostMapping("/qr/merchant-token")
+    public ResponseEntity<SuccessResponse<MerchantQrTokenResponse>> createMerchantQrToken(
+            @Valid @RequestBody MerchantQrCreateRequest request) {
+        MerchantQrTokenResponse response = paymentService.createMerchantQrToken(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(SuccessResponse.of(response));
+    }
+
+    @GetMapping("/qr/merchant-token/{token}")
+    public ResponseEntity<SuccessResponse<MerchantQrInfoResponse>> getMerchantQrInfo(
+            @PathVariable String token) {
+        MerchantQrInfoResponse response = paymentService.getMerchantQrInfo(token);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    @PostMapping("/qr/merchant-token/{token}/pay")
+    public ResponseEntity<SuccessResponse<QrPaymentResponse>> payMerchantQr(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable String token,
+            @Valid @RequestBody MerchantQrPayRequest request) {
+        QrPaymentResponse response = paymentService.payMerchantQr(userId, token, request);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    @GetMapping(value = "/qr/merchant-token/{token}/events", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter subscribeMerchantQrPayment(@PathVariable String token) {
+        return paymentService.subscribeMerchantQrPayment(token);
     }
 }

@@ -15,12 +15,16 @@ import com.ssafy.tax7i.transfer.dto.WithdrawRequest;
 import com.ssafy.tax7i.transfer.entity.Transfer;
 import com.ssafy.tax7i.transfer.entity.TransferType;
 import com.ssafy.tax7i.transfer.repository.TransferRepository;
+import com.ssafy.tax7i.bookentry.event.TransferReceivedEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -30,6 +34,8 @@ public class TransferService {
     private final UserRepository userRepository;
     private final CardRepository cardRepository;
     private final SsafyFinanceClient ssafyFinanceClient;
+    private final TransferFailureSaveService transferFailureSaveService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public TransferResponse p2pTransfer(Long userId, P2pTransferRequest request) {
@@ -51,10 +57,19 @@ public class TransferService {
 
         String description = request.description() != null ? request.description() : "P2P 송금";
 
-        SsafyTransferResult result = ssafyFinanceClient.transfer(
-                senderKey, senderCard.getWithdrawalAccountNo(),
-                receiverKey, receiverCard.getWithdrawalAccountNo(),
-                request.amount(), description, description);
+        SsafyTransferResult result;
+        try {
+            result = ssafyFinanceClient.transfer(
+                    senderKey, senderCard.getWithdrawalAccountNo(),
+                    receiverKey, receiverCard.getWithdrawalAccountNo(),
+                    request.amount(), description, description);
+        } catch (BusinessException e) {
+            // REQUIRES_NEW 트랜잭션으로 실패 기록 저장 — 외부 트랜잭션 롤백과 무관하게 커밋됨
+            transferFailureSaveService.saveFailedTransfer(
+                    sender, receiver, senderCard, receiverCard,
+                    request.amount(), description, e.getMessage());
+            throw e;
+        }
 
         Transfer transfer = Transfer.builder()
                 .senderUser(sender)
@@ -68,6 +83,19 @@ public class TransferService {
         transfer.assignSsafyTransactionUniqueNo(result.withdrawResponse().rec().transactionUniqueNo());
 
         transferRepository.save(transfer);
+
+        // 수신자가 사업자인 경우에만 매출 장부 자동 생성 (개인 간 송금은 매출이 아님)
+        if (Boolean.TRUE.equals(receiver.getIsBusiness())) {
+            eventPublisher.publishEvent(new TransferReceivedEvent(
+                    transfer.getId(),
+                    receiver.getId(),
+                    request.amount(),
+                    sender.getName(),
+                    description,
+                    java.time.LocalDateTime.now()
+            ));
+        }
+
         return TransferResponse.from(transfer);
     }
 

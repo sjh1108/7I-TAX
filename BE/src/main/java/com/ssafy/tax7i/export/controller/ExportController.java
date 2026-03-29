@@ -1,16 +1,12 @@
 package com.ssafy.tax7i.export.controller;
 
-import com.ssafy.tax7i.export.service.ExportService;
-import com.ssafy.tax7i.global.exception.BusinessException;
-import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.ssafy.tax7i.export.service.ExcelExportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-
-import org.springframework.format.annotation.DateTimeFormat;
 
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
@@ -20,67 +16,69 @@ import java.time.LocalDate;
 @RequiredArgsConstructor
 public class ExportController {
 
-    private final ExportService exportService;
+    private final ExcelExportService excelExportService;
 
-    @GetMapping("/book-entries")
-    public ResponseEntity<byte[]> exportBookEntries(
+    // ── PDF ──
+
+    @GetMapping("/simple-ledger/pdf")
+    public ResponseEntity<byte[]> exportSimpleLedgerPdf(
             @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-
-        if (startDate != null && endDate != null) {
-            if (startDate.isAfter(endDate)) {
-                throw new BusinessException(ErrorCode.INVALID_ARGUMENT,
-                        "시작일은 종료일보다 이전이어야 합니다.");
-            }
-            String csv = exportService.exportBookEntriesToCsv(userId, startDate, endDate);
-            return csvResponse(csv, "간편장부_" + startDate + "_" + endDate + ".csv");
-        }
-
+            @RequestParam(required = false) Integer year) {
         int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportBookEntriesToCsv(userId, targetYear);
-        return csvResponse(csv, "간편장부_" + targetYear + ".csv");
+        byte[] pdfBytes = excelExportService.generateSimpleLedgerPdf(userId, targetYear);
+        return pdfResponse(pdfBytes, "간편장부_" + targetYear + ".pdf");
     }
 
-    @GetMapping("/vat")
-    public ResponseEntity<byte[]> exportVat(
+    @GetMapping("/income-tax/pdf")
+    public ResponseEntity<byte[]> exportIncomeTaxPdf(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        byte[] pdfBytes = excelExportService.generateSimpleLedgerPdf(userId, targetYear);
+        return pdfResponse(pdfBytes, "간편장부_" + targetYear + ".pdf");
+    }
+
+    // ── Excel ──
+
+    @GetMapping("/vat/excel")
+    public ResponseEntity<byte[]> exportVatExcel(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) Integer year,
             @RequestParam(required = false, defaultValue = "1") Integer half) {
         int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportVatSummaryCsv(userId, targetYear, half);
-        return csvResponse(csv, "부가세_" + targetYear + "_" + half + "기.csv");
+        byte[] excelBytes = excelExportService.exportVatExcel(userId, targetYear, half);
+        return excelResponse(excelBytes, "부가세_" + targetYear + "_" + half + "기.xlsx");
     }
 
-    @GetMapping("/income-tax")
-    public ResponseEntity<byte[]> exportIncomeTax(
+    @GetMapping("/income-tax/excel")
+    public ResponseEntity<byte[]> exportIncomeTaxExcel(
             @AuthenticationPrincipal Long userId,
             @RequestParam(required = false) Integer year) {
         int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportIncomeTaxSummaryCsv(userId, targetYear);
-        return csvResponse(csv, "종합소득세_" + targetYear + ".csv");
+        byte[] excelBytes = excelExportService.exportIncomeTaxExcel(userId, targetYear);
+        return excelResponse(excelBytes, "종합소득세_" + targetYear + ".xlsx");
     }
 
-    @GetMapping("/local-tax")
-    public ResponseEntity<byte[]> exportLocalTax(
-            @AuthenticationPrincipal Long userId,
-            @RequestParam(required = false) Integer year) {
-        int targetYear = year != null ? year : LocalDate.now().getYear();
-        String csv = exportService.exportLocalTaxSummaryCsv(userId, targetYear);
-        return csvResponse(csv, "지방소득세_" + targetYear + ".csv");
-    }
+    // ── Response Helpers ──
 
-    private ResponseEntity<byte[]> csvResponse(String csv, String filename) {
-        byte[] bom = new byte[]{(byte)0xEF, (byte)0xBB, (byte)0xBF};
-        byte[] content = csv.getBytes(StandardCharsets.UTF_8);
-        byte[] bytes = new byte[bom.length + content.length];
-        System.arraycopy(bom, 0, bytes, 0, bom.length);
-        System.arraycopy(content, 0, bytes, bom.length, content.length);
+    private String buildContentDisposition(String filename) {
         String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        return "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + encoded;
+    }
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] bytes, String filename) {
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
-                .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(filename))
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(bytes.length)
+                .body(bytes);
+    }
+
+    private ResponseEntity<byte[]> excelResponse(byte[] bytes, String filename) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(filename))
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .contentLength(bytes.length)
                 .body(bytes);
     }

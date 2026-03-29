@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.classification.controller;
 
+import com.ssafy.tax7i.ai.service.AiRateLimiter;
 import com.ssafy.tax7i.classification.dto.ClassificationRequest;
 import com.ssafy.tax7i.classification.dto.ClassificationResult;
 import com.ssafy.tax7i.classification.service.TaxClassificationService;
@@ -16,11 +17,14 @@ import org.springframework.web.bind.annotation.*;
 public class ClassificationController {
 
     private final TaxClassificationService classificationService;
+    private final AiRateLimiter rateLimiter;
 
     @PostMapping
     public ResponseEntity<SuccessResponse<ClassificationResult>> classify(
             @AuthenticationPrincipal Long userId,
             @Valid @RequestBody ClassificationRequest request) {
+
+        rateLimiter.checkClassifyLimit(userId);
 
         ClassificationRequest withUser = new ClassificationRequest(
                 request.merchantName(), request.mcc(), request.amount(),

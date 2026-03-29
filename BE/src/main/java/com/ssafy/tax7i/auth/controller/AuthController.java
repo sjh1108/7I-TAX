@@ -62,6 +62,7 @@ public class AuthController {
         return ResponseEntity.ok(SuccessResponse.ok());
     }
 
+    // 테스트 전용 — app.test-login.enabled 프로퍼티로 보호 (기본값 false, local 프로파일에서만 true)
     @PostMapping("/test-login")
     public ResponseEntity<SuccessResponse<LoginResponse>> testLogin(
             @RequestParam(value = "email", required = false) String email) {

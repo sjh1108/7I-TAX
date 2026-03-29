@@ -43,6 +43,8 @@ class TransferServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private CardRepository cardRepository;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
+    @Mock private TransferFailureSaveService transferFailureSaveService;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private TransferService transferService;
@@ -227,6 +229,7 @@ class TransferServiceTest {
                 .cardNo("1005518816097890")
                 .cvc("725")
                 .cardUniqueNo("1003-xxx")
+                .ssafyAccountNo(withdrawalAccountNo)
                 .withdrawalAccountNo(withdrawalAccountNo)
                 .withdrawalDate("4")
                 .cardExpiryDate("20290401")

@@ -152,7 +152,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.loginWithPin("01099999999", "123456"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.USER_NOT_FOUND));
+                        .isEqualTo(ErrorCode.UNAUTHORIZED));
     }
 
     @Test
@@ -168,7 +168,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.loginWithPin("01012345678", "wrong"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.PIN_INVALID));
+                        .isEqualTo(ErrorCode.UNAUTHORIZED));
 
         then(valueOperations).should().increment("pin-fail:01012345678");
     }
@@ -183,7 +183,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.loginWithPin("01012345678", "123456"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.PIN_NOT_SET));
+                        .isEqualTo(ErrorCode.UNAUTHORIZED));
     }
 
     @Test
@@ -194,6 +194,7 @@ class AuthServiceTest {
         given(redisTemplate.opsForValue()).willReturn(valueOperations);
         given(valueOperations.get("pin-fail:01012345678")).willReturn(null);
         given(userRepository.findByPhoneLast4("5678")).willReturn(List.of(user));
+        given(pinService.verifyPin("123456", "encoded-pin")).willReturn(true);
 
         assertThatThrownBy(() -> authService.loginWithPin("01012345678", "123456"))
                 .isInstanceOf(BusinessException.class)
@@ -247,7 +248,7 @@ class AuthServiceTest {
         assertThatThrownBy(() -> authService.loginWithPin("01012345678", "wrong"))
                 .isInstanceOf(BusinessException.class)
                 .satisfies(e -> assertThat(((BusinessException) e).getErrorCode())
-                        .isEqualTo(ErrorCode.PIN_INVALID));
+                        .isEqualTo(ErrorCode.UNAUTHORIZED));
 
         then(valueOperations).should().increment("pin-fail:01012345678");
         then(redisTemplate).should().expire(eq("pin-fail:01012345678"), eq(5L), any());

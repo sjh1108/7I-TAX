@@ -44,7 +44,7 @@ class BookEntryEventListenerTest {
         BookEntryResponse mockResponse = new BookEntryResponse(
                 1L, 1L, LocalDate.now(), "스타벅스 결제", "스타벅스",
                 EntryType.EXPENSE, 0L, 50000L, 0L, 5000L, 50000L,
-                "08", "접대비", true, true, false, null, null, LocalDateTime.now());
+                "08", "접대비", true, true, 0, false, null, null, LocalDateTime.now());
         given(bookEntryService.create(eq(1L), any(BookEntryCreateRequest.class))).willReturn(mockResponse);
 
         eventListener.handlePaymentCaptured(event);

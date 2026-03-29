@@ -2,7 +2,7 @@ package com.ssafy.tax7i.tax.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
+import com.ssafy.tax7i.export.service.ExcelExportHelper;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
 import com.ssafy.tax7i.tax.entity.ExpenseDetail;
@@ -16,7 +16,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
 
-import java.io.ByteArrayOutputStream;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -31,6 +30,7 @@ public class PdfService {
     private final ExpenseDetailRepository expenseDetailRepository;
     private final TaxPaymentRepository taxPaymentRepository;
     private final ObjectMapper objectMapper;
+    private final ExcelExportHelper exportHelper;
 
     /**
      * Generates a PDF for the tax return declaration (종합소득세 확정신고서).
@@ -46,7 +46,7 @@ public class PdfService {
         context.setVariable("deductions", parseDeductions(taxReturn.getDeductionsJson()));
 
         String html = templateEngine.process("pdf/tax-return", context);
-        return htmlToPdf(html);
+        return exportHelper.htmlToPdf(html);
     }
 
     /**
@@ -62,28 +62,7 @@ public class PdfService {
         context.setVariable("payments", payments);
 
         String html = templateEngine.process("pdf/tax-receipt", context);
-        return htmlToPdf(html);
-    }
-
-    /**
-     * Converts an HTML string to PDF bytes using openhtmltopdf.
-     *
-     * Note on Korean font support: openhtmltopdf requires explicit font
-     * registration for CJK characters. If Korean text does not render,
-     * register a font (e.g. NanumGothic) via PdfRendererBuilder.useFont().
-     */
-    private byte[] htmlToPdf(String html) {
-        try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
-            PdfRendererBuilder builder = new PdfRendererBuilder();
-            builder.useFastMode();
-            builder.withHtmlContent(html, "/");
-            builder.toStream(os);
-            builder.run();
-            return os.toByteArray();
-        } catch (Exception e) {
-            throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
-                    "PDF 생성 실패: " + e.getMessage());
-        }
+        return exportHelper.htmlToPdf(html);
     }
 
     /**

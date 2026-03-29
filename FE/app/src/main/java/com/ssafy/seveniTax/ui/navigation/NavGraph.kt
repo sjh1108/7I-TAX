@@ -216,7 +216,7 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
         }
 
         composable(Route.PaymentComplete.path) {
-            PaymentCompleteScreen(navController)
+            PaymentCompleteScreen(navController, paymentViewModel)
         }
 
         composable(Route.CardList.path) {

@@ -34,6 +34,7 @@ public enum ErrorCode {
     USER_SUSPENDED(HttpStatus.FORBIDDEN, "정지된 계정입니다."),
     USER_WITHDRAWN(HttpStatus.FORBIDDEN, "탈퇴한 계정입니다."),
     CARD_INACTIVE(HttpStatus.FORBIDDEN, "비활성 카드입니다."),
+    CHAT_SESSION_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 채팅 세션에 대한 접근 권한이 없습니다."),
 
     // 404 Not Found
     NOT_FOUND(HttpStatus.NOT_FOUND, "리소스를 찾을 수 없습니다."),
@@ -51,6 +52,8 @@ public enum ErrorCode {
     TAX_ALREADY_PAID(HttpStatus.CONFLICT, "이미 납부 완료된 세금입니다."),
     TAX_NATIONAL_FIRST(HttpStatus.BAD_REQUEST, "국세 납부를 먼저 완료해주세요."),
     TAX_RETURN_NOT_FOUND(HttpStatus.NOT_FOUND, "신고서를 찾을 수 없습니다."),
+    TAX_INVALID_TRANSITION(HttpStatus.CONFLICT, "현재 상태에서 해당 작업을 수행할 수 없습니다."),
+    CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "다른 요청과 동시에 처리되었습니다. 다시 시도해주세요."),
 
     // 402 Payment Required
     PAYMENT_DECLINED(HttpStatus.valueOf(402), "결제가 거절되었습니다."),
@@ -78,8 +81,15 @@ public enum ErrorCode {
     // 429 Too Many Requests
     OTP_SEND_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "인증번호 발송 횟수를 초과했습니다. 잠시 후 다시 시도해주세요."),
 
+    // 429 Too Many Requests (AI)
+    AI_RATE_LIMITED(HttpStatus.TOO_MANY_REQUESTS, "AI 요청 한도를 초과했습니다. 잠시 후 다시 시도해주세요."),
+
+    // 500 Internal Server Error (FCM)
+    FCM_SEND_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "푸시 알림 전송에 실패했습니다."),
+
     // 503 Service Unavailable
-    BANK_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "은행 연동 서비스가 일시적으로 불가합니다.");
+    BANK_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "은행 연동 서비스가 일시적으로 불가합니다."),
+    AI_SERVICE_UNAVAILABLE(HttpStatus.SERVICE_UNAVAILABLE, "AI 서비스가 일시적으로 불가합니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

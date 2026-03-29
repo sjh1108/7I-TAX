@@ -80,6 +80,7 @@ fun QrPaymentScreen(
     cardViewModel: CardViewModel = hiltViewModel(),
     paymentViewModel: PaymentViewModel,
     showBackButton: Boolean = true,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val cardUiState by cardViewModel.uiState.collectAsState()
@@ -94,13 +95,15 @@ fun QrPaymentScreen(
     var dialogMessage by remember { mutableStateOf("") }
     var dialogIsSuccess by remember { mutableStateOf(false) }
 
-    // 결제 완료 감지
+    // 결제 완료 감지 → PaymentCompleteScreen으로 이동
     LaunchedEffect(paymentState.paymentComplete) {
         if (paymentState.paymentComplete) {
-            dialogTitle = "결제 완료"
-            dialogMessage = "결제가 성공적으로 처리되었습니다."
-            dialogIsSuccess = true
-            showResultDialog = true
+            scannedResult = null
+            showPayConfirmDialog = false
+            showResultDialog = false
+            navController.navigate(Route.PaymentComplete.path) {
+                popUpTo(Route.Main.path) { inclusive = false }
+            }
         }
     }
 
@@ -246,8 +249,8 @@ fun QrPaymentScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding()
             .background(Background)
+            .statusBarsPadding()
     ) {
         Row(
             modifier = Modifier
@@ -256,14 +259,12 @@ fun QrPaymentScreen(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (showBackButton) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로가기",
-                        tint = TextPrimary
-                    )
-                }
+            IconButton(onClick = { onBack?.invoke() ?: navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "뒤로가기",
+                    tint = TextPrimary
+                )
             }
             Text(
                 text = "Pay 결제",
