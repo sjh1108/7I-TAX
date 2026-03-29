@@ -501,7 +501,8 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
                             entryId = entry.id,
                             merchantName = entry.merchantName ?: entry.description ?: "거래",
                             amount = "${fmt.format(amt)}원",
-                            amountLong = amt
+                            amountLong = amt,
+                            note = entry.note
                         )
                     }
                     classificationViewModel.classifyBulk(bulkInputs)
