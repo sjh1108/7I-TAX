@@ -29,6 +29,15 @@ public class ExportController {
         return pdfResponse(pdfBytes, "간편장부_" + targetYear + ".pdf");
     }
 
+    @GetMapping("/income-tax/pdf")
+    public ResponseEntity<byte[]> exportIncomeTaxPdf(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        byte[] pdfBytes = excelExportService.generateSimpleLedgerPdf(userId, targetYear);
+        return pdfResponse(pdfBytes, "간편장부_" + targetYear + ".pdf");
+    }
+
     // ── Excel ──
 
     @GetMapping("/vat/excel")
