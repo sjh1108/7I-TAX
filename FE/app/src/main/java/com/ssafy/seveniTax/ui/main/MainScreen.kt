@@ -87,6 +87,7 @@ fun MainScreen(
     viewModel: MainViewModel = hiltViewModel()
 ) {
     var selectedTab by remember { mutableStateOf(BottomTab.HOME) }
+    var showAiScreen by remember { mutableStateOf(false) }
     var isSideMenuOpen by remember { mutableStateOf(false) }
     var isNotificationSheetOpen by remember { mutableStateOf(false) }
 
@@ -128,7 +129,7 @@ fun MainScreen(
                         isSideMenuOpen = false
                     },
                     DrawerItem("AI 세무 도우미") {
-                        selectedTab = BottomTab.AI
+                        showAiScreen = true
                         isSideMenuOpen = false
                     },
                     DrawerItem("설정") {
@@ -208,37 +209,43 @@ fun MainScreen(
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
             bottomBar = {
-                if (!isSideMenuOpen) {
+                if (!isSideMenuOpen && !showAiScreen) {
                     BottomTabBar(
                         selectedTab = selectedTab,
                         onTabSelected = { tab ->
+                            showAiScreen = false
                             if (tab == BottomTab.QR_PAYMENT && !viewModel.isPayEnrolled()) {
                                 navController.navigate(Route.PayIntro.path)
                             } else {
                                 selectedTab = tab
                             }
-                        }
+                        },
+                        onAiClick = { showAiScreen = true }
                     )
                 }
             }
         ) { innerPadding ->
             val modifier = Modifier.padding(innerPadding)
-            when (selectedTab) {
-                BottomTab.HOME -> HomeScreen(
-                    navController = navController,
-                    modifier = modifier,
-                    onNotificationClick = { isNotificationSheetOpen = true },
-                    onMenuClick = { isSideMenuOpen = true },
-                    notificationCount = notifications.size
-                )
-                BottomTab.SETTINGS -> SettingsScreen(navController, modifier)
-                BottomTab.AI -> AiScreen(navController, modifier)
-                BottomTab.QR_PAYMENT -> QrPaymentScreen(
-                    navController = navController,
-                    paymentViewModel = hiltViewModel(),
-                    showBackButton = false,
-                    modifier = modifier
-                )
+            if (showAiScreen) {
+                AiScreen(navController, modifier)
+            } else {
+                when (selectedTab) {
+                    BottomTab.HOME -> HomeScreen(
+                        navController = navController,
+                        modifier = modifier,
+                        onNotificationClick = { isNotificationSheetOpen = true },
+                        onMenuClick = { isSideMenuOpen = true },
+                        onQrPaymentClick = { openQrPayment() },
+                        notificationCount = notifications.size
+                    )
+                    BottomTab.SETTINGS -> SettingsScreen(navController, modifier)
+                    BottomTab.QR_PAYMENT -> QrPaymentScreen(
+                        navController = navController,
+                        paymentViewModel = hiltViewModel(),
+                        onBack = { selectedTab = BottomTab.HOME },
+                        modifier = modifier
+                    )
+                }
             }
         }
 
