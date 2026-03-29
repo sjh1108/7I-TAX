@@ -95,12 +95,28 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
     val currentRoute by remember {
         derivedStateOf { navBackStackEntry?.destination?.route }
     }
-    val authRoutes = setOf(
+    val hideFabRoutes = setOf(
+        // auth
         Route.Splash.path, Route.PinLogin.path, Route.IdentityVerify.path,
         Route.SmsAuth.path, Route.PinSetup.path, Route.PinConfirm.path,
-        Route.AuthSuccess.path
+        Route.AuthSuccess.path,
+        // AI 챗봇
+        Route.AiChat.path,
+        // 하단 버튼이 있는 화면
+        Route.BookMemoAdd.path,
+        Route.PaymentComplete.path,
+        Route.ExportFormat.path,
+        Route.ExportDateRange.path,
+        Route.ExportPurpose.path,
+        Route.PayIntro.path, Route.PayTerms.path, Route.PayVerify.path,
+        Route.PayConfirm.path, Route.PayComplete.path,
+        Route.CardInput.path, Route.CardSms.path, Route.CardComplete.path,
+        Route.CardOwnerVerify.path, Route.CardBusinessInfo.path,
+        Route.ClassificationLoading.path, Route.ClassificationResult.path,
+        Route.ClassificationComplete.path, Route.CategorySelect.path,
+        Route.MemoAdd.path, Route.BulkClassificationLoading.path
     )
-    val showFab = currentRoute != null && currentRoute !in authRoutes && currentRoute != Route.AiChat.path
+    val showFab = currentRoute != null && currentRoute !in hideFabRoutes
 
     Box(modifier = Modifier.fillMaxSize()) {
     NavHost(
