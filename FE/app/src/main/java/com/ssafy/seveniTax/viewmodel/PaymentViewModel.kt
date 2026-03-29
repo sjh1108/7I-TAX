@@ -3,9 +3,7 @@ package com.ssafy.seveniTax.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.ssafy.seveniTax.data.model.payment.MerchantResponse
 import com.ssafy.seveniTax.data.model.payment.QrTokenCreateRequest
-import com.ssafy.seveniTax.data.remote.CardApi
 import com.ssafy.seveniTax.data.remote.PaymentApi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -28,8 +26,7 @@ data class PaymentUiState(
 
 @HiltViewModel
 class PaymentViewModel @Inject constructor(
-    private val paymentApi: PaymentApi,
-    private val cardApi: CardApi
+    private val paymentApi: PaymentApi
 ) : ViewModel() {
 
     companion object {
@@ -38,40 +35,6 @@ class PaymentViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
-
-    private val _merchants = MutableStateFlow<List<MerchantResponse>>(emptyList())
-    val merchants: StateFlow<List<MerchantResponse>> = _merchants.asStateFlow()
-
-    private val _selectedMerchant = MutableStateFlow<MerchantResponse?>(null)
-    val selectedMerchant: StateFlow<MerchantResponse?> = _selectedMerchant.asStateFlow()
-
-    init {
-        loadMerchants()
-    }
-
-    fun loadMerchants() = viewModelScope.launch {
-        Log.d(TAG, "▶ loadMerchants()")
-        try {
-            val response = cardApi.getMerchants()
-            val body = response.body()
-            if (response.isSuccessful && body?.status == "success" && body.data != null) {
-                _merchants.value = body.data
-                // 첫 번째 가맹점을 기본 선택
-                if (_selectedMerchant.value == null && body.data.isNotEmpty()) {
-                    _selectedMerchant.value = body.data.first()
-                }
-                Log.d(TAG, "  가맹점 ${body.data.size}개 로드 완료")
-            } else {
-                Log.e(TAG, "  가맹점 로드 실패: ${response.code()} ${body?.message}")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "  가맹점 로드 에러: ${e.message}", e)
-        }
-    }
-
-    fun selectMerchant(merchant: MerchantResponse) {
-        _selectedMerchant.value = merchant
-    }
 
     fun createQrToken(cardId: Long, amount: Long, merchantId: Long, merchantName: String) = viewModelScope.launch {
         Log.d(TAG, "▶ createQrToken() cardId=$cardId, amount=$amount, merchantId=$merchantId, merchant=$merchantName")
