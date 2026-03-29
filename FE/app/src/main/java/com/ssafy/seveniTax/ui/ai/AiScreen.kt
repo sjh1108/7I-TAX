@@ -15,11 +15,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
+import com.ssafy.seveniTax.R
 import com.ssafy.seveniTax.viewmodel.ChatMessage
 import com.ssafy.seveniTax.viewmodel.ChatbotViewModel
 
@@ -254,7 +256,12 @@ private fun AiAvatar() {
             .background(Brush.linearGradient(listOf(Primary900, Primary600))),
         contentAlignment = Alignment.Center
     ) {
-        Text("🤖", fontSize = 16.sp)
+        Icon(
+            painter = painterResource(R.drawable.ic_ai_robot),
+            contentDescription = "AI",
+            tint = Color.Unspecified,
+            modifier = Modifier.size(22.dp)
+        )
     }
 }
 
