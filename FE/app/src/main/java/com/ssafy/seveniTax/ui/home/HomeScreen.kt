@@ -137,7 +137,11 @@ fun HomeScreen(
                     // ❶ 미분류 경비
                     if (unclassifiedCount > 0) {
                         Row(
-                            Modifier.fillMaxWidth().background(UnconfirmedBg, RoundedCornerShape(22.dp)).clickable { navController.navigate(Route.UnclassifiedList.path) }.padding(18.dp, 18.dp),
+                            Modifier.fillMaxWidth()
+                                .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = CardShadow, spotColor = CardShadow)
+                                .background(UnconfirmedBg, RoundedCornerShape(22.dp))
+                                .clickable { navController.navigate(Route.UnclassifiedList.path) }
+                                .padding(18.dp, 18.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Column(Modifier.weight(1f)) {
