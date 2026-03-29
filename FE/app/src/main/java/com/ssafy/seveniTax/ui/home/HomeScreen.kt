@@ -2,6 +2,7 @@ package com.ssafy.seveniTax.ui.home
 
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -317,7 +318,8 @@ private fun TaxBracketCard(taxableIncome: Long, fmt: java.text.NumberFormat) {
 private fun SummaryCard(income: Long, expense: Long, nearest: com.ssafy.seveniTax.data.model.tax.TaxDeadline?, fmt: java.text.NumberFormat, navController: NavController) {
     Column(
         Modifier.fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = CardShadow, spotColor = CardShadow)
+            .shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x1A3629B7), spotColor = Color(0x1A3629B7))
+            .border(1.dp, Color(0x0D3629B7), RoundedCornerShape(22.dp))
             .background(Color.White, RoundedCornerShape(22.dp))
             .padding(20.dp)
     ) {
@@ -364,7 +366,8 @@ private fun SummaryCard(income: Long, expense: Long, nearest: com.ssafy.seveniTa
 private fun SectionCard(title: String, action: String, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     Column(
         Modifier.fillMaxWidth()
-            .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = CardShadow, spotColor = CardShadow)
+            .shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x1A3629B7), spotColor = Color(0x1A3629B7))
+            .border(1.dp, Color(0x0D3629B7), RoundedCornerShape(22.dp))
             .background(Color.White, RoundedCornerShape(22.dp))
             .padding(20.dp)
     ) {
