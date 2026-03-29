@@ -41,6 +41,12 @@ interface BookEntryApi {
         @Body body: CategoryUpdateRequest
     ): Response<ApiResponse<BookEntryResponse>>
 
+    @PATCH("book-entries/{entryId}/note")
+    suspend fun updateNote(
+        @Path("entryId") entryId: Long,
+        @Body body: NoteUpdateRequest
+    ): Response<ApiResponse<BookEntryResponse>>
+
     @PATCH("book-entries/{entryId}/personal")
     suspend fun markAsPersonal(@Path("entryId") entryId: Long): Response<ApiResponse<BookEntryResponse>>
 

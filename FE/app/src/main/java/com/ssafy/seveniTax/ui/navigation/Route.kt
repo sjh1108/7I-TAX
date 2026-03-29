@@ -50,9 +50,9 @@ sealed class Route(val path: String) {
         fun create(purpose: String) = "export_date_range/$purpose"
     }
     object BookFilter : Route("book_filter")
-    object BookMemoAdd : Route("book_memo_add?fromPayment={fromPayment}") {
-        fun createFromPayment() = "book_memo_add?fromPayment=true"
-        fun create() = "book_memo_add?fromPayment=false"
+    object BookMemoAdd : Route("book_memo_add?entryId={entryId}&fromPayment={fromPayment}") {
+        fun create(entryId: Long = -1, fromPayment: Boolean = false) =
+            "book_memo_add?entryId=$entryId&fromPayment=$fromPayment"
     }
     object TaxReport : Route("tax_report")
     object TaxSavingsDetail : Route("tax_savings_detail")

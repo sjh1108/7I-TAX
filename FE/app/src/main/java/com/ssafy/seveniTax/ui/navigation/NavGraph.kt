@@ -556,12 +556,19 @@ fun NavGraph(navController: NavHostController, pendingNavigateTo: String? = null
 
         composable(
             route = Route.BookMemoAdd.path,
-            arguments = listOf(navArgument("fromPayment") {
-                type = NavType.BoolType; defaultValue = false
-            })
+            arguments = listOf(
+                navArgument("entryId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("fromPayment") { type = NavType.BoolType; defaultValue = false }
+            )
         ) { backStackEntry ->
+            val entryId = backStackEntry.arguments?.getLong("entryId") ?: -1L
             val fromPayment = backStackEntry.arguments?.getBoolean("fromPayment") ?: false
-            BookMemoAddScreen(navController, fromPayment = fromPayment)
+            BookMemoAddScreen(
+                navController = navController,
+                entryId = entryId,
+                fromPayment = fromPayment,
+                bookEntryRepository = bookEntryViewModel
+            )
         }
 
         composable(Route.TaxReport.path) {

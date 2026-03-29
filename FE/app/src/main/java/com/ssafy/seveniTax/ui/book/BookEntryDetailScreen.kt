@@ -212,7 +212,7 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
 
             // 증빙 내역 추가/수정
             OutlinedButton(
-                onClick = { navController.navigate(Route.BookMemoAdd.path) },
+                onClick = { navController.navigate(Route.BookMemoAdd.create(entryId = entry.id)) },
                 modifier = Modifier.fillMaxWidth().height(54.dp),
                 shape = RoundedCornerShape(15.dp),
                 border = BorderStroke(1.dp, Disabled)

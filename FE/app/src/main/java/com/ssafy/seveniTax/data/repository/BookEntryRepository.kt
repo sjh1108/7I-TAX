@@ -25,4 +25,5 @@ interface BookEntryRepository {
     suspend fun updateCategory(entryId: Long, body: CategoryUpdateRequest): Response<ApiResponse<BookEntryResponse>>
     suspend fun markAsPersonal(entryId: Long): Response<ApiResponse<BookEntryResponse>>
     suspend fun markAsBusiness(entryId: Long): Response<ApiResponse<BookEntryResponse>>
+    suspend fun updateNote(entryId: Long, body: NoteUpdateRequest): Response<ApiResponse<BookEntryResponse>>
 }

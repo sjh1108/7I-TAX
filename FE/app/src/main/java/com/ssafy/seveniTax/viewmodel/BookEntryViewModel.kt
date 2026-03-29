@@ -64,6 +64,9 @@ class BookEntryViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _bulkConfirmDone = MutableStateFlow(false)
+    val bulkConfirmDone: StateFlow<Boolean> = _bulkConfirmDone.asStateFlow()
+
     init {
         loadEntries()
     }
@@ -297,6 +300,47 @@ class BookEntryViewModel @Inject constructor(
         }
     }
 
+    /**
+     * 일괄 확정: 카테고리 맵에 있는 항목은 카테고리 변경 + 확정, 없는 항목은 확정만.
+     * 모든 API 호출 완료 후 bulkConfirmDone = true 로 변경.
+     */
+    fun bulkConfirmEntries(categoryMap: Map<Long, String>, entryIds: List<Long>) {
+        _bulkConfirmDone.value = false
+        viewModelScope.launch {
+            for (id in entryIds) {
+                val category = categoryMap[id]
+                try {
+                    if (category != null && category != "미분류") {
+                        val code = categoryNameToCode[category] ?: category.lowercase()
+                        val resp = bookEntryRepository.updateCategory(
+                            id, CategoryUpdateRequest(categoryCode = code, categoryName = category)
+                        )
+                        if (resp.isSuccessful && resp.body()?.status == "success") {
+                            Log.d("BookEntryVM", "일괄 경비 변경 성공: $id → $category")
+                        } else {
+                            Log.e("BookEntryVM", "일괄 경비 변경 실패: $id ${resp.body()?.message}")
+                        }
+                    }
+                    val confirmResp = bookEntryRepository.confirmEntry(id)
+                    if (confirmResp.isSuccessful && confirmResp.body()?.status == "success") {
+                        Log.d("BookEntryVM", "일괄 확정 성공: $id")
+                    } else {
+                        Log.e("BookEntryVM", "일괄 확정 실패: $id ${confirmResp.body()?.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("BookEntryVM", "일괄 확정 에러: $id ${e.message}", e)
+                }
+            }
+            loadEntries()
+            loadUnconfirmedCount()
+            _bulkConfirmDone.value = true
+        }
+    }
+
+    fun clearBulkConfirmDone() {
+        _bulkConfirmDone.value = false
+    }
+
     fun createTestEntries() {
         val today = java.time.LocalDate.now().toString()
         val testData = listOf(
@@ -321,6 +365,27 @@ class BookEntryViewModel @Inject constructor(
             }
             loadEntries()
             loadUnconfirmedCount()
+        }
+    }
+
+    fun updateNote(entryId: Long, note: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val response = bookEntryRepository.updateNote(
+                    entryId,
+                    com.ssafy.seveniTax.data.model.book.NoteUpdateRequest(note)
+                )
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.d("BookEntryVM", "메모 저장 성공: entryId=$entryId")
+                    onResult(true)
+                } else {
+                    Log.e("BookEntryVM", "메모 저장 실패: ${response.body()?.message}")
+                    onResult(false)
+                }
+            } catch (e: Exception) {
+                Log.e("BookEntryVM", "메모 저장 에러: ${e.message}", e)
+                onResult(false)
+            }
         }
     }
 

@@ -101,8 +101,9 @@ fun QrPaymentScreen(
             scannedResult = null
             showPayConfirmDialog = false
             showResultDialog = false
+            val paymentId = paymentState.paymentId ?: -1L
             paymentViewModel.resetPayment()
-            navController.navigate(Route.BookMemoAdd.createFromPayment()) {
+            navController.navigate(Route.BookMemoAdd.create(entryId = paymentId, fromPayment = true)) {
                 popUpTo(Route.Main.path) { inclusive = false }
             }
         }

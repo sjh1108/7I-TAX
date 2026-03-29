@@ -29,4 +29,5 @@ class BookEntryRepositoryImpl @Inject constructor(
     override suspend fun updateCategory(entryId: Long, body: CategoryUpdateRequest) = api.updateCategory(entryId, body)
     override suspend fun markAsPersonal(entryId: Long) = api.markAsPersonal(entryId)
     override suspend fun markAsBusiness(entryId: Long) = api.markAsBusiness(entryId)
+    override suspend fun updateNote(entryId: Long, body: NoteUpdateRequest) = api.updateNote(entryId, body)
 }
