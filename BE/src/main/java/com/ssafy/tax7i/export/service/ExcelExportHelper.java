@@ -3,8 +3,10 @@ package com.ssafy.tax7i.export.service;
 import com.ssafy.tax7i.auth.domain.BusinessProfile;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.apache.poi.ss.usermodel.*;
+
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
@@ -63,6 +65,10 @@ public class ExcelExportHelper {
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NanumGothic-Regular.ttf"),
+                    "NanumGothic", 400, BaseRendererBuilder.FontStyle.NORMAL, true);
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NanumGothic-Bold.ttf"),
+                    "NanumGothic", 700, BaseRendererBuilder.FontStyle.NORMAL, true);
             builder.withHtmlContent(html, "/");
             builder.toStream(os);
             builder.run();

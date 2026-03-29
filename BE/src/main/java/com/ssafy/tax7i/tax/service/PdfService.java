@@ -2,6 +2,7 @@ package com.ssafy.tax7i.tax.service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -12,6 +13,7 @@ import com.ssafy.tax7i.tax.repository.ExpenseDetailRepository;
 import com.ssafy.tax7i.tax.repository.TaxPaymentRepository;
 import com.ssafy.tax7i.tax.repository.TaxReturnRepository;
 import lombok.RequiredArgsConstructor;
+
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
@@ -65,17 +67,14 @@ public class PdfService {
         return htmlToPdf(html);
     }
 
-    /**
-     * Converts an HTML string to PDF bytes using openhtmltopdf.
-     *
-     * Note on Korean font support: openhtmltopdf requires explicit font
-     * registration for CJK characters. If Korean text does not render,
-     * register a font (e.g. NanumGothic) via PdfRendererBuilder.useFont().
-     */
     private byte[] htmlToPdf(String html) {
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NanumGothic-Regular.ttf"),
+                    "NanumGothic", 400, BaseRendererBuilder.FontStyle.NORMAL, true);
+            builder.useFont(() -> getClass().getResourceAsStream("/fonts/NanumGothic-Bold.ttf"),
+                    "NanumGothic", 700, BaseRendererBuilder.FontStyle.NORMAL, true);
             builder.withHtmlContent(html, "/");
             builder.toStream(os);
             builder.run();

@@ -101,33 +101,35 @@ public class ExportController {
         return excelResponse(excelBytes, "종합소득세_" + targetYear + ".xlsx");
     }
 
+    private String buildContentDisposition(String filename) {
+        String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        return "attachment; filename=\"" + filename + "\"; filename*=UTF-8''" + encoded;
+    }
+
     private ResponseEntity<byte[]> csvResponse(String csv, String filename) {
         byte[] bom = new byte[]{(byte)0xEF, (byte)0xBB, (byte)0xBF};
         byte[] content = csv.getBytes(StandardCharsets.UTF_8);
         byte[] bytes = new byte[bom.length + content.length];
         System.arraycopy(bom, 0, bytes, 0, bom.length);
         System.arraycopy(content, 0, bytes, bom.length, content.length);
-        String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(filename))
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .contentLength(bytes.length)
                 .body(bytes);
     }
 
     private ResponseEntity<byte[]> pdfResponse(byte[] bytes, String filename) {
-        String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(filename))
                 .contentType(MediaType.APPLICATION_PDF)
                 .contentLength(bytes.length)
                 .body(bytes);
     }
 
     private ResponseEntity<byte[]> excelResponse(byte[] bytes, String filename) {
-        String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                .header(HttpHeaders.CONTENT_DISPOSITION, buildContentDisposition(filename))
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .contentLength(bytes.length)
