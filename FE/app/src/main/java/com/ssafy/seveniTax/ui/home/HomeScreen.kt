@@ -94,7 +94,7 @@ fun HomeScreen(
         ActionItem("스케쥴러", R.drawable.ic_home_scheduler, Route.TaxCalendar.path),
         ActionItem("간편장부", R.drawable.ic_home_book, Route.BookEntryList.path),
         ActionItem("레포트", R.drawable.ic_home_report, Route.TaxReport.path),
-        ActionItem("세금 신고", R.drawable.ic_home_tax_filing, Route.TaxCalendar.path),
+        ActionItem("내보내기", R.drawable.ic_home_export, Route.ExportPurpose.path),
         ActionItem("QR 결제", R.drawable.ic_home_qr, Route.QrPayment.path),
         ActionItem("공제 혜택", R.drawable.ic_home_deduction, Route.TaxSavingsDetail.path),
     )
