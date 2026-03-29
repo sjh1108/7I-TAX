@@ -178,12 +178,10 @@ fun HomeScreen(
                     val bookEntryViewModel: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
                     val unclassifiedCount by bookEntryViewModel.unconfirmedCount.collectAsState()
                     val entries by bookEntryViewModel.entries.collectAsState()
-                    val lifecycleOwner = LocalLifecycleOwner.current
-                    LaunchedEffect(lifecycleOwner) {
-                        lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-                            bookEntryViewModel.loadUnconfirmedCount()
-                            bookEntryViewModel.loadEntries()
-                        }
+                    // 탭 전환 시에도 항상 최신 데이터 로드
+                    LaunchedEffect(Unit) {
+                        bookEntryViewModel.loadUnconfirmedCount()
+                        bookEntryViewModel.loadEntries()
                     }
                     // 장부 현황 계산 (이번 달)
                     val now = java.time.LocalDate.now()
