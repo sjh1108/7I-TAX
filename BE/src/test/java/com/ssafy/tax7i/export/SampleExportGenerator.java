@@ -3,6 +3,7 @@ package com.ssafy.tax7i.export;
 import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.apache.poi.ss.usermodel.*;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.*;
@@ -23,6 +24,7 @@ class SampleExportGenerator {
     private static final String FONT_BOLD = "/fonts/NanumGothic-Bold.ttf";
 
     @Test
+    @Disabled("수동 실행 전용 — ./gradlew test --tests SampleExportGenerator")
     void generateAllSamples() throws Exception {
         Files.createDirectories(OUTPUT_DIR);
 
@@ -134,19 +136,19 @@ class SampleExportGenerator {
             body { font-family: 'NanumGothic', sans-serif; font-size: 9pt; line-height: 1.3; color: #000; }
             h1 { text-align: center; font-size: 16pt; margin-bottom: 4px; }
             .sub-header { text-align: center; font-size: 9pt; color: #555; margin-bottom: 12px; }
-            .info-table { width: 100%%; border-collapse: collapse; margin-bottom: 12px; }
+            .info-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
             .info-table td { padding: 3px 8px; border: 1px solid #999; }
-            .info-table td.label { background-color: #f0f0f0; font-weight: bold; width: 12%%; }
-            table.ledger { width: 100%%; border-collapse: collapse; margin-bottom: 8px; }
+            .info-table td.label { background-color: #f0f0f0; font-weight: bold; width: 12%; }
+            table.ledger { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
             table.ledger th, table.ledger td { border: 1px solid #333; padding: 3px 6px; }
             table.ledger th { background-color: #d9e2f3; text-align: center; font-weight: bold; font-size: 8pt; }
             table.ledger th.group { background-color: #b4c6e7; font-size: 9pt; }
             table.ledger td { font-size: 8pt; }
             .right { text-align: right; } .center { text-align: center; }
             .total-row td { font-weight: bold; background-color: #f5f5f5; border-top: 2px solid #000; }
-            .summary { margin-top: 16px; } .summary table { width: 50%%; border-collapse: collapse; }
+            .summary { margin-top: 16px; } .summary table { width: 50%; border-collapse: collapse; }
             .summary td { padding: 4px 8px; border: 1px solid #999; }
-            .summary td.label { background-color: #f0f0f0; font-weight: bold; width: 50%%; }
+            .summary td.label { background-color: #f0f0f0; font-weight: bold; width: 50%; }
             .legal { margin-top: 12px; font-size: 7pt; color: #777; }
             .disclaimer { margin-top: 16px; padding: 6px; border: 1px solid #999; font-size: 8pt; color: #555; text-align: center; }
         </style></head><body>
@@ -160,17 +162,17 @@ class SampleExportGenerator {
         </tr></table>
         <table class="ledger"><thead>
             <tr>
-                <th rowspan="2" style="width:8%%">날짜</th>
-                <th rowspan="2" style="width:18%%">거래내용</th>
+                <th rowspan="2" style="width:8%">날짜</th>
+                <th rowspan="2" style="width:18%">거래내용</th>
                 <th class="group" colspan="2">수입(매출)</th>
                 <th class="group" colspan="2">비용(매입/경비)</th>
                 <th class="group" colspan="3">고정자산</th>
-                <th rowspan="2" style="width:8%%">비고</th>
+                <th rowspan="2" style="width:8%">비고</th>
             </tr><tr>
-                <th style="width:8%%">매출액</th><th style="width:7%%">부가세</th>
-                <th style="width:8%%">매입/경비</th><th style="width:7%%">부가세</th>
-                <th style="width:8%%">금액</th><th style="width:7%%">부가세</th>
-                <th style="width:5%%">증감</th>
+                <th style="width:8%">매출액</th><th style="width:7%">부가세</th>
+                <th style="width:8%">매입/경비</th><th style="width:7%">부가세</th>
+                <th style="width:8%">금액</th><th style="width:7%">부가세</th>
+                <th style="width:5%">증감</th>
             </tr></thead><tbody>
             <tr><td class="center">2025-01-05</td><td>웹개발 용역대금</td><td class="right">5,000,000</td><td class="right">500,000</td><td></td><td></td><td></td><td></td><td></td><td>1월 계약분</td></tr>
             <tr><td class="center">2025-01-10</td><td>클라우드 서버비</td><td></td><td></td><td class="right">330,000</td><td class="right">33,000</td><td></td><td></td><td></td><td>월정액</td></tr>
@@ -337,11 +339,11 @@ class SampleExportGenerator {
             h1 { text-align: center; font-size: 16pt; margin-bottom: 4px; }
             h2 { text-align: center; font-size: 13pt; margin-top: 0; margin-bottom: 16px; }
             h3 { font-size: 12pt; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 4px; }
-            table { width: 100%%; border-collapse: collapse; margin-bottom: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
             th, td { border: 1px solid #333; padding: 4px 8px; }
             th { background-color: #e8e8e8; text-align: center; font-weight: bold; }
-            td.label { background-color: #f5f5f5; width: 30%%; font-weight: bold; }
-            td.value { text-align: right; width: 20%%; }
+            td.label { background-color: #f5f5f5; width: 30%; font-weight: bold; }
+            td.value { text-align: right; width: 20%; }
             .center { text-align: center; } .right { text-align: right; }
             .page-break { page-break-before: always; }
             .sub-header { text-align: center; font-size: 9pt; color: #555; margin-bottom: 16px; }
@@ -366,7 +368,7 @@ class SampleExportGenerator {
 
         <h3>소득공제 내역</h3>
         <table>
-            <thead><tr><th style="width:60%%">공제 항목</th><th style="width:40%%">공제 금액</th></tr></thead>
+            <thead><tr><th style="width:60%">공제 항목</th><th style="width:40%">공제 금액</th></tr></thead>
             <tbody>
                 <tr><td>기본공제 (본인)</td><td class="right">1,500,000 원</td></tr>
                 <tr><td class="label">소득공제 합계</td><td class="value">1,500,000 원</td></tr>
@@ -375,7 +377,7 @@ class SampleExportGenerator {
 
         <h3>세액 계산</h3>
         <table>
-            <tr><td class="label">과세표준</td><td class="value">33,500,000 원</td><td class="label">적용세율</td><td class="value">24%%</td></tr>
+            <tr><td class="label">과세표준</td><td class="value">33,500,000 원</td><td class="label">적용세율</td><td class="value">24%</td></tr>
             <tr><td class="label">산출세액</td><td class="value">4,780,000 원</td><td class="label">결정세액</td><td class="value">4,580,000 원</td></tr>
             <tr><td class="label">기납부세액</td><td class="value">2,400,000 원</td><td class="label">납부할 국세</td><td class="value">2,180,000 원</td></tr>
             <tr><td class="label">지방소득세</td><td class="value">458,000 원</td><td class="label">총 납부세액</td><td class="value">2,638,000 원</td></tr>
@@ -388,7 +390,7 @@ class SampleExportGenerator {
         <h1>필요경비명세서</h1>
         <p class="sub-header">홍길동 | 2025년 귀속</p>
         <table>
-            <thead><tr><th style="width:10%%">번호</th><th style="width:20%%">경비코드</th><th style="width:40%%">경비항목</th><th style="width:30%%">금액</th></tr></thead>
+            <thead><tr><th style="width:10%">번호</th><th style="width:20%">경비코드</th><th style="width:40%">경비항목</th><th style="width:30%">금액</th></tr></thead>
             <tbody>
                 <tr><td class="center">1</td><td class="center">WELFARE</td><td>복리후생비</td><td class="right">2,400,000 원</td></tr>
                 <tr><td class="center">2</td><td class="center">TRAVEL</td><td>여비교통비</td><td class="right">1,200,000 원</td></tr>
@@ -409,14 +411,14 @@ class SampleExportGenerator {
         <h1>간편장부소득금액계산서</h1>
         <p class="sub-header">홍길동 | 2025년 귀속</p>
         <table>
-            <thead><tr><th style="width:60%%">항목</th><th style="width:40%%">금액</th></tr></thead>
+            <thead><tr><th style="width:60%">항목</th><th style="width:40%">금액</th></tr></thead>
             <tbody>
                 <tr><td class="label">1. 총수입금액</td><td class="value">80,000,000 원</td></tr>
                 <tr><td class="label">2. 필요경비 합계</td><td class="value">45,000,000 원</td></tr>
                 <tr><td class="label">3. 소득금액 (1 - 2)</td><td class="value">35,000,000 원</td></tr>
                 <tr><td class="label">4. 소득공제 합계</td><td class="value">1,500,000 원</td></tr>
                 <tr><td class="label">5. 과세표준 (3 - 4)</td><td class="value">33,500,000 원</td></tr>
-                <tr><td class="label">6. 적용세율</td><td class="value">24%%</td></tr>
+                <tr><td class="label">6. 적용세율</td><td class="value">24%</td></tr>
                 <tr><td class="label">7. 산출세액</td><td class="value">4,780,000 원</td></tr>
                 <tr><td class="label">8. 결정세액</td><td class="value">4,580,000 원</td></tr>
                 <tr><td class="label">9. 기납부세액</td><td class="value">2,400,000 원</td></tr>
@@ -445,10 +447,10 @@ class SampleExportGenerator {
             body { font-family: 'NanumGothic', sans-serif; font-size: 10pt; line-height: 1.4; color: #000; }
             h1 { text-align: center; font-size: 18pt; margin-bottom: 4px; }
             h3 { font-size: 12pt; margin-top: 20px; margin-bottom: 8px; border-bottom: 1px solid #000; padding-bottom: 4px; }
-            table { width: 100%%; border-collapse: collapse; margin-bottom: 12px; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
             th, td { border: 1px solid #333; padding: 6px 10px; }
             th { background-color: #e8e8e8; text-align: center; font-weight: bold; }
-            td.label { background-color: #f5f5f5; width: 35%%; font-weight: bold; }
+            td.label { background-color: #f5f5f5; width: 35%; font-weight: bold; }
             td.value { text-align: right; }
             .center { text-align: center; } .right { text-align: right; }
             .sub-header { text-align: center; font-size: 9pt; color: #555; margin-bottom: 20px; }
@@ -471,8 +473,8 @@ class SampleExportGenerator {
         <h3>납부 내역</h3>
         <table>
             <thead><tr>
-                <th style="width:20%%">구분</th><th style="width:25%%">납부금액</th>
-                <th style="width:20%%">납부상태</th><th style="width:35%%">납부일시</th>
+                <th style="width:20%">구분</th><th style="width:25%">납부금액</th>
+                <th style="width:20%">납부상태</th><th style="width:35%">납부일시</th>
             </tr></thead>
             <tbody>
                 <tr><td class="center">국세</td><td class="right">2,180,000 원</td><td class="center">COMPLETED</td><td class="center">2026-05-20 10:15</td></tr>
