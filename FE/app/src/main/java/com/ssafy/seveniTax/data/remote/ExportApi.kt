@@ -22,4 +22,9 @@ interface ExportApi {
     suspend fun exportIncomeTax(
         @Query("year") year: Int? = null
     ): Response<ResponseBody>
+
+    @GET("export/local-tax")
+    suspend fun exportLocalTax(
+        @Query("year") year: Int? = null
+    ): Response<ResponseBody>
 }

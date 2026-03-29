@@ -366,7 +366,8 @@ fun ExportFormatScreen(
                         when (purpose) {
                             "vat1" -> viewModel.exportVat(year, 1)
                             "vat2" -> viewModel.exportVat(year, 2)
-                            "income", "local" -> viewModel.exportIncomeTax(year)
+                            "income" -> viewModel.exportIncomeTax(year)
+                            "local" -> viewModel.exportLocalTax(year)
                             else -> viewModel.exportBookEntries(year)
                         }
                     }

@@ -56,6 +56,13 @@ class ExportViewModel @Inject constructor(
         )
     }
 
+    fun exportLocalTax(year: Int?) {
+        exportFile(
+            filePrefix = "local_tax_${year ?: "all"}",
+            request = { taxRepository.exportLocalTax(year) }
+        )
+    }
+
     fun clearState() {
         _uiState.value = ExportUiState()
     }
