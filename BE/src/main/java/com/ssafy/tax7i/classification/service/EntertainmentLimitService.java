@@ -11,9 +11,9 @@ import org.springframework.cache.annotation.Cacheable;
 import java.time.LocalDate;
 
 /**
- * 접대비 연간 누적 한도 조회 서비스
- * 기본 한도: 1,200만원 (소득세법§35)
- * 추가 한도: 수입금액 × 0.3% (간편장부 대상자 기준)
+ * 접대비 연간 누적 사용액 조회 서비스
+ * 한도 계산: 1,200만원 + 총수입금액 × 0.2% (소득세법§35, 시행령§79)
+ * ※ 한도 계산 자체는 TaxParameterService.getEntertainmentLimit(year, totalRevenue)에서 수행
  */
 @Slf4j
 @Service

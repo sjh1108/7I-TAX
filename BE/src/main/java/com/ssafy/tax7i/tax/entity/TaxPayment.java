@@ -74,10 +74,20 @@ public class TaxPayment extends BaseTimeEntity {
     }
 
     public void markProcessing() {
+        if (this.status != TaxPaymentStatus.PENDING) {
+            throw new com.ssafy.tax7i.global.exception.BusinessException(
+                    com.ssafy.tax7i.global.exception.ErrorCode.TAX_ALREADY_PAID,
+                    "결제 상태가 PENDING이 아닙니다: " + this.status);
+        }
         this.status = TaxPaymentStatus.PROCESSING;
     }
 
     public void complete(String transferId, String fromAccount) {
+        if (this.status != TaxPaymentStatus.PROCESSING) {
+            throw new com.ssafy.tax7i.global.exception.BusinessException(
+                    com.ssafy.tax7i.global.exception.ErrorCode.TAX_ALREADY_PAID,
+                    "결제 상태가 PROCESSING이 아닙니다: " + this.status);
+        }
         this.status = TaxPaymentStatus.COMPLETED;
         this.transferId = transferId;
         this.fromAccount = fromAccount;
@@ -85,6 +95,9 @@ public class TaxPayment extends BaseTimeEntity {
     }
 
     public void fail(String errorMessage) {
+        if (this.status != TaxPaymentStatus.PROCESSING) {
+            return; // PROCESSING이 아니면 무시 (이미 처리됨)
+        }
         this.status = TaxPaymentStatus.FAILED;
         this.errorMessage = errorMessage;
     }

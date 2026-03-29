@@ -43,6 +43,8 @@ class TransferServiceTest {
     @Mock private UserRepository userRepository;
     @Mock private CardRepository cardRepository;
     @Mock private SsafyFinanceClient ssafyFinanceClient;
+    @Mock private TransferFailureSaveService transferFailureSaveService;
+    @Mock private org.springframework.context.ApplicationEventPublisher eventPublisher;
 
     @InjectMocks
     private TransferService transferService;

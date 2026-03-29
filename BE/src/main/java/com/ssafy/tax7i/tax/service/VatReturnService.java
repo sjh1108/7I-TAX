@@ -38,6 +38,11 @@ public class VatReturnService {
         int taxYear = request.taxYear();
         int taxPeriod = request.taxPeriod();
 
+        if (taxPeriod != 1 && taxPeriod != 2) {
+            throw new BusinessException(ErrorCode.INVALID_ARGUMENT,
+                    "과세기간은 1(1기) 또는 2(2기)만 가능합니다.");
+        }
+
         // Check if VatReturn already exists for this user+year+period (non-DRAFT)
         Optional<VatReturn> existing = vatReturnRepository
                 .findByUserIdAndTaxYearAndTaxPeriod(userId, taxYear, taxPeriod);

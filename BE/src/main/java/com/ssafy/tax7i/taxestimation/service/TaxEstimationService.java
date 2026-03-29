@@ -5,7 +5,6 @@ import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.tax.entity.TaxBracket;
 import com.ssafy.tax7i.tax.service.TaxCalculationEngine;
 import com.ssafy.tax7i.tax.service.TaxParameterService;
-import com.ssafy.tax7i.taxcalendar.entity.TaxDeadline;
 import com.ssafy.tax7i.taxcalendar.repository.TaxDeadlineRepository;
 import com.ssafy.tax7i.taxestimation.dto.MonthlyTaxEstimationResponse;
 import com.ssafy.tax7i.taxestimation.dto.TaxEstimationResponse;
@@ -44,11 +43,19 @@ public class TaxEstimationService {
         long purchaseVat = purchaseVatRaw != null ? purchaseVatRaw : 0L;
         long estimatedVat = Math.max(0, salesVat - purchaseVat);
 
+        // 소득세법 §33·§35·§33의2: 세목별 한도 초과 경비 조정
+        long expenseAdjustment = taxCalculationEngine.computeExpenseAdjustment(userId, year, totalIncome);
+        long adjustedExpenses = Math.max(0, deductibleExpenses - expenseAdjustment);
+
         // 종합소득세: 과세표준 = 수입 - 필요경비
-        long taxableIncome = Math.max(0, totalIncome - deductibleExpenses);
+        long taxableIncome = Math.max(0, totalIncome - adjustedExpenses);
         List<TaxBracket> brackets = taxCalculationEngine.loadBrackets(year);
-        long incomeTax = taxCalculationEngine.calculateIncomeTaxFromBrackets(taxableIncome, brackets);
+        long calculatedTax = taxCalculationEngine.calculateIncomeTaxFromBrackets(taxableIncome, brackets);
         String bracket = taxCalculationEngine.findBracketLabel(taxableIncome, brackets);
+
+        // 세액감면/공제 적용 (조특법 §7, 소득세법 §56조의2)
+        long totalCredits = computeEstimationCredits(userId, year, calculatedTax);
+        long incomeTax = Math.max(0, calculatedTax - totalCredits);
 
         // 지방소득세: 종합소득세의 지방세율 (DB)
         double localTaxRate = taxParameterService.getLocalTaxRate(year);
@@ -84,6 +91,12 @@ public class TaxEstimationService {
      * - 지방세: 종소세 결정세액 × 지방세율 (지방세법 §92, §95)
      */
     public MonthlyTaxEstimationResponse estimateMonthly(Long userId, int year, int month) {
+        if (month < 1 || month > 12) {
+            throw new com.ssafy.tax7i.global.exception.BusinessException(
+                    com.ssafy.tax7i.global.exception.ErrorCode.INVALID_ARGUMENT,
+                    "월은 1~12 범위여야 합니다: " + month);
+        }
+
         // 부가세: 해당 과세기간 누적 (1기: 1~6월, 2기: 7~12월)
         boolean isFirstHalf = month <= 6;
         LocalDate vatStart = isFirstHalf ? LocalDate.of(year, 1, 1) : LocalDate.of(year, 7, 1);
@@ -108,12 +121,20 @@ public class TaxEstimationService {
         long currentIncome = monthlyAgg.totalIncome();
         long currentBusinessExpense = monthlyAgg.businessExpense();
 
+        // 소득세법 §33·§35·§33의2: 세목별 한도 초과 경비 조정
+        long monthlyAdjustment = taxCalculationEngine.computeExpenseAdjustment(userId, year, currentIncome);
+        currentBusinessExpense = Math.max(0, currentBusinessExpense - monthlyAdjustment);
+
         // 연환산 = 현재 누적 × (12 / 경과월수)
         long projectedIncome = month > 0 ? currentIncome * 12 / month : 0;
         long projectedBusinessExpense = month > 0 ? currentBusinessExpense * 12 / month : 0;
         long projectedTaxable = Math.max(0, projectedIncome - projectedBusinessExpense);
         List<TaxBracket> brackets = taxCalculationEngine.loadBrackets(year);
-        long incomeTax = taxCalculationEngine.calculateIncomeTaxFromBrackets(projectedTaxable, brackets);
+        long projectedCalculatedTax = taxCalculationEngine.calculateIncomeTaxFromBrackets(projectedTaxable, brackets);
+
+        // 세액감면/공제 적용
+        long monthlyCredits = computeEstimationCredits(userId, year, projectedCalculatedTax);
+        long incomeTax = Math.max(0, projectedCalculatedTax - monthlyCredits);
         String incomeTaxDueDate = resolveIncomeTaxDueDate(year);
 
         // businessExpense → DTO의 currentExpense / projectedAnnualExpense 필드에 매핑
@@ -204,5 +225,11 @@ public class TaxEstimationService {
                     .map(d -> nextYear + "-" + String.format("%02d-%02d", d.getDeadlineMonth(), d.getDeadlineDay()))
                     .orElse(nextYear + "-01-25");
         }
+    }
+
+    /** 세액감면/공제 합산 — 중소기업 특별세액감면(조특법 §7) + 기장세액공제(소득세법 §56조의2) */
+    private long computeEstimationCredits(Long userId, int year, long calculatedTax) {
+        return taxCalculationEngine.computeTaxCredits(userId, year, calculatedTax)
+                .values().stream().mapToLong(Long::longValue).sum();
     }
 }

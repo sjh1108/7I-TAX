@@ -8,6 +8,7 @@ public record TaxCalculationResult(
         long taxableIncome,
         double taxRate,
         long calculatedTax,
+        long totalTaxCredits,
         long determinedTax,
         long prepaidTax,
         long finalTax,

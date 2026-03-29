@@ -45,35 +45,68 @@ public class TaxParameterDataInitializer implements CommandLineRunner {
                         .year(2025).category("BASIC_DEDUCTION").paramKey("personal").paramValue("1500000")
                         .description("기본공제 본인").legalBasis("소득세법 §50").build(),
 
-                // 노란우산공제 (소기업소상공인공제부금법)
+                // 노란우산공제 (소기업소상공인공제부금법) — 사업소득금액 기준 3단계
                 TaxParameter.builder()
                         .year(2025).category("NORAN_DEDUCTION").paramKey("threshold").paramValue("40000000")
-                        .description("노란우산공제 소득분기점").legalBasis("소기업소상공인공제부금법").build(),
+                        .description("노란우산공제 소득분기점 (4천만원)").legalBasis("소기업소상공인공제부금법").build(),
+                TaxParameter.builder()
+                        .year(2025).category("NORAN_DEDUCTION").paramKey("threshold_high").paramValue("100000000")
+                        .description("노란우산공제 소득분기점 (1억원)").legalBasis("소기업소상공인공제부금법").build(),
                 TaxParameter.builder()
                         .year(2025).category("NORAN_DEDUCTION").paramKey("limit_low").paramValue("5000000")
-                        .description("소득 이하 공제한도").legalBasis("소기업소상공인공제부금법").build(),
+                        .description("사업소득 4천만 이하 공제한도").legalBasis("소기업소상공인공제부금법").build(),
                 TaxParameter.builder()
                         .year(2025).category("NORAN_DEDUCTION").paramKey("limit_high").paramValue("3000000")
-                        .description("소득 초과 공제한도").legalBasis("소기업소상공인공제부금법").build(),
-
-                // 연금저축 세액공제 (소득세법 §50)
+                        .description("사업소득 4천만~1억 공제한도").legalBasis("소기업소상공인공제부금법").build(),
                 TaxParameter.builder()
-                        .year(2025).category("PENSION_CREDIT").paramKey("threshold").paramValue("55000000")
-                        .description("연금저축 소득분기점").legalBasis("소득세법 §50").build(),
+                        .year(2025).category("NORAN_DEDUCTION").paramKey("limit_top").paramValue("2000000")
+                        .description("사업소득 1억 초과 공제한도").legalBasis("소기업소상공인공제부금법").build(),
+
+                // 연금저축 세액공제 (소득세법 §59조의3)
+                TaxParameter.builder()
+                        .year(2025).category("PENSION_CREDIT").paramKey("threshold").paramValue("45000000")
+                        .description("연금저축 소득분기점 (종합소득금액 기준, 사업소득자)").legalBasis("소득세법 §59조의3").build(),
                 TaxParameter.builder()
                         .year(2025).category("PENSION_CREDIT").paramKey("rate_low").paramValue("0.15")
-                        .description("소득 이하 세액공제율").legalBasis("소득세법 §50").build(),
+                        .description("소득 이하 세액공제율").legalBasis("소득세법 §59조의3").build(),
                 TaxParameter.builder()
-                        .year(2025).category("PENSION_CREDIT").paramKey("rate_high").paramValue("0.132")
-                        .description("소득 초과 세액공제율").legalBasis("소득세법 §50").build(),
+                        .year(2025).category("PENSION_CREDIT").paramKey("rate_high").paramValue("0.12")
+                        .description("소득 초과 세액공제율").legalBasis("소득세법 §59조의3").build(),
                 TaxParameter.builder()
                         .year(2025).category("PENSION_CREDIT").paramKey("limit").paramValue("6000000")
-                        .description("연금저축 연간 한도").legalBasis("소득세법 §50").build(),
+                        .description("연금저축 연간 한도").legalBasis("소득세법 §59조의3").build(),
+
+                // 중소기업 특별세액감면 (조특법 §7)
+                TaxParameter.builder()
+                        .year(2025).category("SME_REDUCTION").paramKey("rate").paramValue("0.30")
+                        .description("소기업 세액감면율 (지식기반산업)").legalBasis("조특법 §7②").build(),
+                TaxParameter.builder()
+                        .year(2025).category("SME_REDUCTION").paramKey("eligible_codes").paramValue("72,62,63,58")
+                        .description("감면대상 업종코드 앞2자리 (SW,IT,정보통신,출판)").legalBasis("조특법 §7①").build(),
+
+                // 기장세액공제 (소득세법 §56조의2)
+                TaxParameter.builder()
+                        .year(2025).category("BOOKKEEPING_CREDIT").paramKey("rate").paramValue("0.20")
+                        .description("간편장부 기장 세액공제율 (산출세액의 20%)").legalBasis("소득세법 §56조의2").build(),
+                TaxParameter.builder()
+                        .year(2025).category("BOOKKEEPING_CREDIT").paramKey("limit").paramValue("1000000")
+                        .description("기장세액공제 한도 (연 100만원)").legalBasis("소득세법 §56조의2").build(),
 
                 // 접대비 (소득세법 §35)
                 TaxParameter.builder()
-                        .year(2025).category("ENTERTAINMENT").paramKey("annual_limit").paramValue("12000000")
-                        .description("접대비 연간 기본한도").legalBasis("소득세법 §35").build(),
+                        .year(2025).category("ENTERTAINMENT").paramKey("annual_limit").paramValue("24000000")
+                        .description("접대비 연간 기본한도").legalBasis("소득세법 §35, 시행령 §78").build(),
+                TaxParameter.builder()
+                        .year(2025).category("ENTERTAINMENT").paramKey("revenue_rate").paramValue("0.002")
+                        .description("접대비 수입금액 비례 추가한도율 (수입×0.2%)").legalBasis("소득세법 시행령 §79").build(),
+
+                // 차량유지비 (소득세법 §33의2)
+                TaxParameter.builder()
+                        .year(2025).category("VEHICLE").paramKey("annual_limit").paramValue("15000000")
+                        .description("차량유지비 연간 한도").legalBasis("소득세법 §33의2").build(),
+                TaxParameter.builder()
+                        .year(2025).category("VEHICLE").paramKey("no_insurance_ratio").paramValue("0.5")
+                        .description("업무전용보험 미가입 시 업무사용비율 강제").legalBasis("소득세법 시행령 §78의3").build(),
 
                 // 교육훈련비 (소득세법 §19)
                 TaxParameter.builder()

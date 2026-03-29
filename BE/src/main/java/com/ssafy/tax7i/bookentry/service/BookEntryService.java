@@ -199,7 +199,10 @@ public class BookEntryService {
                 .fixedAssetAmount(0L)
                 .vatAmount(vatAmount)
                 .supplyPrice(supplyPrice)
+                .categoryCode(com.ssafy.tax7i.classification.entity.TaxCategory.SALES.getCode())
+                .categoryName(com.ssafy.tax7i.classification.entity.TaxCategory.SALES.getName())
                 .isVatDeductible(false)
+                .confidenceScore(100)
                 .note(request.note())
                 .build();
 

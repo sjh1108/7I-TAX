@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -70,6 +71,9 @@ public class VatReturn extends BaseTimeEntity {
 
     private LocalDateTime submittedAt;
 
+    @Version
+    private Long version;
+
     @Builder
     public VatReturn(Long userId, int taxYear, int taxPeriod, TaxReturnStatus status,
                      String receiptNumber,
@@ -91,8 +95,9 @@ public class VatReturn extends BaseTimeEntity {
 
     public void transitionTo(TaxReturnStatus next) {
         if (!this.status.canTransitionTo(next)) {
-            throw new IllegalStateException(
-                    "Cannot transition from " + this.status + " to " + next);
+            throw new com.ssafy.tax7i.global.exception.BusinessException(
+                    com.ssafy.tax7i.global.exception.ErrorCode.TAX_INVALID_TRANSITION,
+                    this.status + " → " + next + " 전이가 불가합니다.");
         }
         this.status = next;
         if (next == TaxReturnStatus.SUBMITTED) {

@@ -1,7 +1,9 @@
 package com.ssafy.tax7i.tax.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ssafy.tax7i.auth.domain.BusinessProfile;
 import com.ssafy.tax7i.auth.domain.User;
+import com.ssafy.tax7i.auth.repository.BusinessProfileRepository;
 import com.ssafy.tax7i.auth.repository.UserRepository;
 import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
@@ -33,6 +35,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,7 +53,9 @@ public class TaxReturnService {
     private final ExpenseDetailRepository expenseDetailRepository;
     private final BookEntryRepository bookEntryRepository;
     private final TaxCalculationEngine taxCalculationEngine;
+    private final TaxParameterService taxParameterService;
     private final UserRepository userRepository;
+    private final BusinessProfileRepository businessProfileRepository;
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, String> redisTemplate;
     private final TaxOfficeProperties taxOfficeProperties;
@@ -86,21 +91,30 @@ public class TaxReturnService {
         LocalDate end = LocalDate.of(taxYear, 12, 31);
         AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
         long totalRevenue = agg.totalIncome();
-        long totalExpense = agg.totalExpense();
+        long totalExpense = agg.businessExpense();
+
+        // 소득세법 §33·§35·§33의2: 세목별 한도 초과 경비 조정
+        long expenseAdjustment = taxCalculationEngine.computeExpenseAdjustment(userId, taxYear, totalRevenue);
+        long adjustedExpense = Math.max(0, totalExpense - expenseAdjustment);
 
         // Prepaid tax and deductions
         long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;
         Map<String, Long> deductions = request.deductions() != null
-                ? request.deductions()
-                : Collections.emptyMap();
-
-        // Calculate tax
-        TaxCalculationResult result = taxCalculationEngine.calculate(
-                taxYear, totalRevenue, totalExpense, prepaidTax, deductions);
+                ? new HashMap<>(request.deductions())
+                : new HashMap<>();
+        // 기본공제 본인 (소득세법 §50) — 모든 거주자에게 무조건 적용
+        deductions.putIfAbsent("기본공제_본인", taxParameterService.getBasicDeduction(taxYear));
 
         // Get user info
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
+        // 세액공제/감면 자동 산출 (조특법 §7, 소득세법 §56조의2)
+        Map<String, Long> taxCredits = computeTaxCredits(userId, taxYear, totalRevenue, adjustedExpense, deductions);
+
+        // Calculate tax (소득공제 + 세액공제 분리 적용)
+        TaxCalculationResult result = taxCalculationEngine.calculate(
+                taxYear, totalRevenue, adjustedExpense, prepaidTax, deductions, taxCredits);
 
         // Serialize deductions to JSON
         String deductionsJson = serializeDeductions(deductions);
@@ -180,17 +194,26 @@ public class TaxReturnService {
         LocalDate end = LocalDate.of(taxYear, 12, 31);
         AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
         long totalRevenue = agg.totalIncome();
-        long totalExpense = agg.totalExpense();
+        long totalExpense = agg.businessExpense();
+
+        // 소득세법 §33·§35·§33의2: 세목별 한도 초과 경비 조정
+        long expenseAdjustment = taxCalculationEngine.computeExpenseAdjustment(userId, taxYear, totalRevenue);
+        long adjustedExpense = Math.max(0, totalExpense - expenseAdjustment);
 
         // Updated prepaid tax and deductions
         long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;
         Map<String, Long> deductions = request.deductions() != null
-                ? request.deductions()
-                : Collections.emptyMap();
+                ? new HashMap<>(request.deductions())
+                : new HashMap<>();
+        // 기본공제 본인 (소득세법 §50) — 모든 거주자에게 무조건 적용
+        deductions.putIfAbsent("기본공제_본인", taxParameterService.getBasicDeduction(taxYear));
 
-        // Recalculate tax
+        // 세액공제/감면 자동 산출
+        Map<String, Long> taxCredits = computeTaxCredits(userId, taxYear, totalRevenue, adjustedExpense, deductions);
+
+        // Recalculate tax (소득공제 + 세액공제 분리 적용)
         TaxCalculationResult result = taxCalculationEngine.calculate(
-                taxYear, totalRevenue, totalExpense, prepaidTax, deductions);
+                taxYear, totalRevenue, adjustedExpense, prepaidTax, deductions, taxCredits);
 
         String deductionsJson = serializeDeductions(deductions);
 
@@ -316,6 +339,21 @@ public class TaxReturnService {
                 .toList();
 
         return expenseDetailRepository.saveAll(details);
+    }
+
+    /**
+     * 세액공제/감면 자동 산출 (조특법 §7, 소득세법 §56조의2)
+     *
+     * 국세청 적용 순서:
+     *   산출세액 → (-) 중소기업특별세액감면 → (-) 기장세액공제 → 결정세액
+     */
+    private Map<String, Long> computeTaxCredits(Long userId, int taxYear,
+                                                 long totalRevenue, long totalExpense,
+                                                 Map<String, Long> deductions) {
+        // 산출세액 먼저 계산 (세액공제 없이)
+        TaxCalculationResult base = taxCalculationEngine.calculate(
+                taxYear, totalRevenue, totalExpense, 0, deductions);
+        return taxCalculationEngine.computeTaxCredits(userId, taxYear, base.calculatedTax());
     }
 
     private String serializeDeductions(Map<String, Long> deductions) {

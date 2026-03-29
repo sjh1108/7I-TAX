@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.taxestimation;
 
+import com.ssafy.tax7i.auth.repository.BusinessProfileRepository;
 import com.ssafy.tax7i.bookentry.entity.BookEntry;
 import com.ssafy.tax7i.bookentry.entity.EntryType;
 import com.ssafy.tax7i.bookentry.repository.AggregateResult;
@@ -19,7 +20,9 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDate;
+import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,6 +32,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.lenient;
 
 @ExtendWith(MockitoExtension.class)
 class TaxEstimationServiceTest {
@@ -44,6 +48,9 @@ class TaxEstimationServiceTest {
 
     @Mock
     private TaxDeadlineRepository taxDeadlineRepository;
+
+    @Mock
+    private BusinessProfileRepository businessProfileRepository;
 
     @InjectMocks
     private TaxEstimationService taxEstimationService;
@@ -62,7 +69,7 @@ class TaxEstimationServiceTest {
     @Test
     @DisplayName("종합소득세 계산: 과세표준 1000만원 → 세율 6%, 60만원")
     void incomeTax6Percent() {
-        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null);
+        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null, null);
         long tax = engine.calculateIncomeTaxFromBrackets(10_000_000L, BRACKETS_2025);
         // 10,000,000 * 6% - 0 = 600,000
         assertThat(tax).isEqualTo(600_000L);
@@ -71,7 +78,7 @@ class TaxEstimationServiceTest {
     @Test
     @DisplayName("종합소득세 계산: 과세표준 3000만원 → 세율 15%")
     void incomeTax15Percent() {
-        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null);
+        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null, null);
         long tax = engine.calculateIncomeTaxFromBrackets(30_000_000L, BRACKETS_2025);
         // 30,000,000 * 15% - 1,260,000 = 3,240,000
         assertThat(tax).isEqualTo(3_240_000L);
@@ -80,7 +87,7 @@ class TaxEstimationServiceTest {
     @Test
     @DisplayName("종합소득세 계산: 과세표준 7000만원 → 세율 24%")
     void incomeTax24Percent() {
-        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null);
+        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null, null);
         long tax = engine.calculateIncomeTaxFromBrackets(70_000_000L, BRACKETS_2025);
         // 70,000,000 * 24% - 5,760,000 = 11,040,000
         assertThat(tax).isEqualTo(11_040_000L);
@@ -89,7 +96,7 @@ class TaxEstimationServiceTest {
     @Test
     @DisplayName("종합소득세 계산: 과세표준 0 → 세금 0")
     void incomeTaxZero() {
-        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null);
+        TaxCalculationEngine engine = new TaxCalculationEngine(null, null, null, null);
         assertThat(engine.calculateIncomeTaxFromBrackets(0L, BRACKETS_2025)).isEqualTo(0L);
         assertThat(engine.calculateIncomeTaxFromBrackets(-100L, BRACKETS_2025)).isEqualTo(0L);
     }
@@ -109,16 +116,23 @@ class TaxEstimationServiceTest {
         given(taxCalculationEngine.calculateIncomeTaxFromBrackets(eq(50_000_000L), any())).willReturn(6_240_000L);
         given(taxCalculationEngine.findBracketLabel(eq(30_000_000L), any())).willReturn("15%");
         given(taxParameterService.getLocalTaxRate(anyInt())).willReturn(0.10);
+        // 기장세액공제 648,000 = min(3,240,000 * 0.20, 1,000,000)
+        given(taxCalculationEngine.computeTaxCredits(eq(userId), anyInt(), eq(3_240_000L)))
+                .willReturn(Map.of("기장세액공제", 648_000L));
+        lenient().when(taxCalculationEngine.computeTaxCredits(eq(userId), anyInt(), eq(6_240_000L)))
+                .thenReturn(Map.of("기장세액공제", 1_000_000L));
         given(taxDeadlineRepository.findByYearAndName(anyInt(), anyString())).willReturn(Optional.empty());
 
         TaxEstimationResponse result = taxEstimationService.estimate(userId, 2026);
 
+        // 산출세액 3,240,000 - 기장세액공제 648,000 = 2,592,000
+        long expectedIncomeTax = 3_240_000L - 648_000L;
         assertThat(result.totalIncome()).isEqualTo(50_000_000L);
         assertThat(result.totalExpense()).isEqualTo(20_000_000L);
         assertThat(result.taxableIncome()).isEqualTo(30_000_000L);
-        assertThat(result.estimatedIncomeTax()).isEqualTo(3_240_000L);
+        assertThat(result.estimatedIncomeTax()).isEqualTo(expectedIncomeTax);
         assertThat(result.incomeTaxBracket()).isEqualTo("15%");
-        assertThat(result.estimatedLocalTax()).isEqualTo(324_000L);
+        assertThat(result.estimatedLocalTax()).isEqualTo((long) Math.floor(expectedIncomeTax * 0.10));
         assertThat(result.estimatedVat()).isEqualTo(4_545_455L - 1_818_182L);
         assertThat(result.taxSavingFromExpenses()).isGreaterThan(0);
     }
@@ -161,6 +175,9 @@ class TaxEstimationServiceTest {
         long expectedTax = (long) Math.floor(36_000_000L * 0.15 - 1_260_000L); // 4,140,000
         given(taxCalculationEngine.calculateIncomeTaxFromBrackets(eq(36_000_000L), any())).willReturn(expectedTax);
         given(taxParameterService.getLocalTaxRate(anyInt())).willReturn(0.10);
+        // 기장세액공제: min(4,140,000 * 0.20, 1,000,000) = 828,000
+        given(taxCalculationEngine.computeTaxCredits(eq(userId), anyInt(), eq(expectedTax)))
+                .willReturn(Map.of("기장세액공제", Math.min((long)(expectedTax * 0.20), 1_000_000L)));
         given(taxDeadlineRepository.findByYearAndName(anyInt(), anyString())).willReturn(Optional.empty());
 
         MonthlyTaxEstimationResponse result = taxEstimationService.estimateMonthly(userId, 2026, 3);

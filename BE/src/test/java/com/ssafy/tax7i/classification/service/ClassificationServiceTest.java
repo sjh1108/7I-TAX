@@ -34,6 +34,7 @@ class ClassificationServiceTest {
     @Mock private TaxLimitRepository taxLimitRepository;
     @Mock private AiClassificationService aiClassificationService;
     @Mock private TaxParameterService taxParameterService;
+    @Mock private com.ssafy.tax7i.bookentry.repository.BookEntryRepository bookEntryRepository;
 
     @InjectMocks
     private TaxClassificationService taxClassificationService;
