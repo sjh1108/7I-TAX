@@ -181,10 +181,10 @@ fun HomeScreen(
                         }
                     }
 
-                    // ❹ 한눈에 보기
+                    // ❹ 한눈에 보기 (수입/비용 + 예상 세금 바)
                     SummaryCard(totalIncome, totalExpense, nearest, fmt, navController)
 
-                    // ❺ 신고 일정
+                    // ❺ 다가오는 신고 일정 (가까운 2개)
                     SectionCard("다가오는 신고 일정", "전체 보기", { navController.navigate(Route.TaxCalendar.path) }) {
                         upcoming.forEachIndexed { i, dl ->
                             val date = try { val d = java.time.LocalDate.parse(dl.deadline); "${d.monthValue}월 ${d.dayOfMonth}일" } catch (_: Exception) { dl.deadline }
@@ -211,6 +211,58 @@ fun HomeScreen(
                         InsightItem("신고 전 검토 추천", "미분류 경비를 먼저 처리하면 신고 누락 위험을 줄일 수 있어요.")
                     }
                 }
+            }
+        }
+    }
+}
+
+// ── 한눈에 보기 (수입/비용 + 예상 세금 바) ──
+@Composable
+private fun SummaryCard(income: Long, expense: Long, nearest: com.ssafy.seveniTax.data.model.tax.TaxDeadline?, fmt: java.text.NumberFormat, navController: NavController) {
+    SectionCard("한눈에 보기", "상세", { navController.navigate(Route.TaxReport.path) }) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(Modifier.weight(1f).background(IncomeBg, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                Text("수입", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = IncomeLabel, letterSpacing = 0.3.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("+${fmt.format(income)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            }
+            Column(Modifier.weight(1f).background(ExpenseBg, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                Text("비용", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = ExpenseLabel, letterSpacing = 0.3.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("-${fmt.format(expense)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+            }
+        }
+
+        if (nearest != null) {
+            val taxable = (income - expense).coerceAtLeast(0)
+            val estimatedVat = (income / 10 - expense / 10).coerceAtLeast(0)
+            val estimatedIncome = when {
+                taxable <= 14_000_000 -> (taxable * 0.06).toLong()
+                taxable <= 50_000_000 -> (taxable * 0.15 - 1_260_000).toLong()
+                taxable <= 88_000_000 -> (taxable * 0.24 - 5_760_000).toLong()
+                else -> (taxable * 0.35 - 15_440_000).toLong()
+            }
+            val isVat = nearest.taxName.contains("부가")
+            val estimatedTax = if (isVat) estimatedVat else estimatedIncome
+            val taxLabel = if (isVat) "예상 부가가치세" else "예상 종합소득세"
+
+            Spacer(Modifier.height(12.dp))
+            Row(
+                Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(16.dp)).clickable { navController.navigate(Route.TaxCalendar.path) }.padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(Modifier.weight(1f)) {
+                    Text(taxLabel, fontSize = 12.sp, color = TextSecondary)
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${fmt.format(estimatedTax)}원", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.background(TaxBarAccent.copy(0.15f), RoundedCornerShape(20.dp)).padding(8.dp, 2.dp)) {
+                            Text("D-${nearest.dDay}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TaxBarAccent)
+                        }
+                    }
+                }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color(0xFFCACACA))
             }
         }
     }
@@ -310,66 +362,6 @@ private fun TaxBracketCard(taxableIncome: Long, fmt: java.text.NumberFormat) {
     }
 }
 
-// ── 한눈에 보기 ──
-@Composable
-private fun SummaryCard(income: Long, expense: Long, nearest: com.ssafy.seveniTax.data.model.tax.TaxDeadline?, fmt: java.text.NumberFormat, navController: NavController) {
-    Column(
-        Modifier.fillMaxWidth()
-            .shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x1A3629B7), spotColor = Color(0x1A3629B7))
-            .border(1.dp, Color(0x0D3629B7), RoundedCornerShape(22.dp))
-            .background(Color.White, RoundedCornerShape(22.dp))
-            .padding(20.dp)
-    ) {
-        Text("한눈에 보기", fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Column(Modifier.weight(1f).background(IncomeBg, RoundedCornerShape(16.dp)).padding(14.dp, 14.dp)) {
-                Text("수입", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = IncomeLabel, letterSpacing = 0.3.sp)
-                Spacer(Modifier.height(8.dp))
-                Text("+${fmt.format(income)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            }
-            Column(Modifier.weight(1f).background(ExpenseBg, RoundedCornerShape(16.dp)).padding(14.dp, 14.dp)) {
-                Text("비용", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = ExpenseLabel, letterSpacing = 0.3.sp)
-                Spacer(Modifier.height(8.dp))
-                Text("-${fmt.format(expense)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-            }
-        }
-
-        if (nearest != null) {
-            // 예상 세금 계산
-            val taxable = (income - expense).coerceAtLeast(0)
-            val estimatedVat = (income / 10 - expense / 10).coerceAtLeast(0) // 간이 부가세
-            val estimatedIncome = when { // 종소세
-                taxable <= 14_000_000 -> (taxable * 0.06).toLong()
-                taxable <= 50_000_000 -> (taxable * 0.15 - 1_260_000).toLong()
-                taxable <= 88_000_000 -> (taxable * 0.24 - 5_760_000).toLong()
-                else -> (taxable * 0.35 - 15_440_000).toLong()
-            }
-            val isVat = nearest.taxName.contains("부가")
-            val estimatedTax = if (isVat) estimatedVat else estimatedIncome
-            val taxLabel = if (isVat) "예상 부가가치세" else "예상 종합소득세"
-
-            Spacer(Modifier.height(12.dp))
-            Row(
-                Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(16.dp)).clickable { navController.navigate(Route.TaxCalendar.path) }.padding(16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Text(taxLabel, fontSize = 12.sp, color = TextSecondary)
-                    Spacer(Modifier.height(2.dp))
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("${fmt.format(estimatedTax)}원", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
-                        Spacer(Modifier.width(8.dp))
-                        Box(Modifier.background(TaxBarAccent.copy(0.15f), RoundedCornerShape(20.dp)).padding(8.dp, 2.dp)) {
-                            Text("D-${nearest.dDay}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TaxBarAccent)
-                        }
-                    }
-                }
-                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color(0xFFCACACA))
-            }
-        }
-    }
-}
 
 // ── 섹션 카드 ──
 @Composable
