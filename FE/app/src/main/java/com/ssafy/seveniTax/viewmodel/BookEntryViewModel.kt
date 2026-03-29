@@ -161,7 +161,7 @@ class BookEntryViewModel @Inject constructor(
             _error.value = null
             try {
                 Log.d("BookEntryVM", "▶ loadEntries() 호출")
-                val response = bookEntryRepository.getEntries(confirmed = null, page = 0, size = 50)
+                val response = bookEntryRepository.getEntries(confirmed = null, page = 0, size = 200)
                 val code = response.code()
                 val body = response.body()
                 val errorBody = if (!response.isSuccessful) response.errorBody()?.string() else null
