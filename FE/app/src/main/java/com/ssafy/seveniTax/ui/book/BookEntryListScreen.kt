@@ -525,8 +525,16 @@ private fun TransactionItem(
         "ASSET" -> entry.fixedAssetAmount
         else -> 0L
     }
-    val amountColor = if (entry.entryType == "INCOME") BrandPurple else TextPrimary
-    val amountPrefix = if (entry.entryType == "INCOME") "+" else "-"
+    val amountColor = when (entry.entryType) {
+        "INCOME" -> BrandPurple
+        "ASSET" -> TextSecondary
+        else -> TextPrimary
+    }
+    val amountPrefix = when (entry.entryType) {
+        "INCOME" -> "+"
+        "ASSET" -> "+"
+        else -> "-"
+    }
     val iconBg = if (entry.entryType == "INCOME") Surface else Color(0xFFF5F5F5)
 
     Row(
@@ -579,10 +587,6 @@ private fun TransactionItem(
                 if (entry.categoryName != null) {
                     Text(" · ", fontSize = 12.sp, color = Disabled)
                     Text(entry.categoryName!!, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = LogoPurple)
-                }
-                if (entry.note != null) {
-                    Text(" · ", fontSize = 12.sp, color = Color(0xFF989898))
-                    Text(entry.note!!, fontSize = 12.sp, color = Color(0xFF989898))
                 }
             }
         }

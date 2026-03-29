@@ -191,23 +191,6 @@ private fun DetailContent(entry: BookEntryResponse, navController: NavController
             }
         }
 
-        // 증빙 내역 표시
-        if (!entry.note.isNullOrBlank()) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Surface)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text("증빙 내역", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextSecondary)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(entry.note!!, fontSize = 14.sp, lineHeight = 22.sp, color = TextPrimary)
-                }
-            }
-        }
-
         Spacer(modifier = Modifier.height(16.dp))
 
         // 버튼들
