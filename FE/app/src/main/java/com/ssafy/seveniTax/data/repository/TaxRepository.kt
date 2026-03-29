@@ -14,4 +14,7 @@ interface TaxRepository {
     suspend fun exportVat(year: Int?, half: Int?): Response<ResponseBody>
     suspend fun exportIncomeTax(year: Int?): Response<ResponseBody>
     suspend fun exportLocalTax(year: Int?): Response<ResponseBody>
+    suspend fun exportVatExcel(year: Int?, half: Int?): Response<ResponseBody>
+    suspend fun exportIncomeTaxExcel(year: Int?): Response<ResponseBody>
+    suspend fun exportSimpleLedgerPdf(year: Int?): Response<ResponseBody>
 }

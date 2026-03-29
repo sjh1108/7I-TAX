@@ -63,6 +63,27 @@ class ExportViewModel @Inject constructor(
         )
     }
 
+    fun exportVatExcel(year: Int?, half: Int?) {
+        exportFile(
+            filePrefix = "vat_${year ?: "all"}_${half ?: "all"}",
+            request = { taxRepository.exportVatExcel(year, half) }
+        )
+    }
+
+    fun exportIncomeTaxExcel(year: Int?) {
+        exportFile(
+            filePrefix = "income_tax_${year ?: "all"}",
+            request = { taxRepository.exportIncomeTaxExcel(year) }
+        )
+    }
+
+    fun exportSimpleLedgerPdf(year: Int?) {
+        exportFile(
+            filePrefix = "simple_ledger_${year ?: "all"}",
+            request = { taxRepository.exportSimpleLedgerPdf(year) }
+        )
+    }
+
     fun clearState() {
         _uiState.value = ExportUiState()
     }

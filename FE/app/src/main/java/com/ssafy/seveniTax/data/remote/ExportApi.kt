@@ -27,4 +27,20 @@ interface ExportApi {
     suspend fun exportLocalTax(
         @Query("year") year: Int? = null
     ): Response<ResponseBody>
+
+    @GET("export/vat/excel")
+    suspend fun exportVatExcel(
+        @Query("year") year: Int? = null,
+        @Query("half") half: Int? = null
+    ): Response<ResponseBody>
+
+    @GET("export/income-tax/excel")
+    suspend fun exportIncomeTaxExcel(
+        @Query("year") year: Int? = null
+    ): Response<ResponseBody>
+
+    @GET("export/simple-ledger/pdf")
+    suspend fun exportSimpleLedgerPdf(
+        @Query("year") year: Int? = null
+    ): Response<ResponseBody>
 }

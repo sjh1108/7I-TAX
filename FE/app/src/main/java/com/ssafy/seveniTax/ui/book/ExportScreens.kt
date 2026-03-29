@@ -284,8 +284,8 @@ private data class FormatItem(
 
 private val formats = listOf(
     FormatItem("csv", "CSV", ".csv", "Excel·회계 프로그램에서 바로 열기", "📊"),
-    FormatItem("pdf", "PDF", ".pdf", "준비 중", "📄"),
-    FormatItem("excel", "Excel", ".xlsx", "준비 중", "📊")
+    FormatItem("pdf", "PDF", ".pdf", "간편장부 PDF 다운로드", "📄"),
+    FormatItem("excel", "Excel", ".xlsx", "Excel 파일 다운로드", "📊")
 )
 
 @Composable
@@ -360,15 +360,24 @@ fun ExportFormatScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             formats.forEach { format ->
-                val isAvailable = format.id == "csv"
-                FormatCard(format, enabled = isAvailable) {
-                    if (!uiState.isExporting && isAvailable) {
-                        when (purpose) {
-                            "vat1" -> viewModel.exportVat(year, 1)
-                            "vat2" -> viewModel.exportVat(year, 2)
-                            "income" -> viewModel.exportIncomeTax(year)
-                            "local" -> viewModel.exportLocalTax(year)
-                            else -> viewModel.exportBookEntries(year)
+                FormatCard(format, enabled = true) {
+                    if (!uiState.isExporting) {
+                        when (format.id) {
+                            "csv" -> when (purpose) {
+                                "vat1" -> viewModel.exportVat(year, 1)
+                                "vat2" -> viewModel.exportVat(year, 2)
+                                "income" -> viewModel.exportIncomeTax(year)
+                                "local" -> viewModel.exportLocalTax(year)
+                                else -> viewModel.exportBookEntries(year)
+                            }
+                            "excel" -> when (purpose) {
+                                "vat1" -> viewModel.exportVatExcel(year, 1)
+                                "vat2" -> viewModel.exportVatExcel(year, 2)
+                                "income" -> viewModel.exportIncomeTaxExcel(year)
+                                "local" -> viewModel.exportIncomeTaxExcel(year)
+                                else -> viewModel.exportIncomeTaxExcel(year)
+                            }
+                            "pdf" -> viewModel.exportSimpleLedgerPdf(year)
                         }
                     }
                 }
