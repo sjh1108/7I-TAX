@@ -241,13 +241,12 @@ private fun TaxBracketCard(taxableIncome: Long, fmt: java.text.NumberFormat) {
     val nextBracket = brackets.firstOrNull { taxableIncome < it.limit }
     val progress = (taxableIncome.toFloat() / maxLimit).coerceIn(0f, 1f)
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(2.dp)
+    Column(
+        Modifier.fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = CardShadow, spotColor = CardShadow)
+            .background(Color.White, RoundedCornerShape(22.dp))
+            .padding(20.dp)
     ) {
-        Column(Modifier.padding(16.dp)) {
             // 상단: 과세표준 + 금액
             Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
                 Text("현재 과세표준", fontSize = 13.sp, color = TextSecondary)
@@ -303,12 +302,11 @@ private fun TaxBracketCard(taxableIncome: Long, fmt: java.text.NumberFormat) {
                 }
             }
 
-            // 한도 초과 경고
-            if (taxableIncome >= maxLimit) {
-                Spacer(Modifier.height(12.dp))
-                Box(Modifier.fillMaxWidth().background(Color(0xFFFFF0F3), RoundedCornerShape(8.dp)).padding(12.dp)) {
-                    Text("간편장부 한도를 초과했습니다. 복식부기 전환을 권장합니다.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE8475A))
-                }
+        // 한도 초과 경고
+        if (taxableIncome >= maxLimit) {
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxWidth().background(Color(0xFFFFF0F3), RoundedCornerShape(8.dp)).padding(12.dp)) {
+                Text("간편장부 한도를 초과했습니다. 복식부기 전환을 권장합니다.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE8475A))
             }
         }
     }
