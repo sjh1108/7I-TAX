@@ -63,6 +63,9 @@ fun BottomTabBar(
                 )
             }
         }
+
+        // FAB 자리 확보 (NavGraph에서 오버레이로 표시)
+        Spacer(modifier = Modifier.size(56.dp))
     }
 }
 
