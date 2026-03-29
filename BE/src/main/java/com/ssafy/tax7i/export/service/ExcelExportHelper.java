@@ -3,8 +3,10 @@ package com.ssafy.tax7i.export.service;
 import com.ssafy.tax7i.auth.domain.BusinessProfile;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
+import com.openhtmltopdf.outputdevice.helper.BaseRendererBuilder;
 import com.openhtmltopdf.pdfboxout.PdfRendererBuilder;
 import org.apache.poi.ss.usermodel.*;
+
 import org.springframework.stereotype.Component;
 
 import java.io.ByteArrayOutputStream;
@@ -63,6 +65,8 @@ public class ExcelExportHelper {
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             PdfRendererBuilder builder = new PdfRendererBuilder();
             builder.useFastMode();
+            registerFont(builder, "/fonts/NanumGothic-Regular.ttf", 400);
+            registerFont(builder, "/fonts/NanumGothic-Bold.ttf", 700);
             builder.withHtmlContent(html, "/");
             builder.toStream(os);
             builder.run();
@@ -71,6 +75,16 @@ public class ExcelExportHelper {
             throw new BusinessException(ErrorCode.INTERNAL_SERVER_ERROR,
                     "PDF 생성 실패: " + e.getMessage());
         }
+    }
+
+    private void registerFont(PdfRendererBuilder builder, String resourcePath, int weight) {
+        builder.useFont(() -> {
+            InputStream is = getClass().getResourceAsStream(resourcePath);
+            if (is == null) {
+                throw new RuntimeException("폰트 리소스를 찾을 수 없습니다: " + resourcePath);
+            }
+            return is;
+        }, "NanumGothic", weight, BaseRendererBuilder.FontStyle.NORMAL, true);
     }
 
     public String profileValue(BusinessProfile profile, String field) {
