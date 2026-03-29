@@ -39,11 +39,11 @@ private data class ExportPurposeItem(
 )
 
 private val purposes = listOf(
-    ExportPurposeItem("vat1", "부가가치세 1기", "1월 ~ 6월", "📋"),
-    ExportPurposeItem("vat2", "부가가치세 2기", "7월 ~ 12월", "📋"),
+    ExportPurposeItem("vat1", "부가가치세 1기", "1월 ~ 6월", "📋", enabled = true),
+    ExportPurposeItem("vat2", "부가가치세 2기", "7월 ~ 12월", "📋", enabled = true),
     ExportPurposeItem("income", "종합소득세", "1월 ~ 12월", "📊", enabled = true),
-    ExportPurposeItem("local", "지방소득세", "1월 ~ 12월", "📊"),
-    ExportPurposeItem("custom", "직접 설정", "원하는 기간을 선택합니다", "⚙️")
+    ExportPurposeItem("local", "지방소득세", "1월 ~ 12월", "📊", enabled = true),
+    ExportPurposeItem("custom", "직접 설정", "원하는 기간을 선택합니다", "⚙️", enabled = true)
 )
 
 @Composable
@@ -305,8 +305,8 @@ private data class FormatItem(
 )
 
 private val formats = listOf(
-    FormatItem("pdf", "PDF", ".pdf", "종합소득세 PDF 다운로드", "📄", enabled = true),
-    FormatItem("excel", "Excel", ".xlsx", "Excel 파일 다운로드", "📊")
+    FormatItem("pdf", "PDF", ".pdf", "PDF 다운로드", "📄", enabled = true),
+    FormatItem("excel", "Excel", ".xlsx", "Excel 파일 다운로드", "📊", enabled = true)
 )
 
 @Composable
@@ -383,16 +383,21 @@ fun ExportFormatScreen(
             formats.forEach { format ->
                 FormatCard(format) {
                     if (!uiState.isExporting) {
-                        if (!format.enabled) {
-                            Toast.makeText(context, "준비중입니다", Toast.LENGTH_SHORT).show()
-                            return@FormatCard
-                        }
                         when (format.id) {
                             "pdf" -> when (purpose) {
+                                "vat1" -> viewModel.exportVatPdf(year, 1)
+                                "vat2" -> viewModel.exportVatPdf(year, 2)
                                 "income" -> viewModel.exportIncomeTaxPdf(year)
-                                else -> Toast.makeText(context, "준비중입니다", Toast.LENGTH_SHORT).show()
+                                "local" -> viewModel.exportLocalTaxPdf(year)
+                                else -> viewModel.exportSimpleLedgerPdf(year)
                             }
-                            "excel" -> Toast.makeText(context, "준비중입니다", Toast.LENGTH_SHORT).show()
+                            "excel" -> when (purpose) {
+                                "vat1" -> viewModel.exportVatExcel(year, 1)
+                                "vat2" -> viewModel.exportVatExcel(year, 2)
+                                "income" -> viewModel.exportIncomeTaxExcel(year)
+                                "local" -> viewModel.exportLocalTaxExcel(year)
+                                else -> viewModel.exportIncomeTaxExcel(year)
+                            }
                         }
                     }
                 }
