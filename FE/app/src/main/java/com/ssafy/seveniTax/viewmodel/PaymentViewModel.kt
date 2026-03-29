@@ -3,6 +3,7 @@ package com.ssafy.seveniTax.viewmodel
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.ssafy.seveniTax.data.model.payment.MerchantResponse
 import com.ssafy.seveniTax.data.model.payment.QrTokenCreateRequest
 import com.ssafy.seveniTax.data.remote.PaymentApi
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -21,7 +22,10 @@ data class PaymentUiState(
     val amount: Long = 0,
     val payerName: String = "",
     val paymentComplete: Boolean = false,
-    val paymentStatus: String = ""
+    val paymentStatus: String = "",
+    val merchants: List<MerchantResponse> = emptyList(),
+    val selectedMerchant: MerchantResponse? = null,
+    val merchantsLoading: Boolean = false
 )
 
 @HiltViewModel
@@ -35,6 +39,37 @@ class PaymentViewModel @Inject constructor(
 
     private val _uiState = MutableStateFlow(PaymentUiState())
     val uiState: StateFlow<PaymentUiState> = _uiState.asStateFlow()
+
+    fun loadMerchants() = viewModelScope.launch {
+        if (_uiState.value.merchants.isNotEmpty()) return@launch
+        Log.d(TAG, "▶ loadMerchants()")
+        _uiState.update { it.copy(merchantsLoading = true) }
+        try {
+            val response = paymentApi.getMerchants()
+            val body = response.body()
+            if (response.isSuccessful && body?.status == "success" && body.data != null) {
+                val merchants = body.data
+                Log.d(TAG, "  가맹점 ${merchants.size}개 로드 완료")
+                _uiState.update {
+                    it.copy(
+                        merchantsLoading = false,
+                        merchants = merchants,
+                        selectedMerchant = merchants.firstOrNull()
+                    )
+                }
+            } else {
+                Log.e(TAG, "  가맹점 목록 조회 실패: ${body?.message}")
+                _uiState.update { it.copy(merchantsLoading = false) }
+            }
+        } catch (e: Exception) {
+            Log.e(TAG, "  가맹점 목록 조회 에러: ${e.message}", e)
+            _uiState.update { it.copy(merchantsLoading = false) }
+        }
+    }
+
+    fun selectMerchant(merchant: MerchantResponse) {
+        _uiState.update { it.copy(selectedMerchant = merchant) }
+    }
 
     fun createQrToken(cardId: Long, amount: Long, merchantId: Long, merchantName: String) = viewModelScope.launch {
         Log.d(TAG, "▶ createQrToken() cardId=$cardId, amount=$amount, merchantId=$merchantId, merchant=$merchantName")
