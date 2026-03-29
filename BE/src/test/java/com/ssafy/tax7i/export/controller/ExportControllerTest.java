@@ -24,6 +24,7 @@ class ExportControllerTest {
     @Autowired private MockMvc mockMvc;
 
     @MockitoBean private ExportService exportService;
+    @MockitoBean private com.ssafy.tax7i.export.service.ExcelExportService excelExportService;
     @MockitoBean private com.ssafy.tax7i.global.jwt.JwtTokenProvider jwtTokenProvider;
     @MockitoBean private org.springframework.data.redis.core.RedisTemplate<String, String> redisTemplate;
 

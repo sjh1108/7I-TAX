@@ -2,8 +2,8 @@ package com.ssafy.tax7i.tax.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.tax7i.auth.domain.User;
+import com.ssafy.tax7i.auth.repository.BusinessProfileRepository;
 import com.ssafy.tax7i.auth.repository.UserRepository;
-import com.ssafy.tax7i.bookentry.repository.AggregateResult;
 import com.ssafy.tax7i.bookentry.repository.BookEntryRepository;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -33,6 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -50,7 +51,9 @@ public class TaxReturnService {
     private final ExpenseDetailRepository expenseDetailRepository;
     private final BookEntryRepository bookEntryRepository;
     private final TaxCalculationEngine taxCalculationEngine;
+    private final TaxParameterService taxParameterService;
     private final UserRepository userRepository;
+    private final BusinessProfileRepository businessProfileRepository;
     private final ObjectMapper objectMapper;
     private final RedisTemplate<String, String> redisTemplate;
     private final TaxOfficeProperties taxOfficeProperties;
@@ -81,28 +84,22 @@ public class TaxReturnService {
             }
         }
 
-        // Aggregate BookEntry data for the year
-        LocalDate start = LocalDate.of(taxYear, 1, 1);
-        LocalDate end = LocalDate.of(taxYear, 12, 31);
-        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
-        long totalRevenue = agg.totalIncome();
-        long totalExpense = agg.totalExpense();
-
         // Prepaid tax and deductions
         long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;
         Map<String, Long> deductions = request.deductions() != null
-                ? request.deductions()
-                : Collections.emptyMap();
-
-        // Calculate tax
-        TaxCalculationResult result = taxCalculationEngine.calculate(
-                taxYear, totalRevenue, totalExpense, prepaidTax, deductions);
+                ? new HashMap<>(request.deductions())
+                : new HashMap<>();
 
         // Get user info
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
 
-        // Serialize deductions to JSON
+        // 경비조정 → 기본공제 → 세액공제 일괄 계산 (TaxCalculationEngine에 위임)
+        TaxCalculationResult result = taxCalculationEngine.calculateForUser(
+                userId, taxYear, prepaidTax, deductions);
+
+        // Serialize deductions to JSON (calculateForUser가 기본공제를 추가했으므로 반영)
+        deductions.putIfAbsent("기본공제_본인", taxParameterService.getBasicDeduction(taxYear));
         String deductionsJson = serializeDeductions(deductions);
 
         // Save TaxReturn
@@ -174,24 +171,19 @@ public class TaxReturnService {
                     "DRAFT 상태의 신고서만 수정할 수 있습니다.");
         }
 
-        // Re-aggregate BookEntry data
         int taxYear = taxReturn.getTaxYear();
-        LocalDate start = LocalDate.of(taxYear, 1, 1);
-        LocalDate end = LocalDate.of(taxYear, 12, 31);
-        AggregateResult agg = bookEntryRepository.safeAggregate(userId, start, end);
-        long totalRevenue = agg.totalIncome();
-        long totalExpense = agg.totalExpense();
 
         // Updated prepaid tax and deductions
         long prepaidTax = request.prepaidTax() != null ? request.prepaidTax() : 0L;
         Map<String, Long> deductions = request.deductions() != null
-                ? request.deductions()
-                : Collections.emptyMap();
+                ? new HashMap<>(request.deductions())
+                : new HashMap<>();
 
-        // Recalculate tax
-        TaxCalculationResult result = taxCalculationEngine.calculate(
-                taxYear, totalRevenue, totalExpense, prepaidTax, deductions);
+        // 경비조정 → 기본공제 → 세액공제 일괄 계산 (TaxCalculationEngine에 위임)
+        TaxCalculationResult result = taxCalculationEngine.calculateForUser(
+                userId, taxYear, prepaidTax, deductions);
 
+        deductions.putIfAbsent("기본공제_본인", taxParameterService.getBasicDeduction(taxYear));
         String deductionsJson = serializeDeductions(deductions);
 
         // Update TaxReturn

@@ -15,8 +15,10 @@ import com.ssafy.tax7i.transfer.dto.WithdrawRequest;
 import com.ssafy.tax7i.transfer.entity.Transfer;
 import com.ssafy.tax7i.transfer.entity.TransferType;
 import com.ssafy.tax7i.transfer.repository.TransferRepository;
+import com.ssafy.tax7i.bookentry.event.TransferReceivedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +35,7 @@ public class TransferService {
     private final CardRepository cardRepository;
     private final SsafyFinanceClient ssafyFinanceClient;
     private final TransferFailureSaveService transferFailureSaveService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public TransferResponse p2pTransfer(Long userId, P2pTransferRequest request) {
@@ -80,6 +83,19 @@ public class TransferService {
         transfer.assignSsafyTransactionUniqueNo(result.withdrawResponse().rec().transactionUniqueNo());
 
         transferRepository.save(transfer);
+
+        // 수신자가 사업자인 경우에만 매출 장부 자동 생성 (개인 간 송금은 매출이 아님)
+        if (Boolean.TRUE.equals(receiver.getIsBusiness())) {
+            eventPublisher.publishEvent(new TransferReceivedEvent(
+                    transfer.getId(),
+                    receiver.getId(),
+                    request.amount(),
+                    sender.getName(),
+                    description,
+                    java.time.LocalDateTime.now()
+            ));
+        }
+
         return TransferResponse.from(transfer);
     }
 

@@ -52,6 +52,8 @@ public enum ErrorCode {
     TAX_ALREADY_PAID(HttpStatus.CONFLICT, "이미 납부 완료된 세금입니다."),
     TAX_NATIONAL_FIRST(HttpStatus.BAD_REQUEST, "국세 납부를 먼저 완료해주세요."),
     TAX_RETURN_NOT_FOUND(HttpStatus.NOT_FOUND, "신고서를 찾을 수 없습니다."),
+    TAX_INVALID_TRANSITION(HttpStatus.CONFLICT, "현재 상태에서 해당 작업을 수행할 수 없습니다."),
+    CONCURRENT_MODIFICATION(HttpStatus.CONFLICT, "다른 요청과 동시에 처리되었습니다. 다시 시도해주세요."),
 
     // 402 Payment Required
     PAYMENT_DECLINED(HttpStatus.valueOf(402), "결제가 거절되었습니다."),

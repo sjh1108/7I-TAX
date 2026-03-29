@@ -47,10 +47,22 @@ public class TaxClassificationService {
     private final TaxLimitRepository taxLimitRepository;
     private final AiClassificationService aiClassificationService;
     private final TaxParameterService taxParameterService;
+    private final CategoryLearningService categoryLearningService;
 
     public ClassificationResult classify(ClassificationRequest request) {
         log.info("세목 분류 시작: merchant={}, mcc={}, amount={}",
                 request.merchantName(), request.mcc(), request.amount());
+
+        // 0. 사용자 학습 — 동일 가맹점 N회 이상 동일 세목 확정 시 자동 분류
+        if (request.userId() != null && request.merchantName() != null) {
+            ClassificationResult learned = categoryLearningService.findLearnedClassification(
+                    request.userId(), request.merchantName());
+            if (learned != null) {
+                log.info("사용자 학습 확정: userId={}, merchant={}, category={}",
+                        request.userId(), request.merchantName(), learned.taxCategory());
+                return attachEntertainmentLimitIfNeeded(learned, request);
+            }
+        }
 
         // 1. MCC 결정: 요청에 있으면 사용, 없으면 가맹점명으로 조회
         String mcc = resolveMcc(request);

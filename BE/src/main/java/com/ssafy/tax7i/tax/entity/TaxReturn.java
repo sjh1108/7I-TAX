@@ -1,6 +1,8 @@
 package com.ssafy.tax7i.tax.entity;
 
 import com.ssafy.tax7i.global.entity.BaseTimeEntity;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -119,8 +121,8 @@ public class TaxReturn extends BaseTimeEntity {
 
     public void transitionTo(TaxReturnStatus next) {
         if (!this.status.canTransitionTo(next)) {
-            throw new IllegalStateException(
-                    "Cannot transition from " + this.status + " to " + next);
+            throw new BusinessException(ErrorCode.TAX_INVALID_TRANSITION,
+                    this.status + " → " + next + " 전이가 불가합니다.");
         }
         this.status = next;
         if (next == TaxReturnStatus.SUBMITTED) {

@@ -64,6 +64,10 @@ public class TaxPaymentService {
                     taxReturn.getTaxYear() + "귀속_종합소득세"
             );
 
+            if (response == null || response.rec() == null) {
+                throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE, "은행 응답이 비정상입니다.");
+            }
+
             String txId = response.rec().transactionUniqueNo();
             payment.complete(txId, card.getWithdrawalAccountNo());
 
@@ -113,6 +117,10 @@ public class TaxPaymentService {
                     payment.getAmount(),
                     taxReturn.getTaxYear() + "귀속_지방소득세"
             );
+
+            if (response == null || response.rec() == null) {
+                throw new BusinessException(ErrorCode.BANK_SERVICE_UNAVAILABLE, "은행 응답이 비정상입니다.");
+            }
 
             String txId = response.rec().transactionUniqueNo();
             payment.complete(txId, card.getWithdrawalAccountNo());

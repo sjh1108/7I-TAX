@@ -11,6 +11,7 @@ import com.ssafy.tax7i.tax.dto.TaxReturnResponse;
 import com.ssafy.tax7i.tax.dto.TaxReturnSubmitResponse;
 import com.ssafy.tax7i.tax.dto.TaxReturnUpdateRequest;
 import com.ssafy.tax7i.tax.dto.TaxSavingResponse;
+import com.ssafy.tax7i.tax.dto.TaxSavingSummaryResponse;
 import com.ssafy.tax7i.tax.service.PdfService;
 import com.ssafy.tax7i.tax.service.TaxCalculationEngine;
 import com.ssafy.tax7i.tax.service.TaxPaymentService;
@@ -61,6 +62,15 @@ public class TaxController {
             @RequestParam int taxYear) {
 
         TaxSavingResponse response = taxSavingService.getRecommendations(userId, taxYear);
+        return ResponseEntity.ok(SuccessResponse.of(response));
+    }
+
+    @GetMapping("/savings/summary")
+    public ResponseEntity<SuccessResponse<TaxSavingSummaryResponse>> getSavingSummary(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam int taxYear) {
+
+        TaxSavingSummaryResponse response = taxSavingService.getSummary(userId, taxYear);
         return ResponseEntity.ok(SuccessResponse.of(response));
     }
 

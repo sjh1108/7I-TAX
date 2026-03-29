@@ -8,6 +8,7 @@ import com.ssafy.tax7i.classification.dto.ClassificationRequest;
 import com.ssafy.tax7i.classification.dto.ClassificationResult;
 import com.ssafy.tax7i.classification.entity.TaxCategory;
 import com.ssafy.tax7i.classification.service.TaxClassificationService;
+import com.ssafy.tax7i.tax.service.TaxParameterService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -27,8 +28,12 @@ import org.springframework.transaction.event.TransactionalEventListener;
 @RequiredArgsConstructor
 public class BookEntryEventListener {
 
+    /** mcc_tax_rule.vat_deductible 컬럼의 면세 상태값 */
+    private static final String VAT_STATUS_EXEMPT = "면세";
+
     private final BookEntryService bookEntryService;
     private final TaxClassificationService classificationService;
+    private final TaxParameterService taxParameterService;
 
     @Async
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
@@ -58,12 +63,12 @@ public class BookEntryEventListener {
             String categoryName = classification.taxCategory();
 
             // 3. 경비불인정이면 면세 처리
-            boolean isVatExempt = "경비불인정".equals(categoryName)
-                    || "면세".equals(classification.vatDeductible());
+            boolean isVatExempt = TaxCategory.NOT_DEDUCTIBLE.getName().equals(categoryName)
+                    || VAT_STATUS_EXEMPT.equals(classification.vatDeductible());
 
             // 4. 100만원 이상 감가상각비면 ASSET 타입
             EntryType entryType = EntryType.EXPENSE;
-            if ("감가상각비".equals(categoryName)) {
+            if (TaxCategory.DEPRECIATION.getName().equals(categoryName)) {
                 entryType = EntryType.ASSET;
             }
 
@@ -92,6 +97,38 @@ public class BookEntryEventListener {
         } catch (Exception e) {
             log.error("장부 자동 생성 실패: paymentId={}, userId={}, amount={}, error={}",
                     event.paymentId(), event.userId(), event.amount(), e.getMessage(), e);
+        }
+    }
+
+    @Async
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void handleTransferReceived(TransferReceivedEvent event) {
+        try {
+            String description = event.senderName() != null
+                    ? event.senderName() + " 입금"
+                    : event.description();
+
+            int taxYear = event.transferredAt().getYear();
+            double withholdingRate = taxParameterService.getWithholdingRate(taxYear) * 100;
+
+            bookEntryService.createIncome(
+                    event.receiverUserId(),
+                    new com.ssafy.tax7i.bookentry.dto.IncomeCreateRequest(
+                            event.transferredAt().toLocalDate(),
+                            description,
+                            event.amount(),
+                            withholdingRate,
+                            "P2P 이체 자동 매출 등록"
+                    )
+            );
+
+            log.info("이체 매출 자동 생성: transferId={}, receiverUserId={}, amount={}",
+                    event.transferId(), event.receiverUserId(), event.amount());
+
+        } catch (Exception e) {
+            log.error("이체 매출 자동 생성 실패: transferId={}, error={}",
+                    event.transferId(), e.getMessage(), e);
         }
     }
 

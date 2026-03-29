@@ -34,6 +34,7 @@ class ClassificationServiceTest {
     @Mock private TaxLimitRepository taxLimitRepository;
     @Mock private AiClassificationService aiClassificationService;
     @Mock private TaxParameterService taxParameterService;
+    @Mock private CategoryLearningService categoryLearningService;
 
     @InjectMocks
     private TaxClassificationService taxClassificationService;

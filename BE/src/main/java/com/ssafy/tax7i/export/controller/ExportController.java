@@ -1,5 +1,6 @@
 package com.ssafy.tax7i.export.controller;
 
+import com.ssafy.tax7i.export.service.ExcelExportService;
 import com.ssafy.tax7i.export.service.ExportService;
 import com.ssafy.tax7i.global.exception.BusinessException;
 import com.ssafy.tax7i.global.exception.ErrorCode;
@@ -21,6 +22,7 @@ import java.time.LocalDate;
 public class ExportController {
 
     private final ExportService exportService;
+    private final ExcelExportService excelExportService;
 
     @GetMapping("/book-entries")
     public ResponseEntity<byte[]> exportBookEntries(
@@ -71,6 +73,34 @@ public class ExportController {
         return csvResponse(csv, "지방소득세_" + targetYear + ".csv");
     }
 
+    @GetMapping("/simple-ledger/pdf")
+    public ResponseEntity<byte[]> exportSimpleLedgerPdf(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        byte[] pdfBytes = excelExportService.generateSimpleLedgerPdf(userId, targetYear);
+        return pdfResponse(pdfBytes, "간편장부_" + targetYear + ".pdf");
+    }
+
+    @GetMapping("/vat/excel")
+    public ResponseEntity<byte[]> exportVatExcel(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false, defaultValue = "1") Integer half) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        byte[] excelBytes = excelExportService.exportVatExcel(userId, targetYear, half);
+        return excelResponse(excelBytes, "부가세_" + targetYear + "_" + half + "기.xlsx");
+    }
+
+    @GetMapping("/income-tax/excel")
+    public ResponseEntity<byte[]> exportIncomeTaxExcel(
+            @AuthenticationPrincipal Long userId,
+            @RequestParam(required = false) Integer year) {
+        int targetYear = year != null ? year : LocalDate.now().getYear();
+        byte[] excelBytes = excelExportService.exportIncomeTaxExcel(userId, targetYear);
+        return excelResponse(excelBytes, "종합소득세_" + targetYear + ".xlsx");
+    }
+
     private ResponseEntity<byte[]> csvResponse(String csv, String filename) {
         byte[] bom = new byte[]{(byte)0xEF, (byte)0xBB, (byte)0xBF};
         byte[] content = csv.getBytes(StandardCharsets.UTF_8);
@@ -81,6 +111,25 @@ public class ExportController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
+                .contentLength(bytes.length)
+                .body(bytes);
+    }
+
+    private ResponseEntity<byte[]> pdfResponse(byte[] bytes, String filename) {
+        String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                .contentType(MediaType.APPLICATION_PDF)
+                .contentLength(bytes.length)
+                .body(bytes);
+    }
+
+    private ResponseEntity<byte[]> excelResponse(byte[] bytes, String filename) {
+        String encoded = java.net.URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encoded)
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .contentLength(bytes.length)
                 .body(bytes);
     }

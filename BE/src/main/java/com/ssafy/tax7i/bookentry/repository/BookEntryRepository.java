@@ -71,6 +71,18 @@ public interface BookEntryRepository extends JpaRepository<BookEntry, Long>, Jpa
             "GROUP BY b.categoryCode, b.categoryName ORDER BY SUM(b.expenseAmount) DESC")
     List<Object[]> sumExpenseByCategoryAndYear(@Param("userId") Long userId, @Param("year") int year);
 
+    @Query("SELECT b.categoryCode AS categoryCode, b.categoryName AS categoryName, " +
+            "b.isVatDeductible AS isVatDeductible, COUNT(b) AS count " +
+            "FROM BookEntry b " +
+            "WHERE b.userId = :userId AND b.merchantName = :merchantName " +
+            "AND b.confirmed = true AND b.categoryCode IS NOT NULL " +
+            "GROUP BY b.categoryCode, b.categoryName, b.isVatDeductible " +
+            "HAVING COUNT(b) >= :threshold " +
+            "ORDER BY COUNT(b) DESC")
+    List<LearnedCategoryProjection> findLearnedCategory(@Param("userId") Long userId,
+                                                         @Param("merchantName") String merchantName,
+                                                         @Param("threshold") int threshold);
+
     @Query("SELECT EXTRACT(MONTH FROM b.entryDate), " +
             "COALESCE(SUM(CASE WHEN b.entryType = 'INCOME' THEN b.incomeAmount ELSE 0 END), 0), " +
             "COALESCE(SUM(CASE WHEN b.entryType = 'EXPENSE' THEN b.expenseAmount ELSE 0 END), 0), " +

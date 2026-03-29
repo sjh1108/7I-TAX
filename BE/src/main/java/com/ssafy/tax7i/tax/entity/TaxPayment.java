@@ -1,14 +1,18 @@
 package com.ssafy.tax7i.tax.entity;
 
 import com.ssafy.tax7i.global.entity.BaseTimeEntity;
+import com.ssafy.tax7i.global.exception.BusinessException;
+import com.ssafy.tax7i.global.exception.ErrorCode;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Entity
 @Table(name = "tax_payments", indexes = {
         @Index(name = "idx_tax_payment_tax_return", columnList = "tax_return_id")
@@ -74,10 +78,18 @@ public class TaxPayment extends BaseTimeEntity {
     }
 
     public void markProcessing() {
+        if (this.status != TaxPaymentStatus.PENDING) {
+            throw new BusinessException(ErrorCode.TAX_ALREADY_PAID,
+                    "결제 상태가 PENDING이 아닙니다: " + this.status);
+        }
         this.status = TaxPaymentStatus.PROCESSING;
     }
 
     public void complete(String transferId, String fromAccount) {
+        if (this.status != TaxPaymentStatus.PROCESSING) {
+            throw new BusinessException(ErrorCode.TAX_ALREADY_PAID,
+                    "결제 상태가 PROCESSING이 아닙니다: " + this.status);
+        }
         this.status = TaxPaymentStatus.COMPLETED;
         this.transferId = transferId;
         this.fromAccount = fromAccount;
@@ -85,6 +97,10 @@ public class TaxPayment extends BaseTimeEntity {
     }
 
     public void fail(String errorMessage) {
+        if (this.status != TaxPaymentStatus.PROCESSING) {
+            log.warn("fail() 호출 무시: 현재 상태={}, id={}", this.status, this.id);
+            return;
+        }
         this.status = TaxPaymentStatus.FAILED;
         this.errorMessage = errorMessage;
     }
