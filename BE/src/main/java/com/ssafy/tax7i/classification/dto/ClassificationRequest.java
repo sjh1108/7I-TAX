@@ -16,6 +16,8 @@ public record ClassificationRequest(
 
         Boolean isClientAccompanied, // 거래처 동행 여부 (접대비 판단)
 
-        Long userId // 접대비 누적 한도 체크용
+        Long userId, // 접대비 누적 한도 체크용
+
+        String note // 증빙 메모 — AI 분류 시 description에 합쳐서 전달
 ) {
 }

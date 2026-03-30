@@ -1,88 +1,52 @@
-﻿package com.ssafy.seveniTax.ui.home
+package com.ssafy.seveniTax.ui.home
 
+import androidx.annotation.DrawableRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.NotificationsNone
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import coil3.compose.AsyncImage
-import coil3.request.ImageRequest
-import coil3.svg.SvgDecoder
-import android.widget.Toast
 import com.ssafy.seveniTax.R
 import com.ssafy.seveniTax.ui.navigation.Route
-import com.ssafy.seveniTax.ui.theme.BrandPurple
-import com.ssafy.seveniTax.ui.theme.Error
-import com.ssafy.seveniTax.ui.theme.LogoPurple
-import com.ssafy.seveniTax.ui.theme.Surface
-import com.ssafy.seveniTax.ui.theme.TextPrimary
-import com.ssafy.seveniTax.ui.theme.TextSecondary
+import com.ssafy.seveniTax.ui.theme.*
 import com.ssafy.seveniTax.viewmodel.MainViewModel
 
-private data class HomeActionItem(
+// ── 색상 ──
+private val CardBg = Color(0xFFF8F8FB)
+private val UnconfirmedBg = Color(0xFFF6F3FF)
+private val IncomeBg = Color(0xFFEDF8F6)
+private val IncomeLabel = Color(0xFF7ABFB3)
+private val ExpenseBg = Color(0xFFFFF0F3)
+private val ExpenseLabel = Color(0xFFFF9DAE)
+private val TaxBarBg = Color(0xFFFFF8EE)
+private val TaxBarAccent = Color(0xFFE0A44A)
+private val CardShadow = Color(0x123629B7)
+private val NoticeBg = Color(0xFF1F2430)
+
+private data class ActionItem(
     val title: String,
-    val iconAsset: String,
-    val onClick: (NavController) -> Unit
-)
-
-private data class SummaryMetric(
-    val label: String,
-    val value: String
-)
-
-private data class ScheduleItem(
-    val title: String,
-    val dueText: String,
-    val dDay: Int
-)
-
-private data class TransactionItem(
-    val merchant: String,
-    val amount: String,
-    val status: String
-)
-
-private data class InsightItem(
-    val title: String,
-    val description: String
+    @DrawableRes val iconRes: Int,
+    val route: String
 )
 
 @Composable
@@ -94,695 +58,336 @@ fun HomeScreen(
     onMenuClick: () -> Unit = {},
     notificationCount: Int = 0
 ) {
-    val userName = viewModel.getUserName().ifBlank { "이름" }
-    val actions = listOf(
-        HomeActionItem("세금 일정", "home/icon_tax_calendar.svg") {
-            it.navigate(Route.TaxCalendar.path)
-        },
-        HomeActionItem("장부 보기", "home/icon_book_entries.svg") {
-            it.navigate(Route.BookEntryList.path)
-        },
-        HomeActionItem("리포트 보기", "home/icon_report.svg") {
-            it.navigate(Route.TaxReport.path)
-        },
-        HomeActionItem("카드 관리", "home/icon_card_manage.svg") {
-            it.navigate(Route.CardList.path)
-        },
-        HomeActionItem("QR 결제", "home/icon_qr_payment.svg") {
-            it.navigate(Route.QrPayment.path)
-        }
-    )
+    val userName = viewModel.getUserName().ifBlank { "사용자" }
 
-    // 서버에서 가져온 세금 일정 → 가까운 순 2개
-    val taxCalendarViewModel: com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel = hiltViewModel()
-    val deadlines by taxCalendarViewModel.deadlines.collectAsState()
-    val schedules = deadlines
-        .filter { it.dDay >= 0 }
-        .sortedBy { it.dDay }
-        .take(2)
-        .map {
-            val date = try {
-                val d = java.time.LocalDate.parse(it.deadline)
-                "${d.monthValue}월 ${d.dayOfMonth}일"
-            } catch (_: Exception) { it.deadline }
-            ScheduleItem(it.taxName, date, it.dDay)
-        }
-    val recentTransactions = listOf(
-        TransactionItem("스타벅스 강남점", "12,000원", "미분류"),
-        TransactionItem("쿠팡", "48,000원", "사업용"),
-        TransactionItem("강남주유소", "70,000원", "확인 필요")
-    )
-    val insights = listOf(
-        InsightItem("경비 처리 누락 가능 거래 4건", "정리하면 약 32만원 수준의 절세 여지를 확인할 수 있어요."),
-        InsightItem("신고 전 검토 추천", "미분류 경비를 먼저 처리하면 신고 누락 위험을 줄일 수 있어요.")
+    // 장부 데이터
+    val bookVM: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
+    val entries by bookVM.entries.collectAsState()
+    val unclassifiedCount by bookVM.unconfirmedCount.collectAsState()
+    LaunchedEffect(Unit) { bookVM.loadUnconfirmedCount(); bookVM.loadEntries() }
+
+    val now = java.time.LocalDate.now()
+    val monthEntries = entries.filter {
+        try { val d = java.time.LocalDate.parse(it.entryDate); d.year == now.year && d.monthValue == now.monthValue }
+        catch (_: Exception) { false }
+    }
+    val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+    val totalIncome = monthEntries.filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    val totalExpense = monthEntries.filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
+
+    // 세금 일정
+    val taxVM: com.ssafy.seveniTax.viewmodel.TaxCalendarViewModel = hiltViewModel()
+    val deadlines by taxVM.deadlines.collectAsState()
+    val upcoming = deadlines.filter { it.dDay >= 0 }.sortedBy { it.dDay }.take(2)
+    val nearest = upcoming.firstOrNull()
+
+    // 세율 구간 계산
+    val yearIncome = entries.filter {
+        try { java.time.LocalDate.parse(it.entryDate).year == now.year } catch (_: Exception) { false }
+    }.filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    val yearExpense = entries.filter {
+        try { java.time.LocalDate.parse(it.entryDate).year == now.year } catch (_: Exception) { false }
+    }.filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
+    val taxableIncome = (yearIncome - yearExpense).coerceAtLeast(0)
+
+    val actions = listOf(
+        ActionItem("스케쥴러", R.drawable.ic_home_scheduler, Route.TaxCalendar.path),
+        ActionItem("간편장부", R.drawable.ic_home_book, Route.BookEntryList.path),
+        ActionItem("레포트", R.drawable.ic_home_report, Route.TaxReport.path),
+        ActionItem("증빙서류", R.drawable.ic_home_export, Route.ExportPurpose.path),
+        ActionItem("QR 결제", R.drawable.ic_home_qr, Route.QrPayment.path),
+        ActionItem("공제 혜택", R.drawable.ic_home_deduction, Route.TaxSavingsDetail.path),
     )
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .background(
-                brush = Brush.verticalGradient(
-                    colors = listOf(BrandPurple, BrandPurple, Color.White),
-                    startY = 0f,
-                    endY = 420f
-                )
-            )
+        modifier = modifier.fillMaxSize().background(
+            Brush.verticalGradient(listOf(BrandPurple, BrandPurple, Color.White), startY = 0f, endY = 420f)
+        )
     ) {
         LazyColumn(
-            modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp),
-            verticalArrangement = Arrangement.spacedBy(0.dp)
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = 24.dp, bottom = 32.dp)
         ) {
+            // ── 헤더 ──
             item {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 24.dp)
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 24.dp, vertical = 0.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    HomeHeader(
-                        userName = userName,
-                        notificationCount = notificationCount,
-                        onNotificationClick = onNotificationClick,
-                        onMenuClick = onMenuClick
-                    )
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Text("안녕하세요, ${userName}님", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White, modifier = Modifier.weight(1f))
+                    Box(Modifier.clickable { onNotificationClick() }) {
+                        Icon(Icons.Default.NotificationsNone, null, tint = Color.White, modifier = Modifier.padding(top = 6.dp).size(24.dp))
+                        if (notificationCount > 0) {
+                            Box(Modifier.size(16.dp).clip(CircleShape).background(Error).align(Alignment.TopEnd), contentAlignment = Alignment.Center) {
+                                Text(notificationCount.toString(), fontSize = 9.sp, color = Color.White, fontWeight = FontWeight.Bold)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.width(14.dp))
+                    Icon(Icons.Default.Menu, null, tint = Color.White, modifier = Modifier.padding(top = 6.dp).size(24.dp).clickable { onMenuClick() })
                 }
+                Spacer(Modifier.height(20.dp))
             }
 
+            // ── 메인 콘텐츠 ──
             item {
                 Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(RoundedCornerShape(topStart = 30.dp, topEnd = 30.dp))
-                        .background(Color.White)
-                        .padding(horizontal = 24.dp, vertical = 24.dp),
+                    Modifier.fillMaxWidth().clip(RoundedCornerShape(30.dp, 30.dp)).background(Color.White).padding(24.dp),
                     verticalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
-                    val bookEntryViewModel: com.ssafy.seveniTax.viewmodel.BookEntryViewModel = hiltViewModel()
-                    val unclassifiedCount by bookEntryViewModel.unconfirmedCount.collectAsState()
-                    LaunchedEffect(Unit) { bookEntryViewModel.loadUnconfirmedCount() }
+                    // ❶ 미분류 경비
                     if (unclassifiedCount > 0) {
-                        UnconfirmedLedgerCard(
-                            count = unclassifiedCount,
-                            onClick = { navController.navigate(Route.UnclassifiedList.path) }
-                        )
+                        Row(
+                            Modifier.fillMaxWidth()
+                                .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = CardShadow, spotColor = CardShadow)
+                                .background(UnconfirmedBg, RoundedCornerShape(22.dp))
+                                .clickable { navController.navigate(Route.UnclassifiedList.path) }
+                                .padding(18.dp, 18.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Column(Modifier.weight(1f)) {
+                                Text("미분류 경비", fontSize = 14.sp, color = TextSecondary)
+                                Spacer(Modifier.height(6.dp))
+                                Text("${unclassifiedCount}건", fontSize = 28.sp, fontWeight = FontWeight.Bold, color = BrandPurple)
+                                Spacer(Modifier.height(4.dp))
+                                Text("신고 전에 분류와 확인이 필요한 내역이 있어요", fontSize = 12.sp, color = TextSecondary)
+                            }
+                            Box(Modifier.clip(RoundedCornerShape(999.dp)).background(LogoPurple).padding(14.dp, 10.dp)) {
+                                Text("지금 확인", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                            }
+                        }
                     }
-                    ActionGrid(
-                        navController = navController,
-                        items = actions
-                    )
-                    ScheduleSection(
-                        schedules = schedules,
-                        onClick = { navController.navigate(Route.TaxCalendar.path) }
-                    )
-                    LedgerSection(
-                        transactions = recentTransactions,
-                        onClick = { navController.navigate(Route.BookEntryList.path) }
-                    )
-                    InsightSection(
-                        insights = insights,
-                        onClick = { navController.navigate(Route.TaxReport.path) }
-                    )
-                    NoticeBanner()
+
+                    // ❷ 액션 그리드
+                    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        actions.chunked(3).forEach { row ->
+                            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                                row.forEach { item ->
+                                    Card(
+                                        Modifier.weight(1f).aspectRatio(1f).clickable { navController.navigate(item.route) },
+                                        shape = RoundedCornerShape(15.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color.White),
+                                        elevation = CardDefaults.cardElevation(8.dp)
+                                    ) {
+                                        Column(Modifier.fillMaxSize().padding(12.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                                            Icon(painterResource(item.iconRes), null, Modifier.size(34.dp), tint = Color.Unspecified)
+                                            Spacer(Modifier.height(14.dp))
+                                            Text(item.title, fontSize = 13.sp, fontWeight = FontWeight.Medium, color = TextPrimary)
+                                        }
+                                    }
+                                }
+                                repeat(3 - row.size) { Spacer(Modifier.weight(1f)) }
+                            }
+                        }
+                    }
+
+                    // ❹ 한눈에 보기 (수입/비용 + 예상 세금 바)
+                    SummaryCard(totalIncome, totalExpense, nearest, fmt, navController)
+
+                    // ❺ 다가오는 신고 일정 (가까운 2개)
+                    SectionCard("다가오는 신고 일정", "전체 보기", { navController.navigate(Route.TaxCalendar.path) }) {
+                        upcoming.forEachIndexed { i, dl ->
+                            val date = try { val d = java.time.LocalDate.parse(dl.deadline); "${d.monthValue}월 ${d.dayOfMonth}일" } catch (_: Exception) { dl.deadline }
+                            val ddayColor = when { dl.dDay <= 3 -> DdayError; dl.dDay <= 7 -> DdayWarning; else -> DdayNormal }
+                            Row(
+                                Modifier.fillMaxWidth().background(CardBg, RoundedCornerShape(16.dp)).padding(14.dp, 14.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Column(Modifier.weight(1f)) {
+                                    Text(dl.taxName, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                    Spacer(Modifier.height(4.dp))
+                                    Text(date, fontSize = 12.sp, color = TextSecondary)
+                                }
+                                Text(if (dl.dDay == 0) "D-Day" else "D-${dl.dDay}", fontSize = 14.sp, fontWeight = FontWeight.Bold, color = ddayColor)
+                            }
+                            if (i < upcoming.lastIndex) Spacer(Modifier.height(12.dp))
+                        }
+                    }
+
+                    // ❻ 절세 포인트
+                    SectionCard("이번 달 절세 포인트", "리포트 보기", { navController.navigate(Route.TaxReport.path) }) {
+                        InsightItem("경비 처리 누락 가능 거래 ${unclassifiedCount}건", "정리하면 절세 여지를 확인할 수 있어요.")
+                        Spacer(Modifier.height(12.dp))
+                        InsightItem("신고 전 검토 추천", "미분류 경비를 먼저 처리하면 신고 누락 위험을 줄일 수 있어요.")
+                    }
                 }
             }
         }
     }
 }
 
+// ── 한눈에 보기 (수입/비용 + 예상 세금 바) ──
 @Composable
-private fun HomeHeader(
-    userName: String,
-    notificationCount: Int,
-    onNotificationClick: () -> Unit,
-    onMenuClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "안녕하세요, ${userName}님",
-            fontSize = 20.sp,
-            lineHeight = 24.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = Color.White,
-            modifier = Modifier.weight(1f)
-        )
-
-        Box(
-            modifier = Modifier.clickable { onNotificationClick() }
-        ) {
-            Icon(
-                imageVector = Icons.Default.NotificationsNone,
-                contentDescription = "알림",
-                tint = Color.White,
-                modifier = Modifier
-                    .padding(top = 6.dp)
-                    .size(24.dp)
-            )
-            if (notificationCount > 0) {
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(Error)
-                        .align(Alignment.TopEnd),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = notificationCount.toString(),
-                        fontSize = 9.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.width(14.dp))
-
-        Icon(
-            imageVector = Icons.Default.Menu,
-            contentDescription = "전체 메뉴",
-            tint = Color.White,
-            modifier = Modifier
-                .padding(top = 6.dp)
-                .size(24.dp)
-                .clickable { onMenuClick() }
-        )
-    }
-}
-
-@Composable
-private fun SummaryOverviewCard(metrics: List<SummaryMetric>) {
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
-            Text(
-                text = "이번 달 핵심 요약",
-                fontSize = 15.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                metrics.forEach { metric ->
-                    SummaryStat(
-                        label = metric.label,
-                        value = metric.value,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun SummaryStat(label: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .heightIn(min = 78.dp)
-            .clip(RoundedCornerShape(18.dp))
-            .background(Color.White)
-            .padding(horizontal = 14.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.Top
-    ) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(10.dp))
-        Spacer(modifier = Modifier.weight(1f))
-        Text(
-            text = value,
-            fontSize = 18.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
-    }
-}
-
-@Composable
-private fun UnconfirmedLedgerCard(count: Int = 0, onClick: () -> Unit) {
-    Card(
-        modifier = Modifier.clickable { onClick() },
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFFF6F3FF)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "미분류 경비",
-                    fontSize = 14.sp,
-                    color = TextSecondary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "${count}건",
-                    fontSize = 28.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = BrandPurple
-                )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = "신고 전에 분류와 확인이 필요한 내역이 있어요",
-                    fontSize = 12.sp,
-                    color = TextSecondary
-                )
-            }
-
-            Box(
-                modifier = Modifier
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(LogoPurple)
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "지금 확인",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = Color.White
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionGrid(navController: NavController, items: List<HomeActionItem>) {
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
-        items.chunked(3).forEach { rowItems ->
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                rowItems.forEach { item ->
-                    ActionCard(
-                        item = item,
-                        navController = navController,
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-                repeat(3 - rowItems.size) {
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun ActionCard(
-    item: HomeActionItem,
-    navController: NavController,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .aspectRatio(1f)
-            .clickable { item.onClick(navController) },
-        shape = RoundedCornerShape(15.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 14.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center
-        ) {
-            HomeSvgIcon(
-                assetPath = item.iconAsset,
-                modifier = Modifier.size(34.dp)
-            )
-            Spacer(modifier = Modifier.height(14.dp))
-            Text(
-                text = item.title,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextPrimary
-            )
-        }
-    }
-}
-
-@Composable
-private fun ScheduleSection(schedules: List<ScheduleItem>, onClick: () -> Unit) {
-    HomeSectionCard(
-        title = "다가오는 신고 일정",
-        actionText = "전체 보기",
-        onClick = onClick
-    ) {
-        schedules.forEachIndexed { index, item ->
-            ScheduleRow(item = item)
-            if (index != schedules.lastIndex) {
-                Spacer(modifier = Modifier.height(12.dp))
-            }
-        }
-    }
-}
-
-@Composable
-private fun ScheduleRow(item: ScheduleItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF8F8FB))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.title,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = item.dueText,
-                fontSize = 12.sp,
-                color = TextSecondary
-            )
-        }
-        val ddayColor = when {
-            item.dDay <= 3 -> com.ssafy.seveniTax.ui.theme.DdayError
-            item.dDay <= 7 -> com.ssafy.seveniTax.ui.theme.DdayWarning
-            else -> com.ssafy.seveniTax.ui.theme.DdayNormal
-        }
-        Text(
-            text = if (item.dDay == 0) "D-Day" else "D-${item.dDay}",
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            color = ddayColor
-        )
-    }
-}
-
-@Composable
-private fun LedgerSection(transactions: List<TransactionItem>, onClick: () -> Unit) {
-    HomeSectionCard(
-        title = "이번 달 장부 현황",
-        actionText = "장부 보기",
-        onClick = onClick
-    ) {
+private fun SummaryCard(income: Long, expense: Long, nearest: com.ssafy.seveniTax.data.model.tax.TaxDeadline?, fmt: java.text.NumberFormat, navController: NavController) {
+    SectionCard("한눈에 보기", "상세", { navController.navigate(Route.TaxReport.path) }) {
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LedgerMetricCard("수입", "4,820,000원", Modifier.weight(1f))
-            LedgerMetricCard("지출", "1,430,000원", Modifier.weight(1f))
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            LedgerMetricCard("고정자산", "320,000원", Modifier.weight(1f))
-            LedgerMetricCard("미분류", "5건", Modifier.weight(1f))
-        }
-    }
-}
-
-@Composable
-private fun LedgerMetricCard(title: String, value: String, modifier: Modifier = Modifier) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF8F8FB))
-            .padding(horizontal = 16.dp, vertical = 14.dp)
-    ) {
-        Text(
-            text = title,
-            fontSize = 12.sp,
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = value,
-            fontSize = 16.sp,
-            fontWeight = FontWeight.Bold,
-            color = TextPrimary
-        )
-    }
-}
-
-@Composable
-private fun TransactionRow(item: TransactionItem) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF8F8FB))
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = item.merchant,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium,
-                color = TextPrimary
-            )
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = item.status,
-                fontSize = 12.sp,
-                color = TextSecondary
-            )
-        }
-        Text(
-            text = item.amount,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
-    }
-}
-
-@Composable
-private fun InsightSection(insights: List<InsightItem>, onClick: () -> Unit) {
-    HomeSectionCard(
-        title = "이번 달 절세 포인트",
-        actionText = "리포트 보기",
-        onClick = onClick
-    ) {
-        insights.forEachIndexed { index, item ->
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(16.dp))
-                    .background(Color(0xFFFFF8ED))
-                    .padding(horizontal = 16.dp, vertical = 14.dp)
-            ) {
-                Text(
-                    text = item.title,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = item.description,
-                    fontSize = 12.sp,
-                    color = TextSecondary
-                )
+            Column(Modifier.weight(1f).background(IncomeBg, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                Text("수입", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = IncomeLabel, letterSpacing = 0.3.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("+${fmt.format(income)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
             }
-            if (index != insights.lastIndex) {
-                Spacer(modifier = Modifier.height(12.dp))
+            Column(Modifier.weight(1f).background(ExpenseBg, RoundedCornerShape(16.dp)).padding(14.dp)) {
+                Text("비용", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = ExpenseLabel, letterSpacing = 0.3.sp)
+                Spacer(Modifier.height(8.dp))
+                Text("-${fmt.format(expense)}", fontSize = 18.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
             }
         }
-    }
-}
 
-@Composable
-private fun PaymentSection(
-    isPayEnrolled: Boolean,
-    onCardClick: () -> Unit,
-    onQrClick: () -> Unit
-) {
-    HomeSectionCard(
-        title = "결제 수단 상태",
-        actionText = null,
-        onClick = null
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PaymentStatusCard(
-                title = "기본 카드",
-                value = "삼성 Business",
-                modifier = Modifier.weight(1f),
-                onClick = onCardClick
-            )
-            PaymentStatusCard(
-                title = "Tax Pay",
-                value = if (isPayEnrolled) "가입 완료" else "미가입",
-                modifier = Modifier.weight(1f),
-                onClick = onQrClick
-            )
-        }
-        Spacer(modifier = Modifier.height(12.dp))
-        PaymentStatusWideCard(
-            title = "최근 결제",
-            value = "오늘 14:32 · 18,000원",
-            onClick = onQrClick
-        )
-    }
-}
+        if (nearest != null) {
+            val taxable = (income - expense).coerceAtLeast(0)
+            val estimatedVat = (income / 10 - expense / 10).coerceAtLeast(0)
+            val estimatedIncome = when {
+                taxable <= 14_000_000 -> (taxable * 0.06).toLong()
+                taxable <= 50_000_000 -> (taxable * 0.15 - 1_260_000).toLong()
+                taxable <= 88_000_000 -> (taxable * 0.24 - 5_760_000).toLong()
+                else -> (taxable * 0.35 - 15_440_000).toLong()
+            }
+            val isVat = nearest.taxName.contains("부가")
+            val estimatedTax = if (isVat) estimatedVat else estimatedIncome
+            val taxLabel = if (isVat) "예상 부가가치세" else "예상 종합소득세"
 
-@Composable
-private fun PaymentStatusCard(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit
-) {
-    Column(
-        modifier = modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF8F8FB))
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp)
-    ) {
-        Text(
-            text = title,
-            fontSize = 12.sp,
-            color = TextSecondary
-        )
-        Spacer(modifier = Modifier.height(6.dp))
-        Text(
-            text = value,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
-    }
-}
-
-@Composable
-private fun PaymentStatusWideCard(
-    title: String,
-    value: String,
-    onClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(Color(0xFFF8F8FB))
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 14.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = title,
-            fontSize = 13.sp,
-            color = TextSecondary,
-            modifier = Modifier.weight(1f)
-        )
-        Text(
-            text = value,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold,
-            color = TextPrimary
-        )
-    }
-}
-
-@Composable
-private fun NoticeBanner() {
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color(0xFF1F2430)),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 18.dp)
-        ) {
-            Text(
-                text = "지금 해야 할 것",
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.White
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "사업용으로 확정되지 않은 거래가 있어요. 신고 전에 검토를 마치면 누락 위험을 줄일 수 있어요.",
-                fontSize = 12.sp,
-                color = Color.White.copy(alpha = 0.82f),
-                lineHeight = 18.sp
-            )
-        }
-    }
-}
-
-@Composable
-private fun HomeSectionCard(
-    title: String,
-    actionText: String?,
-    onClick: (() -> Unit)?,
-    content: @Composable () -> Unit
-) {
-    Card(
-        shape = RoundedCornerShape(22.dp),
-        colors = CardDefaults.cardColors(containerColor = Color.White),
-        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-    ) {
-        Column(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(20.dp)
-        ) {
+            Spacer(Modifier.height(12.dp))
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(16.dp)).clickable { navController.navigate(Route.TaxCalendar.path) }.padding(16.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(
-                    text = title,
-                    fontSize = 15.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = TextPrimary,
-                    modifier = Modifier.weight(1f)
-                )
-                if (actionText != null && onClick != null) {
-                    Text(
-                        text = actionText,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = BrandPurple,
-                        modifier = Modifier.clickable { onClick() }
-                    )
+                Column(Modifier.weight(1f)) {
+                    Text(taxLabel, fontSize = 12.sp, color = TextSecondary)
+                    Spacer(Modifier.height(2.dp))
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text("${fmt.format(estimatedTax)}원", fontSize = 17.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                        Spacer(Modifier.width(8.dp))
+                        Box(Modifier.background(TaxBarAccent.copy(0.15f), RoundedCornerShape(20.dp)).padding(8.dp, 2.dp)) {
+                            Text("D-${nearest.dDay}", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = TaxBarAccent)
+                        }
+                    }
                 }
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = Color(0xFFCACACA))
             }
-            Spacer(modifier = Modifier.height(16.dp))
-            content()
         }
     }
 }
 
+// ── 세율 구간 카드 (세무 리포트와 동일 스타일) ──
 @Composable
-private fun HomeSvgIcon(assetPath: String, modifier: Modifier = Modifier) {
-    val context = LocalContext.current
-    val request = ImageRequest.Builder(context)
-        .data("file:///android_asset/$assetPath")
-        .decoderFactory(SvgDecoder.Factory())
-        .build()
-
-    AsyncImage(
-        model = request,
-        contentDescription = null,
-        modifier = modifier,
-        contentScale = ContentScale.Fit
+private fun TaxBracketCard(taxableIncome: Long, fmt: java.text.NumberFormat) {
+    data class Bracket(val limit: Long, val rate: Int, val label: String)
+    val brackets = listOf(
+        Bracket(14_000_000, 6, "~1,400만"),
+        Bracket(50_000_000, 15, "~5,000만"),
+        Bracket(88_000_000, 24, "~8,800만"),
+        Bracket(150_000_000, 35, "~1.5억")
     )
+    val maxLimit = 150_000_000L
+    val currentRate = when {
+        taxableIncome <= 14_000_000 -> 6
+        taxableIncome <= 50_000_000 -> 15
+        taxableIncome <= 88_000_000 -> 24
+        taxableIncome <= 150_000_000 -> 35
+        else -> 38
+    }
+    val currentLabel = brackets.lastOrNull { taxableIncome >= it.limit }?.label
+        ?: brackets.first().label
+    val nextBracket = brackets.firstOrNull { taxableIncome < it.limit }
+    val progress = (taxableIncome.toFloat() / maxLimit).coerceIn(0f, 1f)
+
+    Column(
+        Modifier.fillMaxWidth()
+            .shadow(8.dp, RoundedCornerShape(22.dp), ambientColor = CardShadow, spotColor = CardShadow)
+            .background(Color.White, RoundedCornerShape(22.dp))
+            .padding(20.dp)
+    ) {
+            // 상단: 과세표준 + 금액
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                Text("현재 과세표준", fontSize = 13.sp, color = TextSecondary)
+                Text("${fmt.format(taxableIncome)}원", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            }
+            Spacer(Modifier.height(8.dp))
+
+            // 구간 뱃지 + 범위
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.background(Surface, RoundedCornerShape(4.dp)).padding(horizontal = 10.dp, vertical = 4.dp)) {
+                    Text("${currentRate}% 구간", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = BrandPurple)
+                }
+                Spacer(Modifier.width(8.dp))
+                Text("($currentLabel)", fontSize = 11.sp, color = TextSecondary)
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // 프로그레스 바 + 세율 마커
+            Box(Modifier.fillMaxWidth().height(24.dp)) {
+                Box(Modifier.fillMaxWidth().height(8.dp).align(Alignment.BottomStart).clip(RoundedCornerShape(4.dp)).background(Color(0xFFF0F0F0))) {
+                    Box(Modifier.fillMaxHeight().fillMaxWidth(progress).clip(RoundedCornerShape(4.dp)).background(BrandPurple))
+                }
+                brackets.forEach { bracket ->
+                    val pos = (bracket.limit.toFloat() / maxLimit).coerceIn(0f, 1f)
+                    Text(
+                        text = "${bracket.rate}%",
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Medium,
+                        color = if (currentRate == bracket.rate) BrandPurple else TextSecondary,
+                        modifier = Modifier.align(Alignment.TopStart).fillMaxWidth(pos).wrapContentWidth(Alignment.End)
+                    )
+                }
+            }
+
+            Spacer(Modifier.height(4.dp))
+            Row(Modifier.fillMaxWidth(), Arrangement.SpaceBetween) {
+                Text("0원", fontSize = 10.sp, color = TextSecondary)
+                Text("1억 5,000만원", fontSize = 10.sp, color = TextSecondary)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text("간편장부 대상 한도 (정보통신업)", fontSize = 10.sp, color = TextSecondary, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.End)
+
+            // 다음 구간 안내
+            if (nextBracket != null) {
+                val remaining = nextBracket.limit - taxableIncome
+                if (remaining > 0) {
+                    Spacer(Modifier.height(12.dp))
+                    Column(Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(8.dp)).padding(12.dp)) {
+                        Text("다음 구간까지", fontSize = 12.sp, color = TaxBarAccent)
+                        Text("${fmt.format(remaining)}원 더 벌면 ${nextBracket.rate}% 구간 (${nextBracket.label})", fontSize = 13.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                    }
+                }
+            }
+
+        // 한도 초과 경고
+        if (taxableIncome >= maxLimit) {
+            Spacer(Modifier.height(12.dp))
+            Box(Modifier.fillMaxWidth().background(Color(0xFFFFF0F3), RoundedCornerShape(8.dp)).padding(12.dp)) {
+                Text("간편장부 한도를 초과했습니다. 복식부기 전환을 권장합니다.", fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFE8475A))
+            }
+        }
+    }
+}
+
+
+// ── 섹션 카드 ──
+@Composable
+private fun SectionCard(title: String, action: String, onClick: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
+    Column(
+        Modifier.fillMaxWidth()
+            .shadow(12.dp, RoundedCornerShape(22.dp), ambientColor = Color(0x1A3629B7), spotColor = Color(0x1A3629B7))
+            .border(1.dp, Color(0x0D3629B7), RoundedCornerShape(22.dp))
+            .background(Color.White, RoundedCornerShape(22.dp))
+            .padding(20.dp)
+    ) {
+        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+            Text(title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary, modifier = Modifier.weight(1f))
+            Text(action, fontSize = 12.sp, fontWeight = FontWeight.Medium, color = BrandPurple, modifier = Modifier.clickable { onClick() })
+        }
+        Spacer(Modifier.height(16.dp))
+        content()
+    }
+}
+
+// ── 절세 포인트 ──
+@Composable
+private fun InsightItem(title: String, desc: String) {
+    Column(Modifier.fillMaxWidth().background(TaxBarBg, RoundedCornerShape(16.dp)).padding(14.dp, 14.dp)) {
+        Text(title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+        Spacer(Modifier.height(6.dp))
+        Text(desc, fontSize = 12.sp, color = TextSecondary)
+    }
 }

@@ -23,4 +23,8 @@ class TaxRepositoryImpl @Inject constructor(
     override suspend fun exportBookEntries(year: Int?) = exportApi.exportBookEntries(year)
     override suspend fun exportVat(year: Int?, half: Int?) = exportApi.exportVat(year, half)
     override suspend fun exportIncomeTax(year: Int?) = exportApi.exportIncomeTax(year)
+    override suspend fun exportLocalTax(year: Int?) = exportApi.exportLocalTax(year)
+    override suspend fun exportVatExcel(year: Int?, half: Int?) = exportApi.exportVatExcel(year, half)
+    override suspend fun exportIncomeTaxExcel(year: Int?) = exportApi.exportIncomeTaxExcel(year)
+    override suspend fun exportSimpleLedgerPdf(year: Int?) = exportApi.exportSimpleLedgerPdf(year)
 }

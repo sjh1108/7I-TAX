@@ -80,6 +80,7 @@ fun QrPaymentScreen(
     cardViewModel: CardViewModel = hiltViewModel(),
     paymentViewModel: PaymentViewModel,
     showBackButton: Boolean = true,
+    onBack: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val cardUiState by cardViewModel.uiState.collectAsState()
@@ -94,13 +95,22 @@ fun QrPaymentScreen(
     var dialogMessage by remember { mutableStateOf("") }
     var dialogIsSuccess by remember { mutableStateOf(false) }
 
-    // 결제 완료 감지
+    // 가맹점 목록 로드
+    LaunchedEffect(Unit) {
+        paymentViewModel.loadMerchants()
+    }
+
+    // 결제 완료 감지 → 증빙 내역 추가 페이지로 이동
     LaunchedEffect(paymentState.paymentComplete) {
         if (paymentState.paymentComplete) {
-            dialogTitle = "결제 완료"
-            dialogMessage = "결제가 성공적으로 처리되었습니다."
-            dialogIsSuccess = true
-            showResultDialog = true
+            scannedResult = null
+            showPayConfirmDialog = false
+            showResultDialog = false
+            val paymentId = paymentState.paymentId ?: -1L
+            paymentViewModel.resetPayment()
+            navController.navigate(Route.BookMemoAdd.create(entryId = paymentId, fromPayment = true)) {
+                popUpTo(Route.Main.path) { inclusive = false }
+            }
         }
     }
 
@@ -113,6 +123,62 @@ fun QrPaymentScreen(
             showResultDialog = true
             paymentViewModel.clearError()
         }
+    }
+
+    // QR 스캔 결과 팝업
+    if (scannedResult != null && !showPayConfirmDialog && !showResultDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = {
+                scannedResult = null
+                paymentViewModel.resetPayment()
+            },
+            title = {
+                if (paymentState.isLoading) {
+                    Text("결제 정보 조회 중", fontWeight = FontWeight.Bold)
+                } else {
+                    Text("결제 정보", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                if (paymentState.isLoading) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.CircularProgressIndicator(
+                            color = BrandPurple,
+                            modifier = Modifier.padding(end = 12.dp)
+                        )
+                        Text("조회 중...", fontSize = 14.sp, color = TextSecondary)
+                    }
+                } else if (paymentState.amount > 0) {
+                    Column {
+                        Text(paymentState.payerName, fontSize = 14.sp, color = TextSecondary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            "${java.text.NumberFormat.getNumberInstance().format(paymentState.amount)}원",
+                            fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple
+                        )
+                    }
+                } else {
+                    Text("결제 정보를 불러올 수 없습니다.", fontSize = 14.sp, color = TextSecondary)
+                }
+            },
+            confirmButton = {
+                if (!paymentState.isLoading && paymentState.amount > 0) {
+                    androidx.compose.material3.TextButton(onClick = {
+                        showPayConfirmDialog = true
+                    }) {
+                        Text("결제하기", color = BrandPurple, fontWeight = FontWeight.Bold)
+                    }
+                }
+            },
+            dismissButton = {
+                androidx.compose.material3.TextButton(onClick = {
+                    scannedResult = null
+                    paymentViewModel.resetPayment()
+                }) {
+                    Text(if (paymentState.isLoading) "취소" else "다시 스캔", color = TextSecondary)
+                }
+            }
+        )
     }
 
     // 결제 확인 다이얼로그
@@ -190,8 +256,8 @@ fun QrPaymentScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .statusBarsPadding()
             .background(Background)
+            .statusBarsPadding()
     ) {
         Row(
             modifier = Modifier
@@ -200,14 +266,12 @@ fun QrPaymentScreen(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            if (showBackButton) {
-                IconButton(onClick = { navController.popBackStack() }) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로가기",
-                        tint = TextPrimary
-                    )
-                }
+            IconButton(onClick = { onBack?.invoke() ?: navController.popBackStack() }) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "뒤로가기",
+                    tint = TextPrimary
+                )
             }
             Text(
                 text = "Pay 결제",
@@ -251,15 +315,25 @@ fun QrPaymentScreen(
             if (selectedTab == 0) {
                 val card = cardUiState.cards.getOrNull(selectedCard)
 
-                // 카드 선택 시 QR 토큰 생성
-                LaunchedEffect(selectedCard, card) {
+                // 카드 선택 + 가맹점 로드 완료 시 QR 토큰 생성
+                val selectedMerchant = paymentState.selectedMerchant
+                LaunchedEffect(selectedCard, card, selectedMerchant) {
                     card?.let {
-                        paymentViewModel.createQrToken(
-                            cardId = it.id.toLongOrNull() ?: 0,
-                            amount = 1000, // 테스트용 최소 금액
-                            merchantId = 1,
-                            merchantName = "7iTAX QR 결제"
-                        )
+                        if (selectedMerchant != null) {
+                            paymentViewModel.createQrToken(
+                                cardId = it.id.toLongOrNull() ?: 0,
+                                amount = 1000,
+                                merchantId = selectedMerchant.merchantId,
+                                merchantName = selectedMerchant.merchantName
+                            )
+                        }
+                    }
+                }
+
+                // QR 토큰 생성 후 결제 상태 폴링
+                LaunchedEffect(paymentState.qrToken) {
+                    if (paymentState.qrToken.isNotEmpty()) {
+                        paymentViewModel.startPollingStatus(paymentState.qrToken)
                     }
                 }
 
@@ -310,59 +384,7 @@ fun QrPaymentScreen(
                     Text("QR코드 생성 실패", color = TextSecondary, fontSize = 14.sp)
                 }
             } else {
-                if (scannedResult != null) {
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                        verticalArrangement = Arrangement.Center,
-                        modifier = Modifier.padding(24.dp)
-                    ) {
-                        if (paymentState.isLoading) {
-                            androidx.compose.material3.CircularProgressIndicator(color = BrandPurple)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("결제 정보 조회 중...", fontSize = 14.sp, color = TextSecondary)
-                        } else if (paymentState.amount > 0) {
-                            Text("결제 정보", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Text(paymentState.payerName, fontSize = 14.sp, color = TextSecondary)
-                            Text(
-                                "${java.text.NumberFormat.getNumberInstance().format(paymentState.amount)}원",
-                                fontSize = 24.sp, fontWeight = FontWeight.Bold, color = BrandPurple
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(12.dp))
-                                    .background(BrandPurple)
-                                    .clickable { showPayConfirmDialog = true }
-                                    .padding(vertical = 14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text("결제하기", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                            }
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                "다시 스캔",
-                                fontSize = 13.sp, color = TextSecondary,
-                                modifier = Modifier.clickable { scannedResult = null; paymentViewModel.resetPayment() }
-                            )
-                        } else {
-                            Text("스캔 완료", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(scannedResult!!, fontSize = 14.sp, color = TextSecondary)
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(8.dp))
-                                    .background(BrandPurple)
-                                    .clickable { scannedResult = null }
-                                    .padding(horizontal = 24.dp, vertical = 10.dp)
-                            ) {
-                                Text("다시 스캔", color = Color.White, fontSize = 14.sp)
-                            }
-                        }
-                    }
-                } else if (cameraPermissionGranted) {
+                if (cameraPermissionGranted) {
                     QrScannerView(
                         onQrScanned = { result ->
                             scannedResult = result
@@ -436,7 +458,7 @@ fun QrPaymentScreen(
                         .padding(12.dp),
                     contentAlignment = Alignment.BottomStart
                 ) {
-                    val typeName = if (card.type == "personal") "일반 카드" else "사업자 카드"
+                    val typeName = if (card.type == "personal") "개인 카드" else "사업자 카드"
                     Column {
                         Text(typeName, fontSize = 11.sp, color = Color.White, fontWeight = FontWeight.SemiBold)
                         Text(card.cardNumber.takeLast(17), fontSize = 10.sp, color = Color.White.copy(alpha = 0.7f))

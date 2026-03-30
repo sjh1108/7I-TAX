@@ -8,7 +8,9 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import com.ssafy.seveniTax.viewmodel.ClassificationViewModel
 import kotlinx.coroutines.delay
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,14 +29,31 @@ import com.ssafy.seveniTax.ui.theme.*
 @Composable
 fun ClassificationLoadingScreen(
     navController: NavController,
-    merchantName: String = "스타벅스 강남점",
-    industryCode: String = "카페/음료",
+    classificationViewModel: ClassificationViewModel,
+    merchantName: String = "",
+    amount: Long = 0L,
+    industryCode: String = "",
     onComplete: () -> Unit = {}
 ) {
-    // TODO: 실제 AI API 호출로 교체. 지금은 3초 딜레이 후 결과 화면 이동
+    val uiState by classificationViewModel.uiState.collectAsState()
+
+    // 실제 AI API 호출
     LaunchedEffect(Unit) {
-        delay(3000L)
-        onComplete()
+        val name = merchantName.ifEmpty { uiState.merchantName }
+        val amt = if (amount > 0) amount else uiState.amount
+        if (name.isNotEmpty()) {
+            classificationViewModel.classify(name, if (amt > 0) amt else null, uiState.note)
+        } else {
+            delay(1000L)
+            onComplete()
+        }
+    }
+
+    // 결과 또는 에러 시 다음 화면 이동
+    LaunchedEffect(uiState.result, uiState.error) {
+        if (uiState.result != null || uiState.error != null) {
+            onComplete()
+        }
     }
 
     Column(
@@ -216,10 +235,4 @@ private fun AnalysisItem(
     }
 }
 
-@Preview(showBackground = true)
-@Composable
-private fun ClassificationLoadingScreenPreview() {
-    ClassificationLoadingScreen(
-        navController = rememberNavController()
-    )
-}
+// Preview removed: requires ClassificationViewModel

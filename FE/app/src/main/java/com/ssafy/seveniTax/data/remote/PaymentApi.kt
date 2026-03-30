@@ -18,4 +18,7 @@ interface PaymentApi {
 
     @GET("payments/qr/token/{token}/status")
     suspend fun getQrPaymentStatus(@Path("token") token: String): Response<ApiResponse<QrPaymentStatusResponse>>
+
+    @GET("cards/merchants")
+    suspend fun getMerchants(): Response<ApiResponse<List<MerchantResponse>>>
 }

@@ -5,5 +5,6 @@ data class ClassificationRequest(
     val mcc: String? = null,
     val amount: Long? = null,
     val isBusinessPurpose: Boolean? = null,
-    val isClientAccompanied: Boolean? = null
+    val isClientAccompanied: Boolean? = null,
+    val note: String? = null
 )

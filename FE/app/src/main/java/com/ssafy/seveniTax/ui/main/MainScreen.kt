@@ -52,7 +52,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavController
-import com.ssafy.seveniTax.ui.ai.AiScreen
 import com.ssafy.seveniTax.ui.home.HomeScreen
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.payment.QrPaymentScreen
@@ -65,7 +64,8 @@ import com.ssafy.seveniTax.viewmodel.MainViewModel
 private data class NotificationItem(
     val title: String,
     val message: String,
-    val time: String
+    val time: String,
+    val route: String? = null
 )
 
 private data class DrawerItem(
@@ -100,11 +100,11 @@ fun MainScreen(
     val notifications = remember(unconfirmedCount, deadlines) {
         buildList {
             if (unconfirmedCount > 0) {
-                add(NotificationItem("미분류 거래 ${unconfirmedCount}건", "거래를 분류하면 장부 정확도가 올라갑니다.", ""))
+                add(NotificationItem("미분류 거래 ${unconfirmedCount}건", "거래를 분류하면 장부 정확도가 올라갑니다.", "", Route.UnclassifiedList.path))
             }
             deadlines.filter { it.dDay in 0..7 }.sortedBy { it.dDay }.forEach { d ->
                 val dText = if (d.dDay == 0) "D-Day" else "D-${d.dDay}"
-                add(NotificationItem("${d.taxName} $dText", d.description, ""))
+                add(NotificationItem("${d.taxName} $dText", d.description, "", Route.TaxCalendar.path))
             }
         }
     }
@@ -127,8 +127,8 @@ fun MainScreen(
                         isSideMenuOpen = false
                     },
                     DrawerItem("AI 세무 도우미") {
-                        selectedTab = BottomTab.AI
                         isSideMenuOpen = false
+                        navController.navigate(Route.AiChat.path)
                     },
                     DrawerItem("설정") {
                         selectedTab = BottomTab.SETTINGS
@@ -228,14 +228,14 @@ fun MainScreen(
                     modifier = modifier,
                     onNotificationClick = { isNotificationSheetOpen = true },
                     onMenuClick = { isSideMenuOpen = true },
+                    onQrPaymentClick = { openQrPayment() },
                     notificationCount = notifications.size
                 )
                 BottomTab.SETTINGS -> SettingsScreen(navController, modifier)
-                BottomTab.AI -> AiScreen(navController, modifier)
                 BottomTab.QR_PAYMENT -> QrPaymentScreen(
                     navController = navController,
                     paymentViewModel = hiltViewModel(),
-                    showBackButton = false,
+                    onBack = { selectedTab = BottomTab.HOME },
                     modifier = modifier
                 )
             }
@@ -280,13 +280,19 @@ fun MainScreen(
             sheetState = sheetState,
             containerColor = Color.White
         ) {
-            NotificationSheetContent(notifications = notifications)
+            NotificationSheetContent(
+                notifications = notifications,
+                onItemClick = { route ->
+                    isNotificationSheetOpen = false
+                    navController.navigate(route)
+                }
+            )
         }
     }
 }
 
 @Composable
-private fun NotificationSheetContent(notifications: List<NotificationItem>) {
+private fun NotificationSheetContent(notifications: List<NotificationItem>, onItemClick: (String) -> Unit = {}) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -312,6 +318,7 @@ private fun NotificationSheetContent(notifications: List<NotificationItem>) {
                     .fillMaxWidth()
                     .clip(RoundedCornerShape(18.dp))
                     .background(Color(0xFFF8F8FB))
+                    .then(if (item.route != null) Modifier.clickable { onItemClick(item.route) } else Modifier)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Text(

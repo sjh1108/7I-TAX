@@ -12,7 +12,11 @@ class MainViewModel @Inject constructor(
 
     fun getUserName(): String = secureStorage.getUserName().orEmpty()
 
+    fun getUserPhone(): String = secureStorage.getPhoneNumber().orEmpty()
+
     fun isPayEnrolled(): Boolean = secureStorage.isPayEnrolled()
+
+    fun logout() { secureStorage.clearAll() }
 
     fun setPayEnrolled(enrolled: Boolean) {
         secureStorage.setPayEnrolled(enrolled)

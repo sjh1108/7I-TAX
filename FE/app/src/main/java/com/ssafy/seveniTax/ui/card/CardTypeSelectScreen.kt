@@ -65,10 +65,10 @@ fun CardTypeSelectScreen(navController: NavController, viewModel: CardViewModel)
             )
             Spacer(modifier = Modifier.height(32.dp))
 
-            // 일반 카드
+            // 개인 카드
             CardTypeCard(
                 backgroundColor = CardGold,
-                title = "일반 카드",
+                title = "개인 카드",
                 cardName = "Amazon Platinium",
                 cardNumber = "4756  ••••  ••••  9018",
                 description = "개인 결제용 카드 등록",

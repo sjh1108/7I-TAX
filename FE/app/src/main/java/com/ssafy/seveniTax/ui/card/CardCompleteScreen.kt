@@ -32,7 +32,7 @@ fun CardCompleteScreen(navController: NavController, viewModel: CardViewModel) {
     val uiState by viewModel.uiState.collectAsState()
     val registeredCard = uiState.lastRegisteredCard
     val cardColor = if (registeredCard?.type == "business") CardBlue else CardGold
-    val cardTypeName = if (registeredCard?.type == "business") "사업자 카드" else "일반 카드"
+    val cardTypeName = if (registeredCard?.type == "business") "사업자 카드" else "개인 카드"
     Column(
         modifier = Modifier
             .fillMaxSize()

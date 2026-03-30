@@ -34,19 +34,22 @@ private data class ExportPurposeItem(
     val id: String,
     val title: String,
     val subtitle: String,
-    val icon: String
+    val icon: String,
+    val enabled: Boolean = false
 )
 
 private val purposes = listOf(
-    ExportPurposeItem("vat1", "부가가치세 1기", "2025년 1월 ~ 6월", "📋"),
-    ExportPurposeItem("vat2", "부가가치세 2기", "2025년 7월 ~ 12월", "📋"),
-    ExportPurposeItem("income", "종합소득세", "2025년 1월 ~ 12월", "📊"),
-    ExportPurposeItem("local", "지방소득세", "2025년 1월 ~ 12월", "📊"),
-    ExportPurposeItem("custom", "직접 설정", "원하는 기간을 선택합니다", "⚙️")
+    ExportPurposeItem("vat1", "부가가치세 1기", "1월 ~ 6월", "📋", enabled = true),
+    ExportPurposeItem("vat2", "부가가치세 2기", "7월 ~ 12월", "📋", enabled = true),
+    ExportPurposeItem("income", "종합소득세", "1월 ~ 12월", "📊", enabled = true),
+    ExportPurposeItem("local", "지방소득세", "1월 ~ 12월", "📊", enabled = true),
+    ExportPurposeItem("custom", "직접 설정", "원하는 기간을 선택합니다", "⚙️", enabled = true)
 )
 
 @Composable
 fun ExportPurposeScreen(navController: NavController) {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -80,11 +83,13 @@ fun ExportPurposeScreen(navController: NavController) {
 
             purposes.forEach { purpose ->
                 PurposeCard(purpose) {
+                    if (!purpose.enabled) {
+                        Toast.makeText(context, "준비중입니다", Toast.LENGTH_SHORT).show()
+                        return@PurposeCard
+                    }
                     if (purpose.id == "custom") {
-                        // 직접 설정만 기간 설정 페이지로
                         navController.navigate(Route.ExportDateRange.create(purpose.id))
                     } else {
-                        // 나머지는 바로 파일 형식 선택으로
                         val (start, end) = getDefaultDates(purpose.id)
                         navController.navigate(Route.ExportFormat.create(purpose.id, start, end))
                     }
@@ -102,7 +107,9 @@ private fun PurposeCard(item: ExportPurposeItem, onClick: () -> Unit) {
             .fillMaxWidth()
             .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = Surface),
+        colors = CardDefaults.cardColors(
+            containerColor = if (item.enabled) Surface else Color(0xFFF5F5F5)
+        ),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
@@ -111,10 +118,24 @@ private fun PurposeCard(item: ExportPurposeItem, onClick: () -> Unit) {
         ) {
             Text(item.icon, fontSize = 24.sp)
             Spacer(modifier = Modifier.width(14.dp))
-            Column {
-                Text(item.title, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    item.title,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (item.enabled) TextPrimary else TextSecondary
+                )
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(item.subtitle, fontSize = 12.sp, color = TextSecondary)
+            }
+            if (!item.enabled) {
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text("준비중", fontSize = 11.sp, color = TextSecondary)
+                }
             }
         }
     }
@@ -279,13 +300,13 @@ private data class FormatItem(
     val title: String,
     val extension: String,
     val description: String,
-    val icon: String
+    val icon: String,
+    val enabled: Boolean = false
 )
 
 private val formats = listOf(
-    FormatItem("csv", "CSV", ".csv", "Excel·회계 프로그램에서 바로 열기", "📊"),
-    FormatItem("pdf", "PDF", ".pdf", "준비 중", "📄"),
-    FormatItem("excel", "Excel", ".xlsx", "준비 중", "📊")
+    FormatItem("pdf", "PDF", ".pdf", "PDF 다운로드", "📄", enabled = true),
+    FormatItem("excel", "Excel", ".xlsx", "Excel 파일 다운로드", "📊", enabled = true)
 )
 
 @Composable
@@ -360,14 +381,23 @@ fun ExportFormatScreen(
             Spacer(modifier = Modifier.height(20.dp))
 
             formats.forEach { format ->
-                val isAvailable = format.id == "csv"
-                FormatCard(format, enabled = isAvailable) {
-                    if (!uiState.isExporting && isAvailable) {
-                        when (purpose) {
-                            "vat1" -> viewModel.exportVat(year, 1)
-                            "vat2" -> viewModel.exportVat(year, 2)
-                            "income", "local" -> viewModel.exportIncomeTax(year)
-                            else -> viewModel.exportBookEntries(year)
+                FormatCard(format) {
+                    if (!uiState.isExporting) {
+                        when (format.id) {
+                            "pdf" -> when (purpose) {
+                                "vat1" -> viewModel.exportVatPdf(year, 1)
+                                "vat2" -> viewModel.exportVatPdf(year, 2)
+                                "income" -> viewModel.exportIncomeTaxPdf(year)
+                                "local" -> viewModel.exportLocalTaxPdf(year)
+                                else -> viewModel.exportSimpleLedgerPdf(year)
+                            }
+                            "excel" -> when (purpose) {
+                                "vat1" -> viewModel.exportVatExcel(year, 1)
+                                "vat2" -> viewModel.exportVatExcel(year, 2)
+                                "income" -> viewModel.exportIncomeTaxExcel(year)
+                                "local" -> viewModel.exportLocalTaxExcel(year)
+                                else -> viewModel.exportIncomeTaxExcel(year)
+                            }
                         }
                     }
                 }
@@ -378,16 +408,16 @@ fun ExportFormatScreen(
 }
 
 @Composable
-private fun FormatCard(item: FormatItem, enabled: Boolean = true, onClick: () -> Unit) {
+private fun FormatCard(item: FormatItem, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .then(if (enabled) Modifier.clickable { onClick() } else Modifier),
+            .clickable { onClick() },
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = if (enabled) Color.White else Color(0xFFF5F5F5)
+            containerColor = if (item.enabled) Color.White else Color(0xFFF5F5F5)
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = if (enabled) 2.dp else 0.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = if (item.enabled) 2.dp else 0.dp)
     ) {
         Row(
             modifier = Modifier.padding(16.dp),
@@ -403,14 +433,28 @@ private fun FormatCard(item: FormatItem, enabled: Boolean = true, onClick: () ->
                 Text(item.icon, fontSize = 22.sp)
             }
             Spacer(modifier = Modifier.width(14.dp))
-            Column {
+            Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = TextPrimary)
+                    Text(
+                        item.title,
+                        fontSize = 15.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = if (item.enabled) TextPrimary else TextSecondary
+                    )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(item.extension, fontSize = 12.sp, color = TextSecondary)
                 }
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(item.description, fontSize = 12.sp, color = TextSecondary)
+            }
+            if (!item.enabled) {
+                Box(
+                    modifier = Modifier
+                        .background(Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Text("준비중", fontSize = 11.sp, color = TextSecondary)
+                }
             }
         }
     }

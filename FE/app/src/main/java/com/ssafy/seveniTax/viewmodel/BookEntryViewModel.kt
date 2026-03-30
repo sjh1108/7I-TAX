@@ -5,6 +5,9 @@ import androidx.lifecycle.viewModelScope
 import com.ssafy.seveniTax.data.model.book.BookEntryResponse
 import com.ssafy.seveniTax.data.repository.BookEntryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import android.util.Log
+import com.ssafy.seveniTax.data.model.book.BookEntryRequest
+import com.ssafy.seveniTax.data.model.book.CategoryUpdateRequest
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -27,13 +30,13 @@ class BookEntryViewModel @Inject constructor(
     private val _entries = MutableStateFlow<List<BookEntryResponse>>(emptyList())
     val entries: StateFlow<List<BookEntryResponse>> = _entries.asStateFlow()
 
-    private val _unconfirmedCount = MutableStateFlow(3) // TODO: 데모용 더미값, 추후 0으로 복원
+    private val _unconfirmedCount = MutableStateFlow(0)
     val unconfirmedCount: StateFlow<Int> = _unconfirmedCount.asStateFlow()
 
-    private val _selectedYear = MutableStateFlow(2025)
+    private val _selectedYear = MutableStateFlow(java.time.LocalDate.now().year)
     val selectedYear: StateFlow<Int> = _selectedYear.asStateFlow()
 
-    private val _selectedMonth = MutableStateFlow(3)
+    private val _selectedMonth = MutableStateFlow(java.time.LocalDate.now().monthValue)
     val selectedMonth: StateFlow<Int> = _selectedMonth.asStateFlow()
 
     private val _selectedFilter = MutableStateFlow(EntryFilter.ALL)
@@ -61,8 +64,11 @@ class BookEntryViewModel @Inject constructor(
     private val _error = MutableStateFlow<String?>(null)
     val error: StateFlow<String?> = _error.asStateFlow()
 
+    private val _bulkConfirmDone = MutableStateFlow(false)
+    val bulkConfirmDone: StateFlow<Boolean> = _bulkConfirmDone.asStateFlow()
+
     init {
-        loadMockEntries() // TODO: 데모용 목 데이터, 추후 loadEntries()로 복원
+        loadEntries()
     }
 
     private fun loadMockEntries() {
@@ -157,13 +163,39 @@ class BookEntryViewModel @Inject constructor(
             _isLoading.value = true
             _error.value = null
             try {
-                val response = bookEntryRepository.getEntries(confirmed = null, page = 0, size = 50)
-                if (response.isSuccessful && response.body()?.status == "success") {
-                    _entries.value = response.body()?.data?.content ?: emptyList()
+                Log.d("BookEntryVM", "▶ loadEntries() 호출")
+                val response = bookEntryRepository.getEntries(confirmed = null, page = 0, size = 200)
+                val code = response.code()
+                val body = response.body()
+                val errorBody = if (!response.isSuccessful) response.errorBody()?.string() else null
+
+                Log.d("BookEntryVM", "  HTTP $code | status=${body?.status} | data=${body?.data != null}")
+                if (errorBody != null) Log.e("BookEntryVM", "  errorBody=$errorBody")
+
+                if (response.isSuccessful && body?.status == "success") {
+                    val entries = body.data?.content ?: emptyList()
+                    Log.d("BookEntryVM", "  entries=${entries.size}건")
+                    entries.take(3).forEach { e ->
+                        Log.d("BookEntryVM", "    [${e.id}] ${e.entryDate} ${e.merchantName} ${e.entryType} income=${e.incomeAmount} expense=${e.expenseAmount}")
+                    }
+                    _entries.value = entries
+
+                    // 최신 데이터의 연/월로 자동 설정
+                    val latestDate = entries.mapNotNull {
+                        try { java.time.LocalDate.parse(it.entryDate) } catch (_: Exception) { null }
+                    }.maxOrNull()
+                    if (latestDate != null) {
+                        _selectedYear.value = latestDate.year
+                        _selectedMonth.value = latestDate.monthValue
+                        Log.d("BookEntryVM", "  자동 설정: ${latestDate.year}년 ${latestDate.monthValue}월")
+                    }
                 } else {
-                    _error.value = response.body()?.message ?: "데이터를 불러올 수 없습니다"
+                    val errMsg = body?.message ?: errorBody?.take(200) ?: "데이터를 불러올 수 없습니다 (HTTP $code)"
+                    Log.e("BookEntryVM", "  실패: $errMsg")
+                    _error.value = errMsg
                 }
             } catch (e: Exception) {
+                Log.e("BookEntryVM", "  에러: ${e.message}", e)
                 _error.value = "네트워크 오류가 발생했습니다"
             } finally {
                 _isLoading.value = false
@@ -205,10 +237,155 @@ class BookEntryViewModel @Inject constructor(
         _filterOnlyUnclassified.value = onlyUnclassified
     }
 
+    private val categoryNameToCode = mapOf(
+        "복리후생비" to "welfare",
+        "접대비" to "entertain",
+        "여비교통비" to "transport",
+        "소모품비" to "supplies",
+        "도서인쇄비" to "books",
+        "통신비" to "comm",
+        "지급수수료" to "fee",
+        "비품" to "asset",
+        "매출" to "sales",
+        "감가상각비" to "depreciation",
+        "광고선전비" to "advertising",
+        "교육훈련비" to "education",
+        "보험료" to "insurance",
+        "세금과공과" to "tax",
+        "수선비" to "repair",
+        "수도광열비" to "utility",
+        "운반비" to "delivery",
+        "임차료" to "rent",
+        "차량유지비" to "vehicle"
+    )
+
     fun updateEntryCategory(entryId: Long, newCategory: String) {
-        _entries.value = _entries.value.map { entry ->
-            if (entry.id == entryId) entry.copy(categoryName = newCategory, confirmed = true)
-            else entry
+        val categoryCode = categoryNameToCode[newCategory] ?: newCategory.lowercase()
+        viewModelScope.launch {
+            try {
+                val response = bookEntryRepository.updateCategory(
+                    entryId,
+                    CategoryUpdateRequest(categoryCode = categoryCode, categoryName = newCategory)
+                )
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.d("BookEntryVM", "경비 변경 성공: $entryId → $newCategory")
+                    // 카테고리 변경 후 확정 처리
+                    confirmEntry(entryId)
+                    loadEntries()
+                } else {
+                    val errMsg = response.body()?.message ?: "경비 변경 실패 (${response.code()})"
+                    Log.e("BookEntryVM", "경비 변경 실패: $errMsg")
+                    _error.value = errMsg
+                }
+            } catch (e: Exception) {
+                Log.e("BookEntryVM", "경비 변경 에러: ${e.message}", e)
+                _error.value = "네트워크 오류가 발생했습니다"
+            }
+        }
+    }
+
+    fun confirmEntry(entryId: Long) {
+        viewModelScope.launch {
+            try {
+                val response = bookEntryRepository.confirmEntry(entryId)
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.d("BookEntryVM", "경비 확정 성공: $entryId")
+                    loadEntries()
+                } else {
+                    Log.e("BookEntryVM", "경비 확정 실패: ${response.body()?.message}")
+                }
+            } catch (e: Exception) {
+                Log.e("BookEntryVM", "경비 확정 에러: ${e.message}", e)
+            }
+        }
+    }
+
+    /**
+     * 일괄 확정: 카테고리 맵에 있는 항목은 카테고리 변경 + 확정, 없는 항목은 확정만.
+     * 모든 API 호출 완료 후 bulkConfirmDone = true 로 변경.
+     */
+    fun bulkConfirmEntries(categoryMap: Map<Long, String>, entryIds: List<Long>) {
+        _bulkConfirmDone.value = false
+        viewModelScope.launch {
+            for (id in entryIds) {
+                val category = categoryMap[id]
+                try {
+                    if (category != null && category != "미분류") {
+                        val code = categoryNameToCode[category] ?: category.lowercase()
+                        val resp = bookEntryRepository.updateCategory(
+                            id, CategoryUpdateRequest(categoryCode = code, categoryName = category)
+                        )
+                        if (resp.isSuccessful && resp.body()?.status == "success") {
+                            Log.d("BookEntryVM", "일괄 경비 변경 성공: $id → $category")
+                        } else {
+                            Log.e("BookEntryVM", "일괄 경비 변경 실패: $id ${resp.body()?.message}")
+                        }
+                    }
+                    val confirmResp = bookEntryRepository.confirmEntry(id)
+                    if (confirmResp.isSuccessful && confirmResp.body()?.status == "success") {
+                        Log.d("BookEntryVM", "일괄 확정 성공: $id")
+                    } else {
+                        Log.e("BookEntryVM", "일괄 확정 실패: $id ${confirmResp.body()?.message}")
+                    }
+                } catch (e: Exception) {
+                    Log.e("BookEntryVM", "일괄 확정 에러: $id ${e.message}", e)
+                }
+            }
+            loadEntries()
+            loadUnconfirmedCount()
+            _bulkConfirmDone.value = true
+        }
+    }
+
+    fun clearBulkConfirmDone() {
+        _bulkConfirmDone.value = false
+    }
+
+    fun createTestEntries() {
+        val today = java.time.LocalDate.now().toString()
+        val testData = listOf(
+            BookEntryRequest(entryDate = today, merchantName = "스타벅스 강남점", entryType = "EXPENSE", amount = 5500, description = "커피"),
+            BookEntryRequest(entryDate = today, merchantName = "카카오T 택시", entryType = "EXPENSE", amount = 18400, description = "택시비"),
+            BookEntryRequest(entryDate = today, merchantName = "쿠팡", entryType = "EXPENSE", amount = 32000, description = "사무용품"),
+            BookEntryRequest(entryDate = today, merchantName = "GS25 역삼점", entryType = "EXPENSE", amount = 4800, description = "간식"),
+            BookEntryRequest(entryDate = today, merchantName = "네이버클라우드", entryType = "EXPENSE", amount = 110000, description = "서버 호스팅"),
+        )
+        viewModelScope.launch {
+            testData.forEach { req ->
+                try {
+                    val response = bookEntryRepository.createEntry(req)
+                    if (response.isSuccessful) {
+                        Log.d("BookEntryVM", "테스트 데이터 생성: ${req.merchantName}")
+                    } else {
+                        Log.e("BookEntryVM", "테스트 데이터 실패: ${req.merchantName} (${response.code()})")
+                    }
+                } catch (e: Exception) {
+                    Log.e("BookEntryVM", "테스트 데이터 에러: ${e.message}")
+                }
+            }
+            loadEntries()
+            loadUnconfirmedCount()
+        }
+    }
+
+    fun updateNote(entryId: Long, note: String, onResult: (Boolean) -> Unit = {}) {
+        viewModelScope.launch {
+            try {
+                val response = bookEntryRepository.updateNote(
+                    entryId,
+                    com.ssafy.seveniTax.data.model.book.NoteUpdateRequest(note)
+                )
+                if (response.isSuccessful && response.body()?.status == "success") {
+                    Log.d("BookEntryVM", "메모 저장 성공: entryId=$entryId")
+                    onResult(true)
+                } else {
+                    Log.e("BookEntryVM", "메모 저장 실패: ${response.body()?.message}")
+                    onResult(false)
+                }
+            } catch (e: Exception) {
+                Log.e("BookEntryVM", "메모 저장 에러: ${e.message}", e)
+                onResult(false)
+            }
         }
     }
 
@@ -264,9 +441,9 @@ class BookEntryViewModel @Inject constructor(
         return result
     }
 
-    fun getTotalIncome(): Long = getEntriesForMonth().sumOf { it.incomeAmount }
-    fun getTotalExpense(): Long = getEntriesForMonth().sumOf { it.expenseAmount }
-    fun getTotalAsset(): Long = getEntriesForMonth().sumOf { it.fixedAssetAmount }
+    fun getTotalIncome(): Long = getEntriesForMonth().filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    fun getTotalExpense(): Long = getEntriesForMonth().filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
+    fun getTotalAsset(): Long = getEntriesForMonth().filter { it.entryType == "ASSET" }.sumOf { it.fixedAssetAmount }
     fun getNetProfit(): Long = getTotalIncome() - getTotalExpense()
 
     // 세목별 비용 집계
@@ -298,8 +475,8 @@ class BookEntryViewModel @Inject constructor(
         }
     }
 
-    fun getIncomeFor(year: Int, month: Int): Long = getEntriesFor(year, month).sumOf { it.incomeAmount }
-    fun getExpenseFor(year: Int, month: Int): Long = getEntriesFor(year, month).sumOf { it.expenseAmount }
+    fun getIncomeFor(year: Int, month: Int): Long = getEntriesFor(year, month).filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    fun getExpenseFor(year: Int, month: Int): Long = getEntriesFor(year, month).filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
 
     fun getExpenseByCategoryFor(year: Int, month: Int): List<Pair<String, Long>> {
         return getEntriesFor(year, month)
@@ -336,8 +513,8 @@ class BookEntryViewModel @Inject constructor(
         }
     }
 
-    fun getAnnualIncome(year: Int): Long = getEntriesForYear(year).sumOf { it.incomeAmount }
-    fun getAnnualExpense(year: Int): Long = getEntriesForYear(year).sumOf { it.expenseAmount }
+    fun getAnnualIncome(year: Int): Long = getEntriesForYear(year).filter { it.entryType == "INCOME" }.sumOf { it.incomeAmount }
+    fun getAnnualExpense(year: Int): Long = getEntriesForYear(year).filter { it.entryType == "EXPENSE" }.sumOf { it.expenseAmount }
 
     fun getAnnualExpenseByCategory(year: Int): List<Pair<String, Long>> {
         return getEntriesForYear(year)

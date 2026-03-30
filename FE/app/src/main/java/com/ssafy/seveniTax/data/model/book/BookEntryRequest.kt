@@ -17,3 +17,7 @@ data class CategoryUpdateRequest(
     val categoryCode: String,
     val categoryName: String
 )
+
+data class NoteUpdateRequest(
+    val note: String
+)

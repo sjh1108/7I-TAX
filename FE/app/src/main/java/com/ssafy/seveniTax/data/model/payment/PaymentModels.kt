@@ -43,3 +43,10 @@ data class QrPaymentStatusResponse(
     val paymentId: Long?,
     val capturedAt: String?
 )
+
+data class MerchantResponse(
+    val merchantId: Long,
+    val merchantName: String,
+    val categoryId: String?,
+    val categoryName: String?
+)

@@ -12,7 +12,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.ChevronLeft
 import androidx.compose.material.icons.filled.ChevronRight
-import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -69,13 +68,7 @@ fun TaxCalendarScreen(
     ) {
         // 헤더
         CalendarHeader(
-            onBack = { navController.popBackStack() },
-            notificationCount = 3,
-            onNotificationClick = {
-                scope.launch {
-                    snackbarHostState.showSnackbar("알림 기능 준비 중입니다")
-                }
-            }
+            onBack = { navController.popBackStack() }
         )
 
         Column(
@@ -142,6 +135,12 @@ fun TaxCalendarScreen(
                 HorizontalDivider(color = Surface, thickness = 1.dp)
 
                 MonthScheduleSection(monthDeadlines, navController)
+
+                // ─── 예상 납부액 요약 ───
+                TaxEstimationSummary(
+                    estimatedIncomeTax = estimatedIncomeTax,
+                    estimatedLocalTax = estimatedLocalTax
+                )
             } else {
                 // ─── 특정 세금: 연간 타임라인 모드 ───
                 AnnualTimelineView(
@@ -163,9 +162,7 @@ fun TaxCalendarScreen(
 
 @Composable
 private fun CalendarHeader(
-    onBack: () -> Unit,
-    notificationCount: Int,
-    onNotificationClick: () -> Unit = {}
+    onBack: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -194,33 +191,8 @@ private fun CalendarHeader(
 
         Spacer(modifier = Modifier.weight(1f))
 
-        Box {
-            IconButton(onClick = onNotificationClick) {
-                Icon(
-                    imageVector = Icons.Outlined.Notifications,
-                    contentDescription = "알림",
-                    tint = TextPrimary
-                )
-            }
-            if (notificationCount > 0) {
-                Box(
-                    modifier = Modifier
-                        .size(18.dp)
-                        .clip(CircleShape)
-                        .background(DdayBadge)
-                        .align(Alignment.TopEnd)
-                        .offset(x = (-4).dp, y = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "$notificationCount",
-                        fontSize = 10.sp,
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold
-                    )
-                }
-            }
-        }
+        // 뒤로가기 버튼과 대칭을 위한 빈 공간
+        Spacer(modifier = Modifier.size(48.dp))
     }
 }
 
@@ -241,8 +213,6 @@ private fun UrgentBanner(deadline: TaxDeadline, onClick: () -> Unit = {}) {
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text("🔔", fontSize = 14.sp)
-                Spacer(modifier = Modifier.width(6.dp))
                 Text(
                     text = "가장 임박한 일정",
                     fontSize = 13.sp,
@@ -819,19 +789,25 @@ private fun AnnualTimelineView(
                 dDay = item.dDay,
                 dotColor = taxColor,
                 onClick = {
+                    // 서버 deadlines에서 매칭 시도, 없으면 타임라인 데이터로 직접 이동
                     val matchingDeadline = deadlines.find {
                         it.taxName.contains(item.title) || item.title.contains(it.taxName.take(4))
                     }
-                    if (matchingDeadline != null) {
-                        navController.navigate(
-                            Route.TaxCalendarDetail.create(
-                                taxName = matchingDeadline.taxName,
-                                deadline = matchingDeadline.deadline,
-                                dDay = matchingDeadline.dDay,
-                                description = matchingDeadline.description
-                            )
+                    val taxName = matchingDeadline?.taxName
+                        ?: "${filter.label} ${item.title}"
+                    val deadline = matchingDeadline?.deadline ?: item.date
+                    val dDay = matchingDeadline?.dDay
+                        ?: item.dDay ?: 0
+                    val description = matchingDeadline?.description ?: item.subtitle
+
+                    navController.navigate(
+                        Route.TaxCalendarDetail.create(
+                            taxName = taxName,
+                            deadline = deadline,
+                            dDay = dDay,
+                            description = description
                         )
-                    }
+                    )
                 }
             )
         }
@@ -864,13 +840,13 @@ private fun getAnnualSchedule(filter: TaxFilter, year: Int): List<AnnualSchedule
                 daysBetween(today, LocalDate.of(year, 10, 25)))
         )
         TaxFilter.INCOME -> listOf(
-            AnnualScheduleItem("$year-05-31", "종합소득세 확정신고", "${year - 1}년 귀속",
+            AnnualScheduleItem("$year-05-31", "종합소득세 확정 신고 및 납부", "${year - 1}년 귀속",
                 daysBetween(today, LocalDate.of(year, 5, 31))),
             AnnualScheduleItem("$year-11-30", "중간예납", "중간예납세액 납부",
                 daysBetween(today, LocalDate.of(year, 11, 30)))
         )
         TaxFilter.LOCAL -> listOf(
-            AnnualScheduleItem("$year-05-31", "지방소득세 신고", "종합소득분",
+            AnnualScheduleItem("$year-05-31", "지방소득세 신고 및 납부", "종합소득분",
                 daysBetween(today, LocalDate.of(year, 5, 31))),
             AnnualScheduleItem("$year-08-31", "주민세 납부", "균등분 납부",
                 daysBetween(today, LocalDate.of(year, 8, 31)))
@@ -1074,5 +1050,105 @@ private fun getDdayColor(dDay: Int): Color {
         dDay <= 3 -> DdayError
         dDay <= 7 -> DdayWarning
         else -> DdayNormal
+    }
+}
+
+// ─── 예상 납부액 요약 카드 (전체 필터) ─────────────────
+
+@Composable
+private fun TaxEstimationSummary(
+    estimatedIncomeTax: Long,
+    estimatedLocalTax: Long
+) {
+    val fmt = java.text.NumberFormat.getNumberInstance(java.util.Locale.KOREA)
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp, vertical = 16.dp)
+    ) {
+        Text(
+            text = "예상 납부액",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = TextPrimary
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "장부 데이터 기반 자동 계산",
+            fontSize = 12.sp,
+            color = TextSecondary
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            // 소득세 카드
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(TaxIncome.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(TaxIncome)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "종합소득세",
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "${fmt.format(estimatedIncomeTax)}원",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
+            }
+
+            // 지방세 카드
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .background(TaxLocal.copy(alpha = 0.08f), RoundedCornerShape(16.dp))
+                    .padding(16.dp)
+            ) {
+                Column {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(8.dp)
+                                .clip(CircleShape)
+                                .background(TaxLocal)
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "지방소득세",
+                            fontSize = 13.sp,
+                            color = TextSecondary
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "${fmt.format(estimatedLocalTax)}원",
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                }
+            }
+        }
     }
 }

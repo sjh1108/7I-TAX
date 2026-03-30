@@ -10,12 +10,13 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
@@ -23,9 +24,20 @@ import com.ssafy.seveniTax.ui.components.ButtonVariant
 import com.ssafy.seveniTax.ui.components.TaxButton
 import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.PaymentViewModel
+import java.text.NumberFormat
+import java.time.LocalDateTime
+import java.time.format.DateTimeFormatter
 
 @Composable
-fun PaymentCompleteScreen(navController: NavController) {
+fun PaymentCompleteScreen(
+    navController: NavController,
+    paymentViewModel: PaymentViewModel
+) {
+    val paymentState by paymentViewModel.uiState.collectAsState()
+    val fmt = NumberFormat.getNumberInstance()
+    val now = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss"))
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -68,7 +80,7 @@ fun PaymentCompleteScreen(navController: NavController) {
             Spacer(modifier = Modifier.height(4.dp))
 
             Text(
-                text = "2026.03.17 14:32:18",
+                text = now,
                 fontSize = 13.sp,
                 color = TextSecondary
             )
@@ -82,11 +94,9 @@ fun PaymentCompleteScreen(navController: NavController) {
                     .background(Surface, RoundedCornerShape(12.dp))
                     .padding(20.dp)
             ) {
-                InfoRow("결제 금액", "6,500원")
+                InfoRow("결제 금액", "${fmt.format(paymentState.amount)}원")
                 HorizontalDivider(color = Divider, modifier = Modifier.padding(vertical = 16.dp))
-                InfoRow("가맹점", "스타벅스 강남점")
-                HorizontalDivider(color = Divider, modifier = Modifier.padding(vertical = 16.dp))
-                InfoRow("결제 카드", "신한카드 ••••5678")
+                InfoRow("가맹점", paymentState.payerName.ifEmpty { "-" })
             }
         }
 
@@ -98,17 +108,26 @@ fun PaymentCompleteScreen(navController: NavController) {
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             TaxButton(
-                text = "확인",
+                text = "증빙 내역 추가",
                 onClick = {
-                    navController.navigate(Route.Main.path) {
-                        popUpTo(0) { inclusive = true }
+                    // paymentId로 연결된 장부 내역 상세로 이동
+                    val paymentId = paymentState.paymentId
+                    if (paymentId != null) {
+                        navController.navigate(Route.BookEntryDetail.create(paymentId)) {
+                            popUpTo(Route.Main.path) { inclusive = false }
+                        }
+                    } else {
+                        navController.navigate(Route.BookEntryList.path) {
+                            popUpTo(Route.Main.path) { inclusive = false }
+                        }
                     }
+                    paymentViewModel.resetPayment()
                 }
             )
             TaxButton(
-                text = "내역 보기",
+                text = "홈으로",
                 onClick = {
-                    // TODO: 결제 내역 화면으로 이동
+                    paymentViewModel.resetPayment()
                     navController.navigate(Route.Main.path) {
                         popUpTo(0) { inclusive = true }
                     }

@@ -16,6 +16,10 @@ object NotificationHelper {
     private const val CHANNEL_NAME = "세목 분류 알림"
     private const val CHANNEL_DESC = "AI 세목 자동분류 결과를 알려드립니다"
 
+    private const val PAYMENT_CHANNEL_ID = "payment_channel"
+    private const val PAYMENT_CHANNEL_NAME = "결제 알림"
+    private const val PAYMENT_CHANNEL_DESC = "QR 결제 완료/실패 알림"
+
     private const val TAX_CALENDAR_CHANNEL_ID = "tax_calendar_channel"
     private const val TAX_CALENDAR_CHANNEL_NAME = "세금 캘린더 알림"
     private const val TAX_CALENDAR_CHANNEL_DESC = "세금 신고/납부 마감일 리마인드 알림"
@@ -42,6 +46,16 @@ object NotificationHelper {
             enableVibration(true)
         }
         manager.createNotificationChannel(taxCalendarChannel)
+
+        val paymentChannel = NotificationChannel(
+            PAYMENT_CHANNEL_ID,
+            PAYMENT_CHANNEL_NAME,
+            NotificationManager.IMPORTANCE_HIGH
+        ).apply {
+            description = PAYMENT_CHANNEL_DESC
+            enableVibration(true)
+        }
+        manager.createNotificationChannel(paymentChannel)
     }
 
     fun showClassificationNotification(
@@ -136,5 +150,41 @@ object NotificationHelper {
             .build()
 
         manager.notify("tax_$taxName".hashCode(), notification)
+    }
+
+    fun showPaymentNotification(
+        context: Context,
+        paymentId: String,
+        merchantName: String,
+        amount: String,
+        isSuccess: Boolean
+    ) {
+        val manager = context.getSystemService(NotificationManager::class.java)
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+
+        val pendingIntent = PendingIntent.getActivity(
+            context,
+            "pay_$paymentId".hashCode(),
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        val title = if (isSuccess) "결제 완료" else "결제 실패"
+        val body = if (isSuccess) "$merchantName · ${amount}원 결제가 완료되었습니다"
+                   else "$merchantName · ${amount}원 결제에 실패했습니다"
+
+        val notification = NotificationCompat.Builder(context, PAYMENT_CHANNEL_ID)
+            .setSmallIcon(R.drawable.logo_symbol)
+            .setContentTitle(title)
+            .setContentText(body)
+            .setContentIntent(pendingIntent)
+            .setAutoCancel(true)
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .build()
+
+        manager.notify("pay_$paymentId".hashCode(), notification)
     }
 }

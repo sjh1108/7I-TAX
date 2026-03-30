@@ -28,7 +28,8 @@ public class ClassificationController {
 
         ClassificationRequest withUser = new ClassificationRequest(
                 request.merchantName(), request.mcc(), request.amount(),
-                request.isBusinessPurpose(), request.isClientAccompanied(), userId);
+                request.isBusinessPurpose(), request.isClientAccompanied(), userId,
+                request.note());
 
         ClassificationResult result = classificationService.classify(withUser);
         return ResponseEntity.ok(SuccessResponse.of(result));

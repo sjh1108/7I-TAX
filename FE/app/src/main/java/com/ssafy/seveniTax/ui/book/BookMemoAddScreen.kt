@@ -1,6 +1,7 @@
 package com.ssafy.seveniTax.ui.book
 
 import android.net.Uri
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -34,16 +35,22 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.FileProvider
 import androidx.navigation.NavController
 import coil3.compose.AsyncImage
+import com.ssafy.seveniTax.ui.navigation.Route
 import com.ssafy.seveniTax.ui.theme.*
+import com.ssafy.seveniTax.viewmodel.BookEntryViewModel
 import kotlinx.coroutines.delay
 import java.io.File
 
 @Composable
 fun BookMemoAddScreen(
-    navController: NavController
+    navController: NavController,
+    entryId: Long = -1,
+    fromPayment: Boolean = false,
+    bookEntryRepository: BookEntryViewModel? = null
 ) {
     var memoText by rememberSaveable { mutableStateOf("") }
     var showSuccess by remember { mutableStateOf(false) }
+    var isSaving by remember { mutableStateOf(false) }
     var showPhotoDialog by remember { mutableStateOf(false) }
     var photoUriStrings by rememberSaveable { mutableStateOf(listOf<String>()) }
     val attachedPhotos = photoUriStrings.map { Uri.parse(it) }
@@ -71,7 +78,30 @@ fun BookMemoAddScreen(
     LaunchedEffect(showSuccess) {
         if (showSuccess) {
             delay(1500L)
-            navController.popBackStack()
+            if (fromPayment) {
+                navController.navigate(Route.Main.path) {
+                    popUpTo(0) { inclusive = true }
+                }
+            } else {
+                navController.popBackStack()
+            }
+        }
+    }
+
+    fun saveNote() {
+        if (entryId > 0 && bookEntryRepository != null && memoText.isNotBlank()) {
+            isSaving = true
+            bookEntryRepository.updateNote(entryId, memoText.trim()) { success ->
+                isSaving = false
+                if (success) {
+                    showSuccess = true
+                } else {
+                    Toast.makeText(context, "저장에 실패했습니다", Toast.LENGTH_SHORT).show()
+                }
+            }
+        } else {
+            // entryId 없으면 로컬만 성공 처리
+            showSuccess = true
         }
     }
 
@@ -92,17 +122,19 @@ fun BookMemoAddScreen(
                     .background(Background),
                 contentAlignment = Alignment.Center
             ) {
-                IconButton(
-                    onClick = { navController.popBackStack() },
-                    modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .padding(start = 4.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "뒤로가기",
-                        tint = TextPrimary
-                    )
+                if (!fromPayment) {
+                    IconButton(
+                        onClick = { navController.popBackStack() },
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .padding(start = 4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "뒤로가기",
+                            tint = TextPrimary
+                        )
+                    }
                 }
                 Text(
                     text = "증빙 내역 추가",
@@ -227,7 +259,6 @@ fun BookMemoAddScreen(
                                         .clip(RoundedCornerShape(8.dp)),
                                     contentScale = ContentScale.Crop
                                 )
-                                // 삭제 버튼
                                 Box(
                                     modifier = Modifier
                                         .size(20.dp)
@@ -255,20 +286,21 @@ fun BookMemoAddScreen(
                 }
             }
 
-            // 저장 버튼
-            Box(
+            // 하단 버튼
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .navigationBarsPadding()
-                    .padding(horizontal = 28.dp, vertical = 12.dp)
+                    .padding(horizontal = 28.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 Button(
-                    onClick = { showSuccess = true },
+                    onClick = { saveNote() },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(52.dp),
                     shape = RoundedCornerShape(15.dp),
-                    enabled = memoText.isNotBlank() || attachedPhotos.isNotEmpty(),
+                    enabled = !isSaving && (memoText.isNotBlank() || attachedPhotos.isNotEmpty()),
                     colors = ButtonDefaults.buttonColors(
                         containerColor = BrandPurple,
                         contentColor = Color.White,
@@ -276,12 +308,32 @@ fun BookMemoAddScreen(
                         disabledContentColor = Color.White
                     )
                 ) {
-                    Text(
-                        text = "저장",
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = Color.White
-                    )
+                    if (isSaving) {
+                        CircularProgressIndicator(
+                            color = Color.White,
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp
+                        )
+                    } else {
+                        Text("저장", fontSize = 16.sp, fontWeight = FontWeight.SemiBold, color = Color.White)
+                    }
+                }
+
+                if (fromPayment) {
+                    OutlinedButton(
+                        onClick = {
+                            navController.navigate(Route.Main.path) {
+                                popUpTo(0) { inclusive = true }
+                            }
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(15.dp),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = TextSecondary)
+                    ) {
+                        Text("건너뛰기", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
+                    }
                 }
             }
         }
