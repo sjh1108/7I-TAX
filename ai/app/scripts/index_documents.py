@@ -17,19 +17,14 @@ from app.services.vectorstore import VectorStoreService
 logger = logging.getLogger(__name__)
 
 
-def main() -> None:
+def run_indexing(vectorstore_service: VectorStoreService) -> None:
     """세법 PDF 문서를 ChromaDB에 인덱싱한다.
 
-    처리 순서:
-    1. argparse로 --force 옵션 파싱
-    2. --force면 기존 컬렉션 삭제
-    3. DocumentProcessor.process_all()로 전체 청크 생성
-    4. VectorStoreService.add_documents()로 저장
-    5. 결과 통계 출력:
-       - 총 PDF 수 (law_name unique 개수)
-       - 총 청크 수
-       - 법률별 청크 수 (law_name 기준 그룹핑)
-       - 소요 시간
+    init_services()에서 ChromaDB가 비어있을 때 자동 호출되거나,
+    CLI에서 직접 실행할 수 있다.
+
+    Args:
+        vectorstore_service: 초기화된 VectorStoreService 인스턴스.
     """
     parser = argparse.ArgumentParser(
         description="세법 PDF 문서를 ChromaDB에 인덱싱합니다."
@@ -106,6 +101,29 @@ def main() -> None:
         logger.info("    %-30s : %d", law_name, count)
     logger.info("  소요 시간      : %.2f초", elapsed)
     logger.info("=" * 50)
+
+
+def main() -> None:
+    """CLI 진입점. --force 옵션을 지원한다."""
+    parser = argparse.ArgumentParser(
+        description="세법 PDF 문서를 ChromaDB에 인덱싱합니다."
+    )
+    parser.add_argument(
+        "--force",
+        action="store_true",
+        help="기존 컬렉션을 삭제하고 재인덱싱합니다.",
+    )
+    args = parser.parse_args()
+
+    vectorstore_service = VectorStoreService(settings)
+
+    if args.force:
+        logger.info("--force 옵션 감지: 기존 컬렉션을 삭제합니다.")
+        vectorstore_service.delete_collection()
+        logger.info("컬렉션 삭제 완료.")
+        vectorstore_service = VectorStoreService(settings)
+
+    run_indexing(vectorstore_service)
 
 
 if __name__ == "__main__":

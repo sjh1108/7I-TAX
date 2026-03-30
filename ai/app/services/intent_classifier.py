@@ -27,6 +27,11 @@ class IntentResult:
 
 
 class IntentName:
+    """인텐트 유형 정의.
+
+    시맨틱 라우터에서 지원하는 모든 인텐트 상수를 정의한다.
+    """
+
     TAX_RATE_LOOKUP = "TAX_RATE_LOOKUP"
     EXPENSE_CLASSIFICATION = "EXPENSE_CLASSIFICATION"
     DEDUCTION_ELIGIBILITY = "DEDUCTION_ELIGIBILITY"
@@ -38,6 +43,11 @@ class IntentName:
 
 
 class ModelTier:
+    """LLM 모델 계층 정의.
+
+    인텐트별 복잡도에 따라 사용할 모델을 선택한다.
+    """
+
     MINI = "mini"         # GPT-4o-mini
     STANDARD = "standard" # GPT-4o
 
@@ -54,7 +64,7 @@ class IntentClassifier:
     구현: numpy 기반 직접 구현 (의존성 최소화)
     """
 
-    CONFIDENCE_THRESHOLD = 0.7
+    CONFIDENCE_THRESHOLD = 0.5
 
     def __init__(self, intents_path: str, embedding_service: EmbeddingService) -> None:
         self.intents_path = intents_path

@@ -18,6 +18,23 @@ pipeline {
             }
         }
 
+        stage('Prepare AI Model') {
+            steps {
+                dir('ai') {
+                    sh '''
+                        mkdir -p models/tax_classifier
+                        if [ -d "/opt/tax7i/models/tax_classifier" ]; then
+                            cp -r /opt/tax7i/models/tax_classifier/* models/tax_classifier/
+                            echo "Model files copied:"
+                            ls -lh models/tax_classifier/
+                        else
+                            echo "WARNING: /opt/tax7i/models/tax_classifier not found. AI will start without classifier."
+                        fi
+                    '''
+                }
+            }
+        }
+
         stage('AI - Docker Build') {
             steps {
                 dir('ai') {
@@ -34,7 +51,9 @@ pipeline {
                     docker run -d --name tax-backend \
                         --network ubuntu_default \
                         -p 18080:8080 \
+                        -e TZ=Asia/Seoul \
                         --env-file /home/ubuntu/.env.backend \
+                        -v /home/ubuntu/firebase-service-account.json:/home/ubuntu/firebase-service-account.json:ro \
                         tax-backend
 
                     docker stop tax-frontend || true

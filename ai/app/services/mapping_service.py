@@ -8,6 +8,18 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class MccInfo:
+    """MCC 코드 매핑 정보.
+
+    카드 결제의 Merchant Category Code를 기반으로 거래 분류와 경비율 조회를 위한 정보를 담는다.
+
+    Attributes:
+        mcc: Merchant Category Code.
+        category: 거래 분류 카테고리명.
+        expense_type: 경비 유형.
+        deductible: 세금 공제 가능 여부.
+        industry_code: 대응하는 업종 코드 (경비율 조회용).
+    """
+
     mcc: str
     category: str
     expense_type: str
@@ -17,6 +29,17 @@ class MccInfo:
 
 @dataclass
 class ExpenseRate:
+    """업종별 경비율 정보.
+
+    사업자의 업종 코드에 대응하는 간이과세 및 일반과세 경비율을 담는다.
+
+    Attributes:
+        industry_code: 업종 코드.
+        industry_name: 업종명.
+        simple_rate: 간이과세 경비율.
+        standard_rate: 일반과세 경비율.
+    """
+
     industry_code: str
     industry_name: str
     simple_rate: float

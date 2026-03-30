@@ -58,6 +58,8 @@ class TestVectorStoreServiceInit:
                 model=settings.embedding_model,
                 openai_api_key=settings.gms_api_key,
                 openai_api_base=settings.gms_base_url,
+                chunk_size=10,
+                check_embedding_ctx_length=False,
             )
 
     def test_chroma_called_with_correct_params(self, settings: Settings):

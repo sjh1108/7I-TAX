@@ -68,7 +68,7 @@ public class TaxClassificationService {
         String mcc = resolveMcc(request);
         if (mcc == null) {
             log.warn("MCC 결정 실패: merchant={}, AI 분류 시도", request.merchantName());
-            Optional<ClassificationResult> aiResult = aiClassificationService.classify(buildAiDescription(request));
+            Optional<ClassificationResult> aiResult = aiClassificationService.classify(request.merchantName());
             if (aiResult.isPresent()) {
                 log.info("MCC 미결정 → AI 분류 성공: merchant={}, category={}",
                         request.merchantName(), aiResult.get().taxCategory());
@@ -83,7 +83,7 @@ public class TaxClassificationService {
         List<MccTaxRule> rules = classificationCacheService.getMccRules(mcc);
         if (rules.isEmpty()) {
             log.warn("분류 룰 없음: mcc={}, merchant={}, AI 분류 시도", mcc, request.merchantName());
-            Optional<ClassificationResult> aiResult = aiClassificationService.classify(buildAiDescription(request));
+            Optional<ClassificationResult> aiResult = aiClassificationService.classify(request.merchantName());
             if (aiResult.isPresent()) {
                 log.info("룰 없음 → AI 분류 성공: mcc={}, merchant={}, category={}",
                         mcc, request.merchantName(), aiResult.get().taxCategory());
@@ -147,17 +147,6 @@ public class TaxClassificationService {
                 fallback.getTaxCategory(), fallback.getVatDeductible(),
                 fallback.getLegalBasis(), fallback.getRemark());
         return attachEntertainmentLimitIfNeeded(result, request);
-    }
-
-    // ── AI description 구성: 가맹점명 + 증빙 메모 ──
-
-    private String buildAiDescription(ClassificationRequest request) {
-        String merchant = request.merchantName();
-        String note = request.note();
-        if (note != null && !note.isBlank()) {
-            return merchant + " - " + note.trim();
-        }
-        return merchant;
     }
 
     // ── MCC 결정 ──

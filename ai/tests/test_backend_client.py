@@ -4,6 +4,7 @@ import httpx
 import pytest
 
 from app.core.config import Settings
+from app.core.exceptions import BackendClientError
 from app.services.backend_client import BackendClient, BusinessInfo
 
 
@@ -33,7 +34,7 @@ class TestGetTransactions:
         """404 응답 시 빈 리스트를 반환한다."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "404", request=MagicMock(), response=MagicMock()
+            "404", request=MagicMock(), response=MagicMock(status_code=404)
         )
         backend_client.client.get = AsyncMock(return_value=mock_response)
 
@@ -41,27 +42,25 @@ class TestGetTransactions:
 
         assert result == []
 
-    async def test_returns_empty_on_500(self, backend_client: BackendClient):
-        """500 응답 시 빈 리스트를 반환한다."""
+    async def test_raises_on_500(self, backend_client: BackendClient):
+        """500 응답 시 BackendClientError를 발생시킨다."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "500", request=MagicMock(), response=MagicMock()
+            "500", request=MagicMock(), response=MagicMock(status_code=500)
         )
         backend_client.client.get = AsyncMock(return_value=mock_response)
 
-        result = await backend_client.get_transactions(user_id="user-1")
+        with pytest.raises(BackendClientError):
+            await backend_client.get_transactions(user_id="user-1")
 
-        assert result == []
-
-    async def test_returns_empty_on_timeout(self, backend_client: BackendClient):
-        """타임아웃 시 빈 리스트를 반환한다."""
+    async def test_raises_on_timeout(self, backend_client: BackendClient):
+        """타임아웃 시 BackendClientError를 발생시킨다."""
         backend_client.client.get = AsyncMock(
             side_effect=httpx.TimeoutException("timeout")
         )
 
-        result = await backend_client.get_transactions(user_id="user-1")
-
-        assert result == []
+        with pytest.raises(BackendClientError):
+            await backend_client.get_transactions(user_id="user-1")
 
 
 # ---------------------------------------------------------------------------
@@ -69,11 +68,11 @@ class TestGetTransactions:
 # ---------------------------------------------------------------------------
 
 class TestGetBusinessInfo:
-    async def test_returns_none_on_http_error(self, backend_client: BackendClient):
-        """HTTP 오류 시 None을 반환한다."""
+    async def test_returns_none_on_404(self, backend_client: BackendClient):
+        """404 응답 시 None을 반환한다."""
         mock_response = MagicMock()
         mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            "404", request=MagicMock(), response=MagicMock()
+            "404", request=MagicMock(), response=MagicMock(status_code=404)
         )
         backend_client.client.get = AsyncMock(return_value=mock_response)
 
@@ -81,15 +80,14 @@ class TestGetBusinessInfo:
 
         assert result is None
 
-    async def test_returns_none_on_timeout(self, backend_client: BackendClient):
-        """타임아웃 시 None을 반환한다."""
+    async def test_raises_on_timeout(self, backend_client: BackendClient):
+        """타임아웃 시 BackendClientError를 발생시킨다."""
         backend_client.client.get = AsyncMock(
             side_effect=httpx.TimeoutException("timeout")
         )
 
-        result = await backend_client.get_business_info(user_id="user-1")
-
-        assert result is None
+        with pytest.raises(BackendClientError):
+            await backend_client.get_business_info(user_id="user-1")
 
     async def test_returns_business_info_on_success(self, backend_client: BackendClient):
         """정상 응답 시 BusinessInfo를 반환한다."""
